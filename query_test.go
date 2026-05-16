@@ -51,6 +51,7 @@ func rowDump(t *testing.T, rows *sql.Rows) [][]any {
 // Inputs and expected outputs come from
 // docs/third_party/googlesql-docs/query-syntax.md (set-operations section).
 func TestSetOperationsUnionIntersectExcept(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=setops")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -143,6 +144,7 @@ func TestSetOperationsUnionIntersectExcept(t *testing.T) {
 // 2430). Expected rows are sourced from the visual tables in those
 // examples.
 func TestJoinVariants(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=joins")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -223,6 +225,7 @@ func TestJoinVariants(t *testing.T) {
 // expected outputs come from query-syntax.md SELECT * EXCEPT / SELECT
 // * REPLACE examples.
 func TestSelectExceptAndReplace(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=select_except")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -261,6 +264,7 @@ func TestSelectExceptAndReplace(t *testing.T) {
 // This exercises the parameter-encoding pipeline in encoder.go and
 // the StmtExecContext path's args reshape.
 func TestParameterBindingTypes(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=param_types")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -340,6 +344,7 @@ func TestParameterBindingTypes(t *testing.T) {
 // formatter via WITH RECURSIVE. The example is from
 // docs/third_party/googlesql-docs/query-syntax.md WITH clause section.
 func TestWithRecursiveSelfReferential(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=with_recursive")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -386,6 +391,7 @@ func TestWithRecursiveSelfReferential(t *testing.T) {
 // operators" + query-syntax.md). The values are simple integers so
 // the assertions stay tight.
 func TestExistsAndInSubquery(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=subquery_exprs")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -425,6 +431,7 @@ func TestExistsAndInSubquery(t *testing.T) {
 // at docs/third_party/googlesql-docs/parameters.md (ARRAY parameter
 // expansion as `(?, ?, ...)`).
 func TestArrayUnnestRoundtrip(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=array_unnest")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -463,6 +470,7 @@ func TestArrayUnnestRoundtrip(t *testing.T) {
 // frame specification (ROWS BETWEEN / RANGE BETWEEN / window_spec
 // shorthand).
 func TestWindowVariousFrames(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=window_frames_extra")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -557,6 +565,7 @@ func TestWindowVariousFrames(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "SELECT *
 // modifiers".
 func TestSelectStarReplace(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=select_star_replace")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -599,6 +608,7 @@ func TestSelectStarReplace(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md JOIN
 // operations (INNER, LEFT, RIGHT, FULL, CROSS).
 func TestJoinVariantsExtra(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=join_variants")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -648,6 +658,7 @@ func TestJoinVariantsExtra(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "UNNEST
 // operator with array_expression and WITH OFFSET".
 func TestUnnestWithOffset(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=unnest_offset")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -686,6 +697,7 @@ func TestUnnestWithOffset(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "Recursive CTEs"
 // — example builds an integer ladder via UNION ALL.
 func TestRecursiveCTE(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=recursive_cte")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -722,6 +734,7 @@ func TestRecursiveCTE(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "LIMIT clause"
 // + "OFFSET clause".
 func TestLimitOffset(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=limit_offset")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -754,6 +767,7 @@ func TestLimitOffset(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "ORDER BY
 // clause" — NULLS FIRST / NULLS LAST options.
 func TestOrderByDescAndNullsFirst(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=order_by_nulls")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -789,6 +803,7 @@ func TestOrderByDescAndNullsFirst(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "GROUP BY
 // clause" + "SELECT DISTINCT modifier".
 func TestSelectDistinctAndGroupBy(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=distinct_groupby")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -837,6 +852,7 @@ func TestSelectDistinctAndGroupBy(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/conditional_expressions.md
 // "CASE expr WHEN".
 func TestCaseExpression(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=case_expr")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -861,6 +877,7 @@ func TestCaseExpression(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-types.md "NUMERIC type"
 // — arithmetic uses exact precision; div-by-zero is an analyzer error.
 func TestNumericArithmetic(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=numeric_arith")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -895,6 +912,7 @@ func TestNumericArithmetic(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/dml-syntax.md "UPDATE
 // statement".
 func TestUpdateSetWhere(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=update_set_where")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -940,6 +958,7 @@ func TestUpdateSetWhere(t *testing.T) {
 // partition: each row's partition has only one boolean so the
 // LOGICAL_OR matches the input directly.
 func TestWindowDistinctEmulationPath(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=window_emulation")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -989,6 +1008,7 @@ func TestWindowDistinctEmulationPath(t *testing.T) {
 // hits the native sliding-frame path which still emits ORDER BY
 // markers and frame bounds.
 func TestWindowOrderedFrame(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=window_ordered_frame")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1044,6 +1064,7 @@ func TestWindowOrderedFrame(t *testing.T) {
 //
 // Expected output: a sorted array of the first two elements.
 func TestArrayAggLimitOrderBy(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=array_agg_limit_order_by")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1075,6 +1096,7 @@ func TestArrayAggLimitOrderBy(t *testing.T) {
 // TestArrayAggOrderByDesc drives bindOrderBy with the descending flag.
 // Source: aggregate_functions.md ARRAY_AGG ORDER BY DESC grammar.
 func TestArrayAggOrderByDesc(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=array_agg_order_by_desc")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1106,6 +1128,7 @@ func TestArrayAggOrderByDesc(t *testing.T) {
 // "STRING_AGG" — supports the same ORDER BY / LIMIT modifiers as
 // ARRAY_AGG.
 func TestStringAggOrderByLimit(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=string_agg_order_by_limit")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1142,6 +1165,7 @@ func TestStringAggOrderByLimit(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "TABLESAMPLE"
 // section.
 func TestTableSample(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=table_sample")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1192,6 +1216,7 @@ func TestTableSample(t *testing.T) {
 // clause" — fires after window functions, allowing predicates over
 // window-derived columns.
 func TestQualifyClause(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=qualify_clause")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1232,6 +1257,7 @@ func TestQualifyClause(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "SELECT clause"
 // expressions create computed columns.
 func TestComputedColumnsInProject(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=computed_columns")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1278,6 +1304,7 @@ func TestComputedColumnsInProject(t *testing.T) {
 // for STRUCT" — `struct_value.field_name` lowers to a GetStructField
 // node.
 func TestGetStructField(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=get_struct_field")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1311,6 +1338,7 @@ func TestGetStructField(t *testing.T) {
 // the navigation_functions.md "LAG" / "LEAD" examples. Expected
 // values come straight from the LAG / LEAD definitions.
 func TestLagLeadFirstLast(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=lag_lead")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1380,6 +1408,7 @@ func TestLagLeadFirstLast(t *testing.T) {
 // "ROWS vs. RANGE" — RANGE bounds are based on value rather than row
 // position.
 func TestRangeFrame(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=range_frame")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1430,6 +1459,7 @@ func TestRangeFrame(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/numbering_functions.md
 // "PERCENT_RANK", "CUME_DIST", "NTILE".
 func TestPercentRankCumeDistNtile(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=numbering_funcs")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1480,6 +1510,7 @@ func TestPercentRankCumeDistNtile(t *testing.T) {
 // rows by GROUPING SETS section, lines 1170-1190 of that file).
 // Exercises GroupingSetNode + ColumnHolderNode in the formatter.
 func TestGroupingSets(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=grouping_sets")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1532,6 +1563,7 @@ func TestGroupingSets(t *testing.T) {
 //
 // Source: query-syntax.md ROLLUP and CUBE sections.
 func TestRollupAndCube(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=rollup_cube")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1590,6 +1622,7 @@ func TestRollupAndCube(t *testing.T) {
 // Source: docs/third_party/googlesql-docs/procedural-language.md
 // "@@time_zone" (system variable section).
 func TestSystemVariableTimeZone(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=sysvar_tz")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1621,6 +1654,7 @@ func TestSystemVariableTimeZone(t *testing.T) {
 // "ARRAY_TRANSFORM" reference. The expected output is the input
 // array with the lambda applied per element.
 func TestArrayTransformLambda(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=lambda_array_transform")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1657,6 +1691,7 @@ func TestArrayTransformLambda(t *testing.T) {
 // query-syntax.md PIVOT / UNPIVOT sections; the table shapes are
 // taken from the docs' examples.
 func TestPivotAndUnpivot(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=pivot_unpivot")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1704,6 +1739,7 @@ func TestPivotAndUnpivot(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "PIVOT" and
 // "UNPIVOT" sections.
 func TestPivotAndUnpivotExtra(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=pivot_unpivot")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1759,6 +1795,7 @@ func TestPivotAndUnpivotExtra(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/query-syntax.md "UNNEST" with
 // STRUCT-typed elements.
 func TestArrayUnnestStruct(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=unnest_struct")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1797,6 +1834,7 @@ func TestArrayUnnestStruct(t *testing.T) {
 // TestArrayConcatBetweenLiterals drives FunctionCallNode for
 // ARRAY_CONCAT — uses VARIADIC + non-trivial dispatch.
 func TestArrayConcatBetweenLiterals(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=array_concat")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1818,6 +1856,7 @@ func TestArrayConcatBetweenLiterals(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-manipulation-language.md
 // "INSERT ... SELECT".
 func TestInsertWithSelect(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=insert_select")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1846,6 +1885,7 @@ func TestInsertWithSelect(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-manipulation-language.md
 // "DELETE".
 func TestDeleteWithSubquery(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=delete_subq")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1876,6 +1916,7 @@ func TestDeleteWithSubquery(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/expressions.md "Subqueries"
 // section.
 func TestSubqueryExpr(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=subquery_expr")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1935,6 +1976,7 @@ func TestSubqueryExpr(t *testing.T) {
 // TestSystemVariableSet drives SystemVariableNode read after a SET.
 // Reference: docs/third_party/googlesql-docs/system-variables.md.
 func TestSystemVariableSet(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=sysvar_set")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1966,6 +2008,7 @@ func TestSystemVariableSet(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/aggregate_functions.md
 // "STRING_AGG" with ORDER BY.
 func TestAggregateModifiers(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=agg_modifiers")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1993,11 +2036,13 @@ func TestAggregateModifiers(t *testing.T) {
 // current build — the underlying mechanism is exercised by spectest's
 // proto fixtures.
 func TestFilterFieldsProto(t *testing.T) {
+	t.Parallel()
 	t.Skip("FILTER_FIELDS requires proto registration plumbing; covered by spectest")
 }
 
 // TestAnonymizedDPAggregate skipped — DP aggregates require feature flags.
 func TestAnonymizedDPAggregate(t *testing.T) {
+	t.Parallel()
 	t.Skip("DP aggregates require feature flags; covered by spectest")
 }
 
@@ -2016,6 +2061,7 @@ func TestAnonymizedDPAggregate(t *testing.T) {
 // catalog-internal order, every row gets the _TABLE_SUFFIX synthetic
 // column.
 func TestWildcardTableScan(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=wildcard_scan")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2084,6 +2130,7 @@ func TestWildcardTableScan(t *testing.T) {
 // docs/specs/googlesql/information_schema/tables.md (and its
 // testdata YAML). The view returns one row per registered table.
 func TestInformationSchemaTables(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=info_tables")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2138,6 +2185,7 @@ func TestInformationSchemaTables(t *testing.T) {
 // which surfaces one row per column with its name and data type.
 // Source: docs/specs/googlesql/information_schema/columns.md.
 func TestInformationSchemaColumns(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=info_columns")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2199,6 +2247,7 @@ func TestInformationSchemaColumns(t *testing.T) {
 // CREATE TABLE in a previously-unseen dataset adds a schema entry.
 // Source: docs/specs/googlesql/information_schema/schemata.md.
 func TestInformationSchemaSchemata(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=info_schemata")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2255,6 +2304,7 @@ func TestInformationSchemaSchemata(t *testing.T) {
 // "INFORMATION_SCHEMA.COLUMNS" — ordinal_position is the
 // per-table column index (1-based).
 func TestInformationSchemaColumnsOrdinalPosition(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=info_columns_ordinal")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2313,6 +2363,7 @@ func TestInformationSchemaColumnsOrdinalPosition(t *testing.T) {
 // column lists the canonical type name); ARRAY columns are formatted
 // "ARRAY<...>" with the inner type in brackets.
 func TestInformationSchemaColumnsArrayType(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=info_columns_array")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2348,6 +2399,7 @@ func TestInformationSchemaColumnsArrayType(t *testing.T) {
 // TestInformationSchemaColumnsStructType drives the STRUCT branch of
 // infoSchemaDataType.
 func TestInformationSchemaColumnsStructType(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=info_columns_struct")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2395,6 +2447,7 @@ func TestInformationSchemaColumnsStructType(t *testing.T) {
 //	FROM UNNEST(["apple", "pear", "banana", "pear"]) AS fruit;
 //	-> "pear & pear & apple & banana"
 func TestStringAggOrderBy(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=string_agg_order_by")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2425,6 +2478,7 @@ func TestStringAggOrderBy(t *testing.T) {
 //	FROM UNNEST(["apple", "pear", "banana", "pear"]) AS fruit;
 //	-> "apple & pear"
 func TestStringAggLimit(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=string_agg_limit")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2457,6 +2511,7 @@ func TestStringAggLimit(t *testing.T) {
 //	FROM UNNEST(["apple", "pear", "banana", "pear"]) AS fruit;
 //	-> "pear & banana"
 func TestStringAggDistinctOrderByLimit(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=string_agg_distinct_order_limit")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2482,6 +2537,7 @@ func TestStringAggDistinctOrderByLimit(t *testing.T) {
 // Authoritative source: docs/third_party/googlesql-docs/aggregate_functions.md
 // "ARRAY_AGG" section ARRAY_AGG(x ORDER BY x LIMIT N) example.
 func TestArrayAggOrderByLimit(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=array_agg_order_by_limit")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -2509,7 +2565,7 @@ func TestArrayAggOrderByLimit(t *testing.T) {
 // ---- from tests/parity/query_test.go ----
 
 func TestQuery(t *testing.T) {
-	t.Setenv("TZ", "UTC")
+	t.Parallel()
 	now := time.Now()
 	ctx := context.Background()
 	ctx = googlesqlite.WithCurrentTime(ctx, now)

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/goccy/googlesqlite"
 )
@@ -16,6 +17,13 @@ import (
 // programmatic configuration API. CI sets these variables already, in
 // which case the existing values are kept.
 func TestMain(m *testing.M) {
+	// Pin the process timezone to UTC for the whole suite. Timestamp
+	// tests need a deterministic zone; fixing it once here (instead of
+	// per-test t.Setenv/os.Setenv) keeps those tests free of process-
+	// global mutation so they can run with t.Parallel().
+	os.Setenv("TZ", "UTC")
+	time.Local = time.UTC
+
 	if os.Getenv(googlesqlite.EnvWasmCompilationMode) == "" {
 		os.Setenv(googlesqlite.EnvWasmCompilationMode, string(googlesqlite.WasmCompilationModeCompiler))
 		if os.Getenv(googlesqlite.EnvWasmCacheDir) == "" {

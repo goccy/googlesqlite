@@ -3,7 +3,6 @@ package googlesqlite_test
 import (
 	"context"
 	"database/sql"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -22,6 +21,7 @@ import (
 // Reference: database/sql doc for ColumnType.DatabaseTypeName plus the
 // public googlesqlite.UnmarshalDatabaseTypeName API surface.
 func TestColumnTypeDatabaseTypeName(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=column_type_dtn")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -74,6 +74,7 @@ func TestColumnTypeDatabaseTypeName(t *testing.T) {
 // parameters" — binding a Go type to `?` should select the
 // corresponding GoogleSQL primitive.
 func TestParameterTypeInference(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=param_type_inference")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -154,6 +155,7 @@ func TestParameterTypeInference(t *testing.T) {
 //
 // Reference: docs/third_party/googlesql-docs/parameters.md "Named parameters".
 func TestNamedParameterBinding(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=named_param")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -184,6 +186,7 @@ func TestNamedParameterBinding(t *testing.T) {
 //
 // Expected: UNNEST returns the elements one per row.
 func TestParameterAsArray(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=param_array")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -239,6 +242,7 @@ func TestParameterAsArray(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/parameters.md — every Go
 // primitive maps to a corresponding GoogleSQL type.
 func TestParameterTypeInferenceMore(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=param_more_types")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -327,6 +331,7 @@ func TestParameterTypeInferenceMore(t *testing.T) {
 //
 // Reference: docs/third_party/googlesql-docs/parameters.md "ARRAY parameter".
 func TestArrayParameterVariants(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=param_array_variants")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -396,6 +401,7 @@ func TestArrayParameterVariants(t *testing.T) {
 //
 // Reference: docs/third_party/googlesql-docs/data-types.md "TIMESTAMP type".
 func TestTimestampParameter(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=param_timestamp")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -431,6 +437,7 @@ func TestTimestampParameter(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-types.md "DATE" — Go's
 // time.Time round-trips through DATE columns.
 func TestDateParamRoundTrip(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=date_param")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -459,6 +466,7 @@ func TestDateParamRoundTrip(t *testing.T) {
 // path through ParameterNode.FormatSQL when paramCollectorFromContext
 // is active.
 func TestExecWithMultiplePositionalParams(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=positional_params")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -488,6 +496,7 @@ func TestExecWithMultiplePositionalParams(t *testing.T) {
 // googleSQLTypeForEncodedString TimestampValue / DatetimeValue branches
 // when binding time.Time against typed columns.
 func TestDatetimeAndTimestampValueParams(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=dt_ts_param")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -526,6 +535,7 @@ func TestDatetimeAndTimestampValueParams(t *testing.T) {
 // Reference: database/sql Scan rules — pointers to integer types
 // receive a conversion from the column's int64 source.
 func TestScanIntoEveryIntSize(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=scan_int_sizes")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -637,6 +647,7 @@ func TestScanIntoEveryIntSize(t *testing.T) {
 // TestScanIntoFloatSizes drives assignValue's float branches by
 // scanning a FLOAT64 column into both float32 and float64 destinations.
 func TestScanIntoFloatSizes(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=scan_float_sizes")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -677,6 +688,7 @@ func TestScanIntoFloatSizes(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-types.md "NUMERIC"
 // section — round-trip of canonical decimal string.
 func TestScanStringAffinityTypes(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=scan_affinity_types")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -714,6 +726,7 @@ func TestScanStringAffinityTypes(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-types.md "RANGE" and
 // "INTERVAL" sections — canonical string form is the round-trip.
 func TestScanRangeInterval(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=range_interval_scan")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -760,6 +773,7 @@ func TestScanRangeInterval(t *testing.T) {
 //
 // Reference: docs/third_party/googlesql-docs/data-types.md "JSON" type.
 func TestScanJSONIntoTypes(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=scan_json")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -788,6 +802,7 @@ func TestScanJSONIntoTypes(t *testing.T) {
 //
 // Reference: docs/third_party/googlesql-docs/data-types.md "GEOGRAPHY".
 func TestScanGeographyIntoString(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=scan_geo")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -811,6 +826,7 @@ func TestScanGeographyIntoString(t *testing.T) {
 // Reference: database/sql sql.ColumnType — DatabaseTypeName returns
 // the JSON-encoded type spec stored on each column.
 func TestColumnTypeDatabaseTypeNameMore(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=column_type_db_name")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -845,6 +861,7 @@ func TestColumnTypeDatabaseTypeNameMore(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-types.md — STRUCT field
 // rendering is positional in the GoogleSQL compliance suite.
 func TestScanStructArrayIntoAny(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=scan_any_array_struct")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -976,6 +993,7 @@ func TestScanStructArrayIntoAny(t *testing.T) {
 // Without this, the deep assignInterfaceValue path for nested
 // containers is not exercised.
 func TestScanArrayOfStructToAny(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=scan_array_of_struct")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1006,6 +1024,7 @@ func TestScanArrayOfStructToAny(t *testing.T) {
 // alias pass is that `CREATE TABLE` succeeds and the column accepts
 // INT64 values.
 func TestTypeAliasesIntInteger(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=type_aliases")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1052,6 +1071,7 @@ func TestTypeAliasesIntInteger(t *testing.T) {
 // INT64). The isAliasInTypePosition helper guards against rewriting
 // columns named "Int", "Integer" etc.
 func TestTypeAliasInCast(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=cast_alias")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1095,6 +1115,7 @@ func TestTypeAliasInCast(t *testing.T) {
 //	SELECT SAFE_CAST("apple" AS INT64) AS not_a_number;
 //	-> NULL
 func TestSafeCastInvalidReturnsNull(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=safe_cast_invalid")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1118,6 +1139,7 @@ func TestSafeCastInvalidReturnsNull(t *testing.T) {
 //
 // Same source as the NULL case (conversion_functions.md SAFE_CAST).
 func TestSafeCastValidPassesThrough(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=safe_cast_valid")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1148,6 +1170,7 @@ func TestSafeCastValidPassesThrough(t *testing.T) {
 // Expected behaviour: SELECT NUMERIC '1' / NUMERIC '0' yields a
 // non-nil error containing "Div".
 func TestNumericDivisionByZeroReturnsError(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=numeric_divzero")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1173,6 +1196,7 @@ func TestNumericDivisionByZeroReturnsError(t *testing.T) {
 // through a BIGNUMERIC operand — NumericValue.Div handles both
 // NUMERIC and BIGNUMERIC values.
 func TestBignumericDivisionByZeroReturnsError(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=bignumeric_divzero")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -1190,6 +1214,7 @@ func TestBignumericDivisionByZeroReturnsError(t *testing.T) {
 // ---- from tests/parity/timestamp_test.go ----
 
 func TestTimestamp(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name      string
 		timestamp string
@@ -1210,7 +1235,6 @@ func TestTimestamp(t *testing.T) {
 		{name: "canonical microsecond", timestamp: "2020-06-02 14:58:40.123000+00", expected: "2020-06-02T14:58:40.123000Z"},
 		{name: "canonical now-shape", timestamp: "2026-05-14 01:31:31.392415+00", expected: "2026-05-14T01:31:31.392415Z"},
 	} {
-		os.Setenv("TZ", "UTC")
 		t.Run(test.name, func(t *testing.T) {
 			ti, err := googlesqlite.TimeFromTimestampValue(test.timestamp)
 			if err != nil {

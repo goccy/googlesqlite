@@ -19,6 +19,7 @@ import (
 // Source: database/sql.Conn.QueryContext is documented to accept any
 // SQL string; the driver shouldn't refuse DDL.
 func TestDDLViaQueryContext(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=ddl_via_query")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -96,6 +97,7 @@ func TestDDLViaQueryContext(t *testing.T) {
 // NoopStmtAction. Calling it via db.QueryContext exercises the
 // QueryContext branch (rather than ExecContext).
 func TestNoopDDLViaQueryContext(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=noop_querycontext")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -125,6 +127,7 @@ func TestNoopDDLViaQueryContext(t *testing.T) {
 // TestBeginCommitViaQueryContext drives BeginStmtAction.QueryContext
 // and CommitStmtAction.QueryContext through db.QueryContext.
 func TestBeginCommitViaQueryContext(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=begin_commit_qc")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -147,6 +150,7 @@ func TestBeginCommitViaQueryContext(t *testing.T) {
 
 // TestTruncateViaQueryContext drives TruncateStmtAction.QueryContext.
 func TestTruncateViaQueryContext(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=truncate_qc")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -177,6 +181,7 @@ func TestTruncateViaQueryContext(t *testing.T) {
 
 // TestMergeViaQueryContext drives MergeStmtAction.QueryContext.
 func TestMergeViaQueryContext(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=merge_qc")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -221,6 +226,7 @@ func TestMergeViaQueryContext(t *testing.T) {
 // TestAssignmentViaQueryContext drives AssignmentStmtAction.QueryContext
 // for `SET @@var = expr`.
 func TestAssignmentViaQueryContext(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=assign_qc")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -263,6 +269,7 @@ func TestAssignmentViaQueryContext(t *testing.T) {
 // does not mutate SQLite state). The contract assertion is that
 // Exec returns nil error.
 func TestNoopDDLAlterTable(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=noop_alter_table")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -294,6 +301,7 @@ func TestNoopDDLAlterTable(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-definition-language.md
 // "CREATE SCHEMA" grammar.
 func TestNoopDDLCreateSchema(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=noop_create_schema")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -319,6 +327,7 @@ func TestNoopDDLCreateSchema(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-control-language.md
 // "GRANT" / "REVOKE" sections.
 func TestNoopDDLGrantRevoke(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=noop_grant_revoke")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -352,6 +361,7 @@ func TestNoopDDLGrantRevoke(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/procedural-language.md
 // "CREATE PROCEDURE" grammar.
 func TestNoopDDLCreateProcedure(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=noop_create_procedure")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -376,6 +386,7 @@ func TestNoopDDLCreateProcedure(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-manipulation-language.md
 // "ASSERT" / procedural-language ASSERT grammar.
 func TestNoopDDLAssertStmt(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=noop_assert")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -410,6 +421,7 @@ func TestNoopDDLAssertStmt(t *testing.T) {
 // DescriptorPool and replays its registered protos / enums on the
 // fresh SimpleCatalog instance.
 func TestDropDoesNotWipeWellKnownProtos(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=drop_preserves_protos")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -458,6 +470,7 @@ func TestDropDoesNotWipeWellKnownProtos(t *testing.T) {
 // "CREATE PROPERTY GRAPH" grammar and the `FinGraph` Examples
 // section.
 func TestCreatePropertyGraph(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=create_property_graph")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -525,6 +538,7 @@ func TestCreatePropertyGraph(t *testing.T) {
 // FinGraph example (lines 472-499 of that file). Expected: the
 // Person rows we inserted come back unfiltered.
 func TestPropertyGraphMatchPerson(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=property_graph_match_person")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -593,6 +607,7 @@ func TestPropertyGraphMatchPerson(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/graph-schema-statements.md
 // FinGraph EDGE TABLES + graph-query-statements MATCH (a)-[e]->(b).
 func TestPropertyGraphMatchEdge(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=property_graph_match_edge")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -658,6 +673,7 @@ func TestPropertyGraphMatchEdge(t *testing.T) {
 // TABLE FUNCTION" with the TEMP modifier — function only exists for
 // the current session.
 func TestTempTVF(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=tvf_temp")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -715,6 +731,7 @@ func TestTempTVF(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-definition-language.md
 // "DROP" statements.
 func TestDropTableAndFunction(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=drop_table_fn")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -746,6 +763,7 @@ func TestDropTableAndFunction(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-definition-language.md
 // "DROP VIEW".
 func TestDropView(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=drop_view")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -768,6 +786,7 @@ func TestDropView(t *testing.T) {
 // CREATE FUNCTION inside a dataset namespace yields a multi-part
 // NamePath, which exercises getFunctions/getTVFs lookup branches.
 func TestNamePathedFunction(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=ns_func")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -799,6 +818,7 @@ func TestNamePathedFunction(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-manipulation-language.md
 // "TRUNCATE TABLE".
 func TestExecContextTruncate(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=truncate")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -832,6 +852,7 @@ func TestExecContextTruncate(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-manipulation-language.md
 // "MERGE" statement.
 func TestMergeStmt(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=merge")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -878,6 +899,7 @@ func TestMergeStmt(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/user-defined-functions.md
 // "ANY TYPE" — templated function parameter.
 func TestTemplatedFunctionAnyType(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=templated_any_type")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -918,6 +940,7 @@ func TestTemplatedFunctionAnyType(t *testing.T) {
 // typeKindToSQLName for primitive kinds. Source:
 // docs/third_party/googlesql-docs/conversion_functions.md "CAST".
 func TestCastEveryTypeFormatType(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=cast_format_type")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
