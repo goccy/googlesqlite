@@ -21,7 +21,11 @@ func TIMESTAMP_ADD(t time.Time, v int64, part string) (value.Value, error) {
 	case "HOUR":
 		return value.TimestampValue(t.Add(time.Duration(v) * time.Hour)), nil
 	case "DAY":
-		return value.TimestampValue(t.AddDate(0, 0, int(v))), nil
+		n, err := helper.SafeInt(v)
+		if err != nil {
+			return nil, err
+		}
+		return value.TimestampValue(t.AddDate(0, 0, n)), nil
 	}
 	return nil, fmt.Errorf("TIMESTAMP_ADD: unexpected part value %s", part)
 }

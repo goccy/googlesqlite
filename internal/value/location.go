@@ -40,11 +40,14 @@ func toLocation(timeZone string) (*time.Location, error) {
 	if matched := timeZoneOffsetPattern.FindAllStringSubmatch(timeZone, -1); len(matched) != 0 && len(matched[0]) == 3 {
 		offsetHour := matched[0][1]
 		offsetMin := matched[0][2]
-		hour, err := strconv.ParseInt(offsetHour, 10, 64)
+		// The regexp captures at most a sign plus two digits, so the
+		// parsed values always fit in 32 bits; parsing with a 32-bit
+		// width keeps the int conversions below provably in range.
+		hour, err := strconv.ParseInt(offsetHour, 10, 32)
 		if err != nil {
 			return nil, err
 		}
-		min, err := strconv.ParseInt(offsetMin, 10, 64)
+		min, err := strconv.ParseInt(offsetMin, 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +58,7 @@ func toLocation(timeZone string) (*time.Location, error) {
 	}
 	if matched := timeZoneOffsetPartialPattern.FindAllStringSubmatch(timeZone, -1); len(matched) != 0 && len(matched[0]) == 2 {
 		offset := matched[0][1]
-		hour, err := strconv.ParseInt(offset, 10, 64)
+		hour, err := strconv.ParseInt(offset, 10, 32)
 		if err != nil {
 			return nil, err
 		}

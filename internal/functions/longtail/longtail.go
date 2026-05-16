@@ -256,7 +256,10 @@ func BindSplitSubstr(args ...value.Value) (value.Value, error) {
 		return nil, err
 	}
 	parts := strings.Split(s, delim)
-	idx := int(pos)
+	idx, err := helper.SafeInt(pos)
+	if err != nil {
+		return nil, err
+	}
 	if idx > 0 {
 		idx--
 	} else if idx < 0 {
@@ -273,7 +276,10 @@ func BindSplitSubstr(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		count = int(c)
+		count, err = helper.SafeInt(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if count < 1 {
 		count = 1
@@ -851,7 +857,25 @@ func BindNetFormatIp(args ...value.Value) (value.Value, error) {
 	if n < 0 || n > 0xFFFFFFFF {
 		return nil, fmt.Errorf("NET.FORMAT_IP: out of range")
 	}
-	ip := gonet.IPv4(byte(n>>24), byte(n>>16), byte(n>>8), byte(n))
+	// Extract each octet by masking to [0, 255] before the checked
+	// byte conversion.
+	b0, err := helper.SafeByte((n >> 24) & 0xFF)
+	if err != nil {
+		return nil, err
+	}
+	b1, err := helper.SafeByte((n >> 16) & 0xFF)
+	if err != nil {
+		return nil, err
+	}
+	b2, err := helper.SafeByte((n >> 8) & 0xFF)
+	if err != nil {
+		return nil, err
+	}
+	b3, err := helper.SafeByte(n & 0xFF)
+	if err != nil {
+		return nil, err
+	}
+	ip := gonet.IPv4(b0, b1, b2, b3)
 	return value.StringValue(ip.String()), nil
 }
 
@@ -921,10 +945,14 @@ func BindNetMakeNet(args ...value.Value) (value.Value, error) {
 	if ip.To4() == nil {
 		bits = 128
 	}
-	if int(pref) < 0 || int(pref) > bits {
+	prefInt, err := helper.SafeInt(pref)
+	if err != nil {
+		return nil, err
+	}
+	if prefInt < 0 || prefInt > bits {
 		return nil, fmt.Errorf("NET.MAKE_NET: prefix out of range")
 	}
-	mask := gonet.CIDRMask(int(pref), bits)
+	mask := gonet.CIDRMask(prefInt, bits)
 	masked := ip.Mask(mask)
 	return value.StringValue(fmt.Sprintf("%s/%d", masked.String(), pref)), nil
 }

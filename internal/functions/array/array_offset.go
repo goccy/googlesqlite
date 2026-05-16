@@ -23,5 +23,9 @@ var BindArrayAtOffset = helper.Scalar2(func(a, b value.Value) (value.Value, erro
 	if err != nil {
 		return nil, err
 	}
-	return ARRAY_OFFSET(a, int(i64))
+	idx, err := helper.SafeInt(i64)
+	if err != nil {
+		return nil, err
+	}
+	return ARRAY_OFFSET(a, idx)
 })

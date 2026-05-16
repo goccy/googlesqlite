@@ -2,18 +2,43 @@ package interval
 
 import (
 	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
 func MAKE_INTERVAL(year, month, day, hour, minute, second int64) (value.Value, error) {
+	year32, err := helper.SafeInt32(year)
+	if err != nil {
+		return nil, err
+	}
+	month32, err := helper.SafeInt32(month)
+	if err != nil {
+		return nil, err
+	}
+	day32, err := helper.SafeInt32(day)
+	if err != nil {
+		return nil, err
+	}
+	hour32, err := helper.SafeInt32(hour)
+	if err != nil {
+		return nil, err
+	}
+	minute32, err := helper.SafeInt32(minute)
+	if err != nil {
+		return nil, err
+	}
+	second32, err := helper.SafeInt32(second)
+	if err != nil {
+		return nil, err
+	}
 	return &value.IntervalValue{
 		IntervalValue: &bigquery.IntervalValue{
-			Years:   int32(year),
-			Months:  int32(month),
-			Days:    int32(day),
-			Hours:   int32(hour),
-			Minutes: int32(minute),
-			Seconds: int32(second),
+			Years:   year32,
+			Months:  month32,
+			Days:    day32,
+			Hours:   hour32,
+			Minutes: minute32,
+			Seconds: second32,
 		},
 	}, nil
 }

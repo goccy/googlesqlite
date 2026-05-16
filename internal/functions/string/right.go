@@ -11,6 +11,10 @@ func RIGHT(val value.Value, length int64) (value.Value, error) {
 	if length < 0 {
 		return nil, fmt.Errorf("RIGHT: unexpected length val. length must be positive number")
 	}
+	n, err := helper.SafeInt(length)
+	if err != nil {
+		return nil, err
+	}
 	switch val.(type) {
 	case value.StringValue:
 		v, err := val.ToString()
@@ -18,19 +22,19 @@ func RIGHT(val value.Value, length int64) (value.Value, error) {
 			return nil, err
 		}
 		runes := []rune(v)
-		if len(runes) <= int(length) {
+		if len(runes) <= n {
 			return val, nil
 		}
-		return value.StringValue(string(runes[len(runes)-int(length):])), nil
+		return value.StringValue(string(runes[len(runes)-n:])), nil
 	case value.BytesValue:
 		v, err := val.ToBytes()
 		if err != nil {
 			return nil, err
 		}
-		if len(v) <= int(length) {
+		if len(v) <= n {
 			return val, nil
 		}
-		return value.BytesValue(v[len(v)-int(length):]), nil
+		return value.BytesValue(v[len(v)-n:]), nil
 	}
 	return nil, fmt.Errorf("RIGHT: val must be STRING or BYTES")
 }

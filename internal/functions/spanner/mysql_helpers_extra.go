@@ -30,7 +30,11 @@ func BindChar(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		b.WriteRune(rune(n))
+		cp, err := helper.SafeInt32(n)
+		if err != nil {
+			return nil, err
+		}
+		b.WriteRune(rune(cp))
 	}
 	return value.StringValue(b.String()), nil
 }
@@ -89,11 +93,19 @@ func BindInsert(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	if pos <= 0 || int(pos) > len(src) {
+	posInt, err := helper.SafeInt(pos)
+	if err != nil {
+		return nil, err
+	}
+	if pos <= 0 || posInt > len(src) {
 		return value.StringValue(src), nil
 	}
-	start := int(pos - 1)
-	end := start + int(length)
+	start := posInt - 1
+	lengthInt, err := helper.SafeInt(length)
+	if err != nil {
+		return nil, err
+	}
+	end := start + lengthInt
 	if length < 0 || end > len(src) {
 		end = len(src)
 	}
@@ -124,7 +136,11 @@ func BindLocate(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		start = int(s) - 1
+		sInt, err := helper.SafeInt(s)
+		if err != nil {
+			return nil, err
+		}
+		start = sInt - 1
 		if start < 0 {
 			start = 0
 		}
@@ -155,9 +171,13 @@ func BindMid(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	start := int(pos) - 1
+	posInt, err := helper.SafeInt(pos)
+	if err != nil {
+		return nil, err
+	}
+	start := posInt - 1
 	if pos < 0 {
-		start = len(s) + int(pos)
+		start = len(s) + posInt
 	}
 	if start < 0 {
 		start = 0
@@ -171,10 +191,14 @@ func BindMid(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		if int(l) < 0 {
+		lInt, err := helper.SafeInt(l)
+		if err != nil {
+			return nil, err
+		}
+		if lInt < 0 {
 			return value.StringValue(""), nil
 		}
-		end = start + int(l)
+		end = start + lInt
 		if end > len(s) {
 			end = len(s)
 		}
@@ -324,12 +348,19 @@ func BindSubstringIndex(args ...value.Value) (value.Value, error) {
 	}
 	parts := strings.Split(s, delim)
 	if count > 0 {
-		if int(count) >= len(parts) {
+		c, err := helper.SafeInt(count)
+		if err != nil {
+			return nil, err
+		}
+		if c >= len(parts) {
 			return value.StringValue(s), nil
 		}
-		return value.StringValue(strings.Join(parts[:count], delim)), nil
+		return value.StringValue(strings.Join(parts[:c], delim)), nil
 	}
-	n := int(-count)
+	n, err := helper.SafeInt(-count)
+	if err != nil {
+		return nil, err
+	}
 	if n >= len(parts) {
 		return value.StringValue(s), nil
 	}
@@ -424,7 +455,11 @@ func BindFromDays(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := mysqlUnixEpochAsTime.AddDate(0, 0, int(n-mysqlDaysFromYear0ToUnixEpoch))
+	dayOffset, err := helper.SafeInt(n - mysqlDaysFromYear0ToUnixEpoch)
+	if err != nil {
+		return nil, err
+	}
+	d := mysqlUnixEpochAsTime.AddDate(0, 0, dayOffset)
 	return value.DateValue(d), nil
 }
 
@@ -482,7 +517,15 @@ func BindMakeDate(args ...value.Value) (value.Value, error) {
 	if doy < 1 {
 		return nil, nil
 	}
-	d := time.Date(int(year), 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, int(doy-1))
+	yearInt, err := helper.SafeInt(year)
+	if err != nil {
+		return nil, err
+	}
+	doyOffset, err := helper.SafeInt(doy - 1)
+	if err != nil {
+		return nil, err
+	}
+	d := time.Date(yearInt, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, doyOffset)
 	return value.DateValue(d), nil
 }
 
@@ -534,8 +577,15 @@ func BindPeriodAdd(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	y, m := splitPeriod(p)
-	tm := time.Date(y, time.Month(m), 1, 0, 0, 0, 0, time.UTC).AddDate(0, int(n), 0)
+	y, m, err := splitPeriod(p)
+	if err != nil {
+		return nil, err
+	}
+	months, err := helper.SafeInt(n)
+	if err != nil {
+		return nil, err
+	}
+	tm := time.Date(y, time.Month(m), 1, 0, 0, 0, 0, time.UTC).AddDate(0, months, 0)
 	return value.IntValue(int64(tm.Year())*100 + int64(tm.Month())), nil
 }
 
@@ -555,27 +605,47 @@ func BindPeriodDiff(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	ay, am := splitPeriod(a)
-	by, bm := splitPeriod(b)
+	ay, am, err := splitPeriod(a)
+	if err != nil {
+		return nil, err
+	}
+	by, bm, err := splitPeriod(b)
+	if err != nil {
+		return nil, err
+	}
 	return value.IntValue(int64((ay-by)*12 + (am - bm))), nil
 }
 
-func splitPeriod(p int64) (int, int) {
+func splitPeriod(p int64) (int, int, error) {
 	if p < 1 {
-		return 0, 0
+		return 0, 0, nil
 	}
 	if p < 7000 {
 		// MySQL convention: 2-digit year < 70 → 20xx, else 19xx.
-		yy := int(p / 100)
-		mm := int(p % 100)
+		yy, err := helper.SafeInt(p / 100)
+		if err != nil {
+			return 0, 0, err
+		}
+		mm, err := helper.SafeInt(p % 100)
+		if err != nil {
+			return 0, 0, err
+		}
 		if yy < 70 {
 			yy += 2000
 		} else {
 			yy += 1900
 		}
-		return yy, mm
+		return yy, mm, nil
 	}
-	return int(p / 100), int(p % 100)
+	yy, err := helper.SafeInt(p / 100)
+	if err != nil {
+		return 0, 0, err
+	}
+	mm, err := helper.SafeInt(p % 100)
+	if err != nil {
+		return 0, 0, err
+	}
+	return yy, mm, nil
 }
 
 // BindStrToDate parses a STRING using a MySQL date format string.
@@ -738,7 +808,14 @@ func BindInetNtoa(args ...value.Value) (value.Value, error) {
 	if n < 0 || n > 0xFFFFFFFF {
 		return nil, nil
 	}
-	ip := net.IPv4(byte(n>>24), byte(n>>16), byte(n>>8), byte(n))
+	// n is range-checked to [0, 0xFFFFFFFF] above, so the conversion to
+	// uint32 is exact. Each octet is then the low 8 bits of a shift,
+	// which is the intended IPv4 dotted-quad decomposition.
+	u, err := helper.SafeUint32(n)
+	if err != nil {
+		return nil, err
+	}
+	ip := net.IPv4(byte(u>>24), byte(u>>16), byte(u>>8), byte(u))
 	return value.StringValue(ip.String()), nil
 }
 

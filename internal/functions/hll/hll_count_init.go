@@ -17,7 +17,12 @@ type HLL_COUNT_INIT struct {
 
 func (f *HLL_COUNT_INIT) Step(input value.Value, precision int64, opt *helper.Option) (e error) {
 	f.once.Do(func() {
-		h, err := hll.NewHll(hll.Settings{Log2m: int(precision)})
+		log2m, err := helper.SafeInt(precision)
+		if err != nil {
+			e = err
+			return
+		}
+		h, err := hll.NewHll(hll.Settings{Log2m: log2m})
 		if err != nil {
 			e = err
 		}

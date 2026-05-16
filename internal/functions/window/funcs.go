@@ -9,6 +9,7 @@ import (
 
 	"gonum.org/v1/gonum/stat"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -677,7 +678,11 @@ func (f *WINDOW_PERCENTILE_CONT) Done(agg *WindowFuncAggregatedStatus) (value.Va
 			if err != nil {
 				return err
 			}
-			nonNullValues = append(nonNullValues, int(int64Val))
+			intVal, err := helper.SafeInt(int64Val)
+			if err != nil {
+				return err
+			}
+			nonNullValues = append(nonNullValues, intVal)
 			filteredValues = append(filteredValues, val)
 		}
 		if len(filteredValues) == 0 {

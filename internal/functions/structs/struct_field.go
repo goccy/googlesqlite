@@ -28,5 +28,9 @@ var BindStructField = helper.Scalar2(func(a, b value.Value) (value.Value, error)
 	if err != nil {
 		return nil, err
 	}
-	return STRUCT_FIELD(a, int(i64))
+	idx, err := helper.SafeInt(i64)
+	if err != nil {
+		return nil, err
+	}
+	return STRUCT_FIELD(a, idx)
 })

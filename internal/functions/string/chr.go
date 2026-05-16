@@ -9,7 +9,11 @@ func CHR(v int64) (value.Value, error) {
 	if v == 0 {
 		return value.StringValue(""), nil
 	}
-	return value.StringValue(string(rune(v))), nil
+	r, err := helper.SafeInt32(v)
+	if err != nil {
+		return nil, err
+	}
+	return value.StringValue(string(rune(r))), nil
 }
 
 var BindChr = helper.Scalar1(func(a value.Value) (value.Value, error) {

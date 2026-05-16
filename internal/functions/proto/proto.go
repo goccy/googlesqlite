@@ -181,7 +181,11 @@ func BindGetProtoField(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	target := protowire.Number(num)
+	numInt32, err := helper.SafeInt32(num)
+	if err != nil {
+		return nil, err
+	}
+	target := protowire.Number(numInt32)
 	kind, err := args[2].ToString()
 	if err != nil {
 		return nil, err
@@ -267,7 +271,11 @@ func BindGetProtoFieldRepeated(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	target := protowire.Number(num)
+	numInt32, err := helper.SafeInt32(num)
+	if err != nil {
+		return nil, err
+	}
+	target := protowire.Number(numInt32)
 	kind, err := args[2].ToString()
 	if err != nil {
 		return nil, err
@@ -479,7 +487,11 @@ func BindMakeProto(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, encodeSingleField(int(tag), args[i+2], kind)...)
+		tagInt, err := helper.SafeInt(tag)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, encodeSingleField(tagInt, args[i+2], kind)...)
 	}
 	return value.BytesValue(out), nil
 }
@@ -972,7 +984,11 @@ func BindProtoMapContainsKey(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	target := protowire.Number(mapTag)
+	mapTagInt32, err := helper.SafeInt32(mapTag)
+	if err != nil {
+		return nil, err
+	}
+	target := protowire.Number(mapTagInt32)
 	keyKind, err := args[2].ToString()
 	if err != nil {
 		return nil, err
@@ -1056,7 +1072,11 @@ func BindProtoModifyMap(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	mapTag := protowire.Number(mapTagNum)
+	mapTagInt32, err := helper.SafeInt32(mapTagNum)
+	if err != nil {
+		return nil, err
+	}
+	mapTag := protowire.Number(mapTagInt32)
 	keyKind, err := args[2].ToString()
 	if err != nil {
 		return nil, err
@@ -1192,6 +1212,10 @@ func BindEnumValueDescriptorProto(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
+	nInt32, err := helper.SafeInt32(n)
+	if err != nil {
+		return nil, err
+	}
 	enumName := ""
 	if len(args) >= 2 && args[1] != nil {
 		if s, err := args[1].ToString(); err == nil {
@@ -1199,7 +1223,7 @@ func BindEnumValueDescriptorProto(args ...value.Value) (value.Value, error) {
 		}
 	}
 	out := []byte{}
-	if name := lookupEnumValueName(enumName, int32(n)); name != "" {
+	if name := lookupEnumValueName(enumName, nInt32); name != "" {
 		// field 1 (name) = STRING, wire = BytesType.
 		out = append(out, 0x0a)
 		out = protowire.AppendVarint(out, uint64(len(name)))

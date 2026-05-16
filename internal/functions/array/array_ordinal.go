@@ -23,5 +23,9 @@ var BindArrayAtOrdinal = helper.Scalar2(func(a, b value.Value) (value.Value, err
 	if err != nil {
 		return nil, err
 	}
-	return ARRAY_ORDINAL(a, int(i64))
+	idx, err := helper.SafeInt(i64)
+	if err != nil {
+		return nil, err
+	}
+	return ARRAY_ORDINAL(a, idx)
 })

@@ -19,7 +19,15 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 	if err != nil {
 		return nil, err
 	}
-	pos := int(position) - 1
+	posInt, err := helper.SafeInt(position)
+	if err != nil {
+		return nil, err
+	}
+	pos := posInt - 1
+	occ, err := helper.SafeInt(occurrence)
+	if err != nil {
+		return nil, err
+	}
 	switch val.(type) {
 	case value.StringValue:
 		v, err := val.ToString()
@@ -29,11 +37,11 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if pos >= len([]rune(v)) {
 			return nil, nil
 		}
-		matches := re.FindAllStringSubmatch(v[pos:], int(occurrence))
-		if len(matches) < int(occurrence) {
+		matches := re.FindAllStringSubmatch(v[pos:], occ)
+		if len(matches) < occ {
 			return nil, nil
 		}
-		match := matches[occurrence-1]
+		match := matches[occ-1]
 		return value.StringValue(match[len(match)-1]), nil
 	case value.BytesValue:
 		v, err := val.ToBytes()
@@ -43,11 +51,11 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if pos >= len(v) {
 			return nil, nil
 		}
-		matches := re.FindAllSubmatch(v[pos:], int(occurrence))
-		if len(matches) < int(occurrence) {
+		matches := re.FindAllSubmatch(v[pos:], occ)
+		if len(matches) < occ {
 			return nil, nil
 		}
-		match := matches[occurrence-1]
+		match := matches[occ-1]
 		return value.BytesValue(match[len(match)-1]), nil
 	}
 	return nil, fmt.Errorf("REGEXP_EXTRACT: val argument must be STRING or BYTES")

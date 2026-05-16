@@ -548,8 +548,12 @@ func centuryParser(text []rune, t *time.Time) (int, error) {
 	if c < 0 {
 		return 0, fmt.Errorf("invalid century number %d", c)
 	}
+	yearInt, err := SafeInt(c*100 - 99)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
-		int(c*100-99),
+		yearInt,
 		t.Month(),
 		t.Day(),
 		t.Hour(),
@@ -575,8 +579,12 @@ func yearWithoutCenturyParser(text []rune, t *time.Time) (int, error) {
 	} else {
 		year += 2000
 	}
+	yearInt, err := SafeInt(year)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
-		int(year),
+		yearInt,
 		t.Month(),
 		t.Day(),
 		t.Hour(),
@@ -631,10 +639,14 @@ func dayParser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not parse day number: %s", err)
 	}
+	dayInt, err := SafeInt(days)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
 		t.Year(),
 		t.Month(),
-		int(days),
+		dayInt,
 		t.Hour(),
 		t.Minute(),
 		t.Second(),
@@ -675,11 +687,15 @@ func hourParser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not parse hour number: %s", err)
 	}
+	hourInt, err := SafeInt(h)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
 		t.Year(),
 		t.Month(),
 		t.Day(),
-		int(h),
+		hourInt,
 		t.Minute(),
 		t.Second(),
 		t.Nanosecond(),
@@ -724,11 +740,15 @@ func hour12Parser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not parse hour number: %s", err)
 	}
+	hourInt, err := SafeInt(h)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
 		t.Year(),
 		t.Month(),
 		t.Day(),
-		int(h),
+		hourInt,
 		t.Minute(),
 		t.Second(),
 		t.Nanosecond(),
@@ -746,7 +766,11 @@ func dayOfYearParser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not parse day of year number: %s", err)
 	}
-	dayOfYear := int(d) - 1
+	dInt, err := SafeInt(d)
+	if err != nil {
+		return 0, err
+	}
+	dayOfYear := dInt - 1
 	year := t.Year()
 	stubDate := time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, dayOfYear)
 	*t = time.Date(
@@ -771,12 +795,16 @@ func minuteParser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("unexpected minute number: %s", err)
 	}
+	minInt, err := SafeInt(m)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
 		t.Year(),
 		t.Month(),
 		t.Day(),
 		t.Hour(),
-		int(m),
+		minInt,
 		t.Second(),
 		t.Nanosecond(),
 		t.Location(),
@@ -842,9 +870,13 @@ func monthNumberParser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not parse month: %s", err)
 	}
+	monthInt, err := SafeInt(months)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
 		t.Year(),
-		time.Month(months),
+		time.Month(monthInt),
 		t.Day(),
 		t.Hour(),
 		t.Minute(),
@@ -966,13 +998,17 @@ func secondParser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("unexpected second number: %s", err)
 	}
+	secInt, err := SafeInt(s)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
 		t.Year(),
 		t.Month(),
 		t.Day(),
 		t.Hour(),
 		t.Minute(),
-		int(s),
+		secInt,
 		t.Nanosecond(),
 		t.Location(),
 	)
@@ -1069,8 +1105,12 @@ func yearParser(text []rune, t *time.Time) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not parse year: %s", err)
 	}
+	yearInt, err := SafeInt(y)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
-		int(y),
+		yearInt,
 		t.Month(),
 		t.Day(),
 		t.Hour(),
@@ -1385,7 +1425,10 @@ func timeZoneRFC3339Parser(target []rune, t *time.Time) (int, error) {
 		if err != nil {
 			return 0, fmt.Errorf("unexpected hour:minute format: %w", err)
 		}
-		hs := int(h*60*60 + m*60)
+		hs, err := SafeInt(h*60*60 + m*60)
+		if err != nil {
+			return 0, err
+		}
 		if s == '-' {
 			hs *= -1
 		}
@@ -1436,14 +1479,22 @@ func timePrecisionParser(precision int, text []rune, t *time.Time) (int, error) 
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse nanoseconds parameter for %s: %w", string(text), err)
 	}
+	secInt, err := SafeInt(s)
+	if err != nil {
+		return 0, err
+	}
+	nanoInt, err := SafeInt(n)
+	if err != nil {
+		return 0, err
+	}
 	*t = time.Date(
 		t.Year(),
 		t.Month(),
 		t.Day(),
 		t.Hour(),
 		t.Minute(),
-		int(s),
-		int(n),
+		secInt,
+		nanoInt,
 		t.Location(),
 	)
 	return fmtLen, nil

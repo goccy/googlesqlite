@@ -26,7 +26,19 @@ func TIME(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		return value.TimeValue(time.Date(0, 0, 0, int(hour), int(min), int(sec), 0, loc)), nil
+		hourInt, err := helper.SafeInt(hour)
+		if err != nil {
+			return nil, err
+		}
+		minInt, err := helper.SafeInt(min)
+		if err != nil {
+			return nil, err
+		}
+		secInt, err := helper.SafeInt(sec)
+		if err != nil {
+			return nil, err
+		}
+		return value.TimeValue(time.Date(0, 0, 0, hourInt, minInt, secInt, 0, loc)), nil
 	}
 	if len(args) != 1 && len(args) != 2 {
 		return nil, fmt.Errorf("TIME: invalid number of arguments: got %d, want 1 or 2", len(args))

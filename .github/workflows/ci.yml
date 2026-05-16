@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# The CI jobs only read the repository contents; grant the minimum
+# token scope so a compromised action cannot push to the repo.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest

@@ -161,7 +161,11 @@ func BindSpace(args ...value.Value) (value.Value, error) {
 	if n < 0 {
 		n = 0
 	}
-	return value.StringValue(strings.Repeat(" ", int(n))), nil
+	count, err := helper.SafeInt(n)
+	if err != nil {
+		return nil, err
+	}
+	return value.StringValue(strings.Repeat(" ", count)), nil
 }
 
 // BindPosition returns the 1-based offset of `needle` within

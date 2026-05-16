@@ -119,7 +119,10 @@ func BindSpannerTokenizeNGrams(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		n = int(x)
+		n, err = helper.SafeInt(x)
+		if err != nil {
+			return nil, err
+		}
 		if n < 1 {
 			n = 1
 		}

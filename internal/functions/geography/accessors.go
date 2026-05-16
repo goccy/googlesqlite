@@ -1,6 +1,7 @@
 package geography
 
 import (
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -56,7 +57,10 @@ func BindStPointN(args ...value.Value) (value.Value, error) {
 	if !ok || len(pts) == 0 {
 		return nil, nil
 	}
-	idx := int(n)
+	idx, err := helper.SafeInt(n)
+	if err != nil {
+		return nil, err
+	}
 	if idx > 0 {
 		idx--
 	} else if idx < 0 {
@@ -85,7 +89,11 @@ func BindStGeometryN(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	idx := int(n) - 1
+	nInt, err := helper.SafeInt(n)
+	if err != nil {
+		return nil, err
+	}
+	idx := nInt - 1
 	if idx < 0 {
 		return nil, nil
 	}

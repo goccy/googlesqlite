@@ -26,7 +26,10 @@ var BindRound = helper.ScalarN(func(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		precision = int(i64)
+		precision, err = helper.SafeInt(i64)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return ROUND(args[0], precision)
 })

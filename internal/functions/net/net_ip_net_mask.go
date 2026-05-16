@@ -9,7 +9,15 @@ import (
 )
 
 func NET_IP_NET_MASK(output, prefix int64) (value.Value, error) {
-	result := net.CIDRMask(int(prefix), int(output)*8)
+	prefixInt, err := helper.SafeInt(prefix)
+	if err != nil {
+		return nil, err
+	}
+	outputInt, err := helper.SafeInt(output * 8)
+	if err != nil {
+		return nil, err
+	}
+	result := net.CIDRMask(prefixInt, outputInt)
 	if output != 4 && output != 16 {
 		return nil, fmt.Errorf("NET.IP_NET_MASK: the first argument must be either 4 or 16")
 	}

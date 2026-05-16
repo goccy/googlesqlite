@@ -8,6 +8,7 @@ import (
 	"github.com/golang/geo/s1"
 	"github.com/golang/geo/s2"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -641,7 +642,10 @@ func BindS2CellIDFromPoint(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		level = int(l)
+		level, err = helper.SafeInt(l)
+		if err != nil {
+			return nil, err
+		}
 		if level < 0 || level > 30 {
 			return nil, sqError("S2_CELLIDFROMPOINT", "level out of range [0, 30]")
 		}
@@ -680,14 +684,20 @@ func BindS2CoveringCellIDs(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		minLevel = int(l)
+		minLevel, err = helper.SafeInt(l)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(args) >= 3 && args[2] != nil {
 		l, err := args[2].ToInt64()
 		if err != nil {
 			return nil, err
 		}
-		maxLevel = int(l)
+		maxLevel, err = helper.SafeInt(l)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(args) >= 4 && args[3] != nil {
 		n, err := args[3].ToInt64()
@@ -695,7 +705,10 @@ func BindS2CoveringCellIDs(args ...value.Value) (value.Value, error) {
 			return nil, err
 		}
 		if n > 0 {
-			maxCells = int(n)
+			maxCells, err = helper.SafeInt(n)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	cov := &s2.RegionCoverer{MinLevel: minLevel, MaxLevel: maxLevel, MaxCells: maxCells}
@@ -928,7 +941,10 @@ func BindStGeoHash(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		precision = int(p)
+		precision, err = helper.SafeInt(p)
+		if err != nil {
+			return nil, err
+		}
 		if precision < 1 || precision > 20 {
 			return nil, sqError("ST_GEOHASH", "precision out of range [1, 20]")
 		}
