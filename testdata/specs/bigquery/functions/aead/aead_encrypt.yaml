@@ -1,0 +1,18 @@
+spec: docs/specs/bigquery/functions/aead/aead_encrypt.md
+dialect: bigquery
+cases:
+  - desc: encrypt + decrypt round-trip
+    sql: |-
+      WITH ks AS (
+        SELECT KEYS.NEW_KEYSET('AEAD_AES_GCM_256') AS k
+      )
+      SELECT AEAD.DECRYPT_STRING(
+        (SELECT k FROM ks),
+        AEAD.ENCRYPT(
+          (SELECT k FROM ks),
+          'hello world',
+          'aad'),
+        'aad')
+    expected:
+      rows:
+        - ['hello world']

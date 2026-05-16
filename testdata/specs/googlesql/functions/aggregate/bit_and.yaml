@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/bit_and.md
+dialect: googlesql
+cases:
+  - desc: bit_and over integers
+    sql: SELECT BIT_AND(x) FROM UNNEST([7, 3, 5]) AS x
+    expected:
+      rows:
+        - [1]

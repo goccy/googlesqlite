@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/repeat_stmt.md
+dialect: googlesql
+cases:
+  - desc: REPEAT body runs at least once
+    setup:
+      - REPEAT SELECT 1; UNTIL TRUE END REPEAT
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

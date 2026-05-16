@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/regexp_instr.md
+dialect: googlesql
+cases:
+  - desc: regexp_instr basic behaviour
+    sql: SELECT REGEXP_INSTR("hello", "l")
+    expected:
+      rows:
+        - [3]

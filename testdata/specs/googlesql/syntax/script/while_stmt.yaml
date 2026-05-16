@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/while_stmt.md
+dialect: googlesql
+cases:
+  - desc: WHILE with immediate BREAK
+    setup:
+      - WHILE 1 = 2 DO SELECT 1; END WHILE
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/json/json_value.md
+dialect: googlesql
+cases:
+  - desc: extract string by JSONPath
+    sql: |
+      SELECT JSON_VALUE('{"name": "alice"}', "$.name")
+    expected:
+      rows:
+        - ["alice"]

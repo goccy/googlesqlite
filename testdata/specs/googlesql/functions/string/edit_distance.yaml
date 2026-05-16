@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/edit_distance.md
+dialect: googlesql
+cases:
+  - desc: edit_distance basic behaviour
+    sql: SELECT EDIT_DISTANCE("kitten", "sitting")
+    expected:
+      rows:
+        - [3]

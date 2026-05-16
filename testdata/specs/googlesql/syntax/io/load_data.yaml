@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/syntax/io/load_data.md
+dialect: googlesql
+cases:
+  - desc: LOAD DATA INTO ... FROM FILES (...) executes as a no-op
+    setup:
+      - CREATE TABLE load_ds.t1 (a INT64)
+      - "LOAD DATA INTO load_ds.t1 FROM FILES (uris=['gs://demo/data.csv'], format='CSV')"
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

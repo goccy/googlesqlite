@@ -1,0 +1,10 @@
+spec: docs/specs/bigquery/functions/time_series/changes.md
+dialect: bigquery
+cases:
+  - desc: CHANGES lowers to an empty subquery
+    sql: |-
+      CREATE TABLE IF NOT EXISTS changes_t (id INT64);
+      SELECT COALESCE((SELECT id FROM CHANGES(TABLE changes_t, NULL, CURRENT_TIMESTAMP()) LIMIT 1), 999) AS placeholder
+    expected:
+      rows:
+        - [999]

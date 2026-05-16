@@ -1,0 +1,29 @@
+spec: docs/specs/googlesql/functions/range/range_intersect.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/range-functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT RANGE_INTERSECT(
+        RANGE<DATE> '[2022-02-01, 2022-09-01)',
+        RANGE<DATE> '[2021-06-15, 2022-04-15)') AS results
+    expected:
+      rows:
+        - ['[2022-02-01, 2022-04-15)']
+  - desc: upstream example 2
+    sql: |-
+      SELECT RANGE_INTERSECT(
+        RANGE<DATE> '[2022-02-01, UNBOUNDED)',
+        RANGE<DATE> '[2021-06-15, 2022-04-15)') AS results
+    expected:
+      rows:
+        - ['[2022-02-01, 2022-04-15)']
+  - desc: upstream example 3
+    sql: |-
+      SELECT RANGE_INTERSECT(
+        RANGE<DATE> '[2022-02-01, UNBOUNDED)',
+        RANGE<DATE> '[2021-06-15, UNBOUNDED)') AS results
+    expected:
+      rows:
+        - ['[2022-02-01, UNBOUNDED)']

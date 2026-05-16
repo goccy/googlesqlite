@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/string.md
+dialect: googlesql
+cases:
+  - desc: string basic behaviour
+    sql: SELECT STRING(JSON '"hello"')
+    expected:
+      rows:
+        - ['hello']

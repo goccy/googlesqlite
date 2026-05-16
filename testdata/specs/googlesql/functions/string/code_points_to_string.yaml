@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/code_points_to_string.md
+dialect: googlesql
+cases:
+  - desc: code_points_to_string basic behaviour
+    sql: SELECT CODE_POINTS_TO_STRING([72, 101])
+    expected:
+      rows:
+        - ['He']

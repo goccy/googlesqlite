@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/break.md
+dialect: googlesql
+cases:
+  - desc: BREAK exits the innermost LOOP
+    setup:
+      - LOOP BREAK; END LOOP
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

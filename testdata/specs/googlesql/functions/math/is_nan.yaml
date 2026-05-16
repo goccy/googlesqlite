@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/is_nan.md
+dialect: googlesql
+cases:
+  - desc: is_nan on number
+    sql: SELECT IS_NAN(1.0)
+    expected:
+      rows:
+        - [false]

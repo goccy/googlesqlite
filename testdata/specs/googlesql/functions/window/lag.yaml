@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/window/lag.md
+dialect: googlesql
+cases:
+  - desc: lag returns prior row
+    sql: |
+      SELECT x, LAG(x) OVER (ORDER BY x) AS prev
+      FROM UNNEST([10, 20, 30]) AS x
+      ORDER BY x
+    expected:
+      rows:
+        - [10, null]
+        - [20, 10]
+        - [30, 20]

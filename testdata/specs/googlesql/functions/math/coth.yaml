@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/coth.md
+dialect: googlesql
+cases:
+  - desc: coth of typical input is finite
+    sql: SELECT IS_NAN(COTH(1.0))
+    expected:
+      rows:
+        - [false]

@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_length.md
+dialect: googlesql
+cases:
+  - desc: 1-degree linestring at equator
+    sql: |-
+      SELECT ROUND(ST_LENGTH(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0)')) / 1000)
+    expected:
+      rows:
+        - [111]

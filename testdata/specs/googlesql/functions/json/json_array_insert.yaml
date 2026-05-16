@@ -1,0 +1,62 @@
+spec: docs/specs/googlesql/functions/json/json_array_insert.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/json_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '["a", ["b", "c"], "d"]', '$[1]', 1) AS json_data
+    expected:
+      rows:
+        - ['["a",1,["b","c"],"d"]']
+  - desc: upstream example 2
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '["a", ["b", "c"], "d"]', '$[1][0]', 1) AS json_data
+    expected:
+      rows:
+        - ['["a",[1,"b","c"],"d"]']
+  - desc: upstream example 3
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '["a", "b", "c"]', '$[1]', [1, 2]) AS json_data
+    expected:
+      rows:
+        - ['["a",1,2,"b","c"]']
+  - desc: upstream example 4
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(
+        JSON '["a", "b", "c"]',
+        '$[1]', [1, 2],
+        insert_each_element=>FALSE) AS json_data
+    expected:
+      rows:
+        - ['["a",[1,2],"b","c"]']
+  - desc: upstream example 5
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '["a", "b", "c", "d"]', '$[7]', "e") AS json_data
+    expected:
+      rows:
+        - ['["a","b","c","d",null,null,null,"e"]']
+  - desc: upstream example 6
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '{"a": {}}', '$.a[0]', 2) AS json_data
+    expected:
+      rows:
+        - ['{"a":{}}']
+  - desc: upstream example 7
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '[1, 2]', '$', 3) AS json_data
+    expected:
+      rows:
+        - ['[1,2]']
+  - desc: upstream example 8
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '{"a": null}', '$.a[2]', 10) AS json_data
+    expected:
+      rows:
+        - ['{"a":[null,null,10]}']
+  - desc: upstream example 9
+    sql: |-
+      SELECT JSON_ARRAY_INSERT(JSON '1', '$[0]', 'r1') AS json_data
+    expected:
+      rows:
+        - ['1']

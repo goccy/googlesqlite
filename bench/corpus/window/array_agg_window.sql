@@ -1,0 +1,9 @@
+CREATE TABLE rows_ (grp INT64, v INT64);
+INSERT INTO rows_ (grp, v)
+  SELECT MOD(n, 4), n
+  FROM UNNEST(GENERATE_ARRAY(1, 200)) AS n;
+-- @query
+SELECT grp, v,
+       ARRAY_AGG(v) OVER (PARTITION BY grp ORDER BY v ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS recent
+FROM rows_
+ORDER BY grp, v

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/timestamp/timestamp.md
+dialect: googlesql
+cases:
+  - desc: timestamp from string round-trips through unix seconds
+    sql: SELECT UNIX_SECONDS(TIMESTAMP("2024-03-15 12:00:00+00"))
+    expected:
+      rows:
+        - [1710504000]

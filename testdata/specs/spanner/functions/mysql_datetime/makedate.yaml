@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_datetime/makedate.md
+dialect: spanner
+cases:
+  - desc: year + day-of-year to DATE
+    sql: |-
+      SELECT mysql.makedate(2024, 100)
+    expected:
+      rows:
+        - ['2024-04-09']

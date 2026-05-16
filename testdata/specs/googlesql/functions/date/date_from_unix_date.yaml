@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/date_from_unix_date.md
+dialect: googlesql
+cases:
+  - desc: epoch day 0 is 1970-01-01
+    sql: SELECT DATE_FROM_UNIX_DATE(0)
+    expected:
+      rows:
+        - ['1970-01-01']

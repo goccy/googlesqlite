@@ -1,0 +1,39 @@
+spec: docs/specs/googlesql/syntax/dml/truncate_table.md
+dialect: googlesql
+cases:
+  - desc: TRUNCATE TABLE empties rows but keeps the schema
+    setup:
+      - CREATE TABLE trunc_ds.t (a INT64)
+      - "INSERT INTO trunc_ds.t (a) VALUES (1), (2), (3)"
+      - TRUNCATE TABLE trunc_ds.t
+    sql: |-
+      SELECT column_name
+      FROM trunc_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 't'
+    expected:
+      rows:
+        - ['a']
+  - desc: TRUNCATE TABLE — 2-segment dataset.table path
+    setup:
+      - CREATE TABLE trunc_two.tbl (a INT64)
+      - "INSERT INTO trunc_two.tbl (a) VALUES (1), (2)"
+      - TRUNCATE TABLE trunc_two.tbl
+    sql: SELECT a FROM trunc_two.tbl
+    expected:
+      rows: []
+  - desc: TRUNCATE TABLE — 3-segment project.dataset.table path
+    setup:
+      - CREATE TABLE proj_x.ds_x.tbl_x (a INT64)
+      - "INSERT INTO proj_x.ds_x.tbl_x (a) VALUES (10)"
+      - TRUNCATE TABLE proj_x.ds_x.tbl_x
+    sql: SELECT a FROM proj_x.ds_x.tbl_x
+    expected:
+      rows: []
+  - desc: TRUNCATE TABLE — backquoted compound path
+    setup:
+      - CREATE TABLE trunc_bq.tbl_bq (a INT64)
+      - "INSERT INTO trunc_bq.tbl_bq (a) VALUES (99)"
+      - "TRUNCATE TABLE `trunc_bq.tbl_bq`"
+    sql: SELECT a FROM trunc_bq.tbl_bq
+    expected:
+      rows: []

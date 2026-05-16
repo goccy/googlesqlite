@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_datetime/monthname.md
+dialect: spanner
+cases:
+  - desc: month name from DATE
+    sql: |-
+      SELECT mysql.monthname(DATE '2024-03-15')
+    expected:
+      rows:
+        - ['March']

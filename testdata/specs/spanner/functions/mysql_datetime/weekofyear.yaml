@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/weekofyear.md
+dialect: spanner
+cases:
+  - desc: weekofyear is a synonym of week
+    sql: SELECT mysql.weekofyear(DATE "2024-03-15")
+    expected:
+      rows:
+        - [11]

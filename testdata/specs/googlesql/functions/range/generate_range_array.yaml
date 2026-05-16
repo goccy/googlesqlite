@@ -1,0 +1,42 @@
+spec: docs/specs/googlesql/functions/range/generate_range_array.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/range-functions.md. The upstream
+# Examples table renders the ARRAY<RANGE<DATE>> result as a single cell
+# spanning multiple display lines (`[r1, r2, ..., r5]`); each case here
+# packs that cell into a single ARRAY-shape expected row so the runner's
+# `[]any` vs string comparison normalises to the same canonical form.
+cases:
+  - desc: upstream example 1 — 1-day buckets covering the full range
+    sql: |-
+      SELECT GENERATE_RANGE_ARRAY(
+        RANGE(DATE '2020-01-01', DATE '2020-01-06'),
+        INTERVAL 1 DAY) AS results
+    expected:
+      rows:
+        - ['[[2020-01-01, 2020-01-02), [2020-01-02, 2020-01-03), [2020-01-03, 2020-01-04), [2020-01-04, 2020-01-05), [2020-01-05, 2020-01-06)]']
+  - desc: upstream example 2 — 2-day buckets, trailing bucket clipped to the end
+    sql: |-
+      SELECT GENERATE_RANGE_ARRAY(
+        RANGE(DATE '2020-01-01', DATE '2020-01-06'),
+        INTERVAL 2 DAY) AS results
+    expected:
+      rows:
+        - ['[[2020-01-01, 2020-01-03), [2020-01-03, 2020-01-05), [2020-01-05, 2020-01-06)]']
+  - desc: upstream example 3 — 2-day buckets with explicit `last_partial_range = TRUE`
+    sql: |-
+      SELECT GENERATE_RANGE_ARRAY(
+        RANGE(DATE '2020-01-01', DATE '2020-01-06'),
+        INTERVAL 2 DAY,
+        TRUE) AS results
+    expected:
+      rows:
+        - ['[[2020-01-01, 2020-01-03), [2020-01-03, 2020-01-05), [2020-01-05, 2020-01-06)]']
+  - desc: upstream example 4 — `last_partial_range = FALSE` drops the trailing partial
+    sql: |-
+      SELECT GENERATE_RANGE_ARRAY(
+        RANGE(DATE '2020-01-01', DATE '2020-01-06'),
+        INTERVAL 2 DAY,
+        FALSE) AS results
+    expected:
+      rows:
+        - ['[[2020-01-01, 2020-01-03), [2020-01-03, 2020-01-05)]']

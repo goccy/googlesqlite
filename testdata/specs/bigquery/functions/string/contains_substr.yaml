@@ -1,0 +1,18 @@
+spec: docs/specs/bigquery/functions/string/contains_substr.md
+dialect: bigquery
+cases:
+  - desc: simple substring match returns TRUE
+    sql: SELECT CONTAINS_SUBSTR('Hello, world!', 'world')
+    expected:
+      rows:
+        - [true]
+  - desc: case-insensitive match
+    sql: SELECT CONTAINS_SUBSTR('Hello, World!', 'hello')
+    expected:
+      rows:
+        - [true]
+  - desc: substring absent
+    sql: SELECT CONTAINS_SUBSTR('Hello', 'goodbye')
+    expected:
+      rows:
+        - [false]

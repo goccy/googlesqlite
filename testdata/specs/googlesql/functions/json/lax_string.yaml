@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_string.md
+dialect: googlesql
+cases:
+  - desc: lax_string basic behaviour
+    sql: SELECT LAX_STRING(JSON '"hello"')
+    expected:
+      rows:
+        - ['hello']

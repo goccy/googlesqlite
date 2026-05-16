@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_difference.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT
+        ST_DIFFERENCE(
+            ST_GEOGFROMTEXT('POLYGON((0 0, 10 0, 10 10, 0 0))'),
+            ST_GEOGFROMTEXT('POLYGON((4 2, 6 2, 8 6, 4 2))')
+        )
+    expected:
+      rows:
+        - ['POLYGON((0 0, 10 0, 10 10, 0 0), (8 6, 6 2, 4 2, 8 6))']

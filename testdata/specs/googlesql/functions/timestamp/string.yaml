@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/timestamp/string.md
+dialect: googlesql
+cases:
+  - desc: STRING returns a formatted timestamp
+    sql: SELECT STRING(TIMESTAMP '2024-06-15 13:45:00 UTC', 'UTC') IS NOT NULL
+    expected:
+      rows:
+        - [true]

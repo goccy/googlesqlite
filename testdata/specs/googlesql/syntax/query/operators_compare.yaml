@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/syntax/query/operators_compare.md
+dialect: googlesql
+cases:
+  - desc: relational operators
+    sql: SELECT 1 < 2 AS lt, 1 = 1 AS eq, 1 != 2 AS ne, 3 >= 3 AS ge
+    expected:
+      rows:
+        - [true, true, true, true]
+  - desc: IS DISTINCT FROM treats NULL like a value
+    sql: |-
+      SELECT
+        1 IS DISTINCT FROM 2 AS r1,
+        NULL IS DISTINCT FROM NULL AS r2,
+        1 IS DISTINCT FROM NULL AS r3
+    expected:
+      rows:
+        - [true, false, true]

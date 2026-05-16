@@ -1,0 +1,17 @@
+spec: docs/specs/spanner/functions/compression/zstd_decompress_to_string.md
+dialect: spanner
+# Candidate testdata sourced from googlesql compliance fixtures.
+# Review each case before committing as authoritative.
+cases:
+  - desc: zstd_decompress_to_string_null
+    sql: |-
+      select zstd_decompress_to_string(null)
+    expected:
+      rows:
+        - [null]
+  - desc: zstd_decompress_to_string_optional_arg_null
+    sql: |-
+      select zstd_decompress_to_string(b"(\xb5/\xfd \x05)\x00\x00bytes", size_limit => NULL)
+    expected:
+      rows:
+        - [null]

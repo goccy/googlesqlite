@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/tan.md
+dialect: googlesql
+cases:
+  - desc: TAN(0) is 0
+    sql: SELECT TAN(0)
+    expected:
+      rows:
+        - [0.0]

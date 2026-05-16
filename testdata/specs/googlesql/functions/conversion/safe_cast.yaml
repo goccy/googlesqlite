@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/conversion/safe_cast.md
+dialect: googlesql
+cases:
+  - desc: valid cast
+    sql: SELECT SAFE_CAST("42" AS INT64)
+    expected:
+      rows:
+        - [42]
+  - desc: invalid cast returns NULL
+    sql: SELECT SAFE_CAST("abc" AS INT64)
+    expected:
+      rows:
+        - [null]

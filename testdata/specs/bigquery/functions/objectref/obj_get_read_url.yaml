@@ -1,0 +1,9 @@
+spec: docs/specs/bigquery/functions/objectref/obj_get_read_url.md
+dialect: bigquery
+# OBJ.GET_READ_URL returns the same deterministic stub URL prefix.
+cases:
+  - desc: stub read URL has expected prefix
+    sql: SELECT STARTS_WITH(obj.get_read_url('gs://bucket/file'), 'https://storage.googleapis.local/') AS r
+    expected:
+      rows:
+        - [true]

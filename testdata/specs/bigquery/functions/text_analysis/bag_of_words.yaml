@@ -1,0 +1,18 @@
+spec: docs/specs/bigquery/functions/text_analysis/bag_of_words.md
+dialect: bigquery
+cases:
+  - desc: counts each distinct term and sorts by term
+    sql: SELECT TO_JSON_STRING(BAG_OF_WORDS(['I','like','pie','pie','pie']))
+    expected:
+      rows:
+        - ['[{"term":"I","count":1},{"term":"like","count":1},{"term":"pie","count":3}]']
+  - desc: distinct terms preserved, count reflects multiplicity
+    sql: SELECT TO_JSON_STRING(BAG_OF_WORDS(['yum','yum','pie']))
+    expected:
+      rows:
+        - ['[{"term":"pie","count":1},{"term":"yum","count":2}]']
+  - desc: NULL input propagates
+    sql: SELECT BAG_OF_WORDS(CAST(NULL AS ARRAY<STRING>))
+    expected:
+      rows:
+        - [null]

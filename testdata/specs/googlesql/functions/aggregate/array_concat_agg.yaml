@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/aggregate/array_concat_agg.md
+dialect: googlesql
+cases:
+  - desc: concat arrays preserves order
+    sql: |
+      SELECT ARRAY_CONCAT_AGG(arr ORDER BY id)
+      FROM UNNEST([
+        STRUCT(1 AS id, [1, 2] AS arr),
+        STRUCT(2 AS id, [3, 4] AS arr)
+      ])
+    expected:
+      rows:
+        - [[1, 2, 3, 4]]

@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_encryption/sha2.md
+dialect: spanner
+cases:
+  - desc: SHA-256 'hello'
+    sql: |-
+      SELECT mysql.sha2('hello', 256)
+    expected:
+      rows:
+        - ['2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824']

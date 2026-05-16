@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/hash/md5.md
+dialect: googlesql
+cases:
+  - desc: md5 of empty bytes
+    sql: SELECT TO_HEX(MD5(b""))
+    expected:
+      rows:
+        - ["d41d8cd98f00b204e9800998ecf8427e"]

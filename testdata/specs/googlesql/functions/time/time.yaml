@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/time.md
+dialect: googlesql
+cases:
+  - desc: construct time
+    sql: SELECT CAST(TIME(12, 30, 45) AS STRING)
+    expected:
+      rows:
+        - ["12:30:45"]

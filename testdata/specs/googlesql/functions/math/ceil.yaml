@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/math/ceil.md
+dialect: googlesql
+cases:
+  - desc: rounds up positive fraction
+    sql: SELECT CEIL(1.2)
+    expected:
+      rows:
+        - [2.0]
+  - desc: rounds toward zero on negative fraction
+    sql: SELECT CEIL(-1.2)
+    expected:
+      rows:
+        - [-1.0]
+  - desc: integer value is unchanged
+    sql: SELECT CEIL(3.0)
+    expected:
+      rows:
+        - [3.0]
+  - desc: null propagates
+    sql: SELECT CEIL(NULL)
+    expected:
+      rows:
+        - [null]

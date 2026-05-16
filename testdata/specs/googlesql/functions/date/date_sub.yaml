@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/date_sub.md
+dialect: googlesql
+cases:
+  - desc: subtract 5 days
+    sql: SELECT FORMAT_DATE('%Y-%m-%d', DATE_SUB(DATE '2020-01-10', INTERVAL 5 DAY))
+    expected:
+      rows:
+        - ['2020-01-05']

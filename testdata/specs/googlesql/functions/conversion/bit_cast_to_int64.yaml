@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/conversion/bit_cast_to_int64.md
+dialect: googlesql
+cases:
+  - desc: bit-cast a positive int64 is identity
+    sql: SELECT BIT_CAST_TO_INT64(42)
+    expected:
+      rows:
+        - [42]

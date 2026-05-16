@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/tokenize_number.md
+dialect: spanner
+cases:
+  - desc: number tokenises
+    sql: |-
+      SELECT LENGTH(CAST(TOKENIZE_NUMBER(3.14) AS STRING)) > 0
+    expected:
+      rows:
+        - [true]

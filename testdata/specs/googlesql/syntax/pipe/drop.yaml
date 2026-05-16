@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/syntax/pipe/drop.md
+dialect: googlesql
+cases:
+  - desc: drop one column
+    sql: |-
+      FROM (SELECT 1 AS x, 2 AS y)
+      |> DROP x
+    expected:
+      rows:
+        - [2]
+  - desc: drop multiple columns
+    sql: |-
+      FROM (SELECT 1 AS x, 2 AS y, 3 AS z)
+      |> DROP x, z
+    expected:
+      rows:
+        - [2]

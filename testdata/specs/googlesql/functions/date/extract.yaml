@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/extract.md
+dialect: googlesql
+cases:
+  - desc: EXTRACT(YEAR FROM DATE)
+    sql: SELECT EXTRACT(YEAR FROM DATE '2024-06-15')
+    expected:
+      rows:
+        - [2024]

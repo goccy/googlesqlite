@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/syntax/io/export_data.md
+dialect: googlesql
+cases:
+  - desc: EXPORT DATA OPTIONS(...) AS SELECT yields the inner rows
+    sql: |-
+      EXPORT DATA
+      OPTIONS(uri = 'gs://demo/out.csv', format = 'CSV')
+      AS SELECT 1 AS x, 'a' AS y
+    expected:
+      rows:
+        - [1, 'a']

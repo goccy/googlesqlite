@@ -1,0 +1,11 @@
+spec: docs/specs/spanner/functions/ml/ml_predict.md
+dialect: spanner
+# ML.PREDICT is a stub that passes through the features payload
+# unchanged in our runtime (no real model service). The pass-through
+# property is the deterministic surface we assert.
+cases:
+  - desc: features pass-through stub
+    sql: SELECT ml.predict('any-model-id', 'features-blob') AS r
+    expected:
+      rows:
+        - ['features-blob']

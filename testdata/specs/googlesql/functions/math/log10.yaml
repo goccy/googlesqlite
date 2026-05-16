@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/log10.md
+dialect: googlesql
+cases:
+  - desc: log10 of 100
+    sql: SELECT LOG10(100.0)
+    expected:
+      rows:
+        - [2.0]

@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/syntax/query/qualify.md
+dialect: googlesql
+cases:
+  - desc: top-1 per partition via QUALIFY
+    sql: |-
+      SELECT k, v
+      FROM UNNEST([STRUCT('a' AS k, 1 AS v), ('a', 2), ('b', 3), ('b', 0)])
+      QUALIFY RANK() OVER (PARTITION BY k ORDER BY v DESC) = 1
+      ORDER BY k
+    expected:
+      rows:
+        - ['a', 2]
+        - ['b', 3]

@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_string/position.md
+dialect: spanner
+cases:
+  - desc: substring found at position 2 (1-based)
+    sql: SELECT mysql.position('bar', 'foobarbaz')
+    expected:
+      rows:
+        - [4]
+  - desc: substring not found returns 0
+    sql: SELECT mysql.position('xyz', 'foobar')
+    expected:
+      rows:
+        - [0]

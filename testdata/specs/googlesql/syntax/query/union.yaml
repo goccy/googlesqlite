@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/syntax/query/union.md
+dialect: googlesql
+cases:
+  - desc: UNION ALL retains duplicates
+    sql: |-
+      (SELECT 1 AS x) UNION ALL (SELECT 1)
+    expected:
+      rows:
+        - [1]
+        - [1]
+  - desc: UNION DISTINCT deduplicates
+    sql: |-
+      (SELECT 1 AS x UNION ALL SELECT 2) UNION DISTINCT (SELECT 2 UNION ALL SELECT 3)
+    expected:
+      rows:
+        - [1]
+        - [2]
+        - [3]

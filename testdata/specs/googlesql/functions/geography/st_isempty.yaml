@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_isempty.md
+dialect: googlesql
+cases:
+  - desc: Non-empty linestring
+    sql: |-
+      SELECT ST_ISEMPTY(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0)'))
+    expected:
+      rows:
+        - [false]

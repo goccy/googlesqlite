@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/for_in.md
+dialect: googlesql
+cases:
+  - desc: FOR ... IN over a subquery
+    setup:
+      - FOR row IN (SELECT 1 AS x UNION ALL SELECT 2) DO SELECT row.x; END FOR
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

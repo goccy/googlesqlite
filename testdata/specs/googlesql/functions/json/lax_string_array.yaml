@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_string_array.md
+dialect: googlesql
+cases:
+  - desc: lax_string_array extracts a typed array with NULLs on bad elements
+    sql: SELECT TO_JSON_STRING(LAX_STRING_ARRAY(JSON '["a","b"]'))
+    expected:
+      rows:
+        - ['["a","b"]']

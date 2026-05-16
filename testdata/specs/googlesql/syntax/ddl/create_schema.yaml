@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/syntax/ddl/create_schema.md
+dialect: googlesql
+cases:
+  - desc: CREATE SCHEMA executes without error
+    setup:
+      - CREATE SCHEMA cs_demo
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]
+  - desc: CREATE SCHEMA with OPTIONS executes without error
+    setup:
+      - "CREATE SCHEMA cs_demo2 OPTIONS(description='demo schema')"
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_double_array.md
+dialect: googlesql
+cases:
+  - desc: lax_double_array extracts a typed array with NULLs on bad elements
+    sql: SELECT TO_JSON_STRING(LAX_DOUBLE_ARRAY(JSON '[1.0,2.5]'))
+    expected:
+      rows:
+        - ['[1,2.5]']

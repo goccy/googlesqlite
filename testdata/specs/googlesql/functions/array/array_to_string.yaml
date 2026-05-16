@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_to_string.md
+dialect: googlesql
+cases:
+  - desc: join with comma
+    sql: SELECT ARRAY_TO_STRING(["a", "b", "c"], ",")
+    expected:
+      rows:
+        - ["a,b,c"]

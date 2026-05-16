@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/trim.md
+dialect: googlesql
+cases:
+  - desc: trim spaces
+    sql: SELECT TRIM('  hi  ')
+    expected:
+      rows:
+        - ['hi']
+  - desc: no whitespace
+    sql: SELECT TRIM('hi')
+    expected:
+      rows:
+        - ['hi']

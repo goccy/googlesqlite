@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/string/ucase.md
+dialect: spanner
+cases:
+  - desc: ucase is the upper-case alias
+    sql: SELECT mysql.ucase('hello')
+    expected:
+      rows:
+        - ['HELLO']

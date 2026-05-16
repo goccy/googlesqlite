@@ -1,0 +1,18 @@
+spec: docs/specs/bigquery/functions/json/float64.md
+dialect: bigquery
+cases:
+  - desc: integer JSON value
+    sql: SELECT FLOAT64(JSON '42')
+    expected:
+      rows:
+        - [42.0]
+  - desc: floating-point JSON value
+    sql: SELECT FLOAT64(JSON '3.14')
+    expected:
+      rows:
+        - [3.14]
+  - desc: NULL JSON returns NULL
+    sql: SELECT FLOAT64(CAST(NULL AS JSON))
+    expected:
+      rows:
+        - [null]

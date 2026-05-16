@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/syntax/script/assert.md
+dialect: googlesql
+cases:
+  - desc: ASSERT TRUE executes silently
+    setup:
+      - ASSERT 1 = 1
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]
+  - desc: ASSERT with AS message clause
+    setup:
+      - "ASSERT 2 > 1 AS 'always true'"
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

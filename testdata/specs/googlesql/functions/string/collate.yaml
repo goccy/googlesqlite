@@ -1,0 +1,29 @@
+spec: docs/specs/googlesql/functions/string/collate.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/string_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH Words AS (
+        SELECT
+          COLLATE('a', 'und:ci') AS char1,
+          COLLATE('Z', 'und:ci') AS char2
+      )
+      SELECT ( Words.char1 < Words.char2 ) AS a_less_than_Z
+      FROM Words
+    expected:
+      rows:
+        - [true]
+  - desc: upstream example 2
+    sql: |-
+      WITH Words AS (
+        SELECT
+          'a' AS char1,
+          'Z' AS char2
+      )
+      SELECT ( Words.char1 < Words.char2 ) AS a_less_than_Z
+      FROM Words
+    expected:
+      rows:
+        - [false]

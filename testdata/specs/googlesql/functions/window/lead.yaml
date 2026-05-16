@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/window/lead.md
+dialect: googlesql
+cases:
+  - desc: lead returns next row
+    sql: |
+      SELECT x, LEAD(x) OVER (ORDER BY x) AS nxt
+      FROM UNNEST([10, 20, 30]) AS x
+      ORDER BY x
+    expected:
+      rows:
+        - [10, 20]
+        - [20, 30]
+        - [30, null]

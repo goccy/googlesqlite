@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/ieee_divide.md
+dialect: googlesql
+cases:
+  - desc: division by zero returns +Infinity
+    sql: SELECT IS_INF(IEEE_DIVIDE(1.0, 0.0))
+    expected:
+      rows:
+        - [true]
+  - desc: regular division
+    sql: SELECT IEEE_DIVIDE(10.0, 2.0)
+    expected:
+      rows:
+        - [5.0]

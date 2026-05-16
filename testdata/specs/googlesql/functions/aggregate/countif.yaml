@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/countif.md
+dialect: googlesql
+cases:
+  - desc: count truthy values
+    sql: SELECT COUNTIF(x > 2) FROM UNNEST([1, 2, 3, 4]) AS x
+    expected:
+      rows:
+        - [2]

@@ -1,0 +1,132 @@
+spec: docs/specs/googlesql/functions/range/range_sessionize.md
+dialect: googlesql
+# Auto-extracted from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/range-functions.md
+#
+# The upstream Examples reference a shared
+# `mydataset.my_sessionized_range_table` populated by Example 1's
+# INSERT statement. Since each spectest case runs against a fresh
+# in-memory connection, every case re-creates the table and rows
+# through `setup:` before running its `sql:` body.
+cases:
+  - desc: upstream example 1
+    setup:
+      - >-
+        CREATE TABLE mydataset.my_sessionized_range_table
+        (emp_id INT64, dept_id INT64, duration RANGE<DATE>)
+      - >-
+        INSERT mydataset.my_sessionized_range_table
+        (emp_id, dept_id, duration)
+        VALUES(10, 1000, RANGE<DATE> '[2010-01-10, 2010-03-10)'),
+              (10, 2000, RANGE<DATE> '[2010-03-10, 2010-07-15)'),
+              (10, 2000, RANGE<DATE> '[2010-06-15, 2010-08-18)'),
+              (20, 2000, RANGE<DATE> '[2010-03-10, 2010-07-20)'),
+              (20, 1000, RANGE<DATE> '[2020-05-10, 2020-09-20)')
+    sql: |-
+      SELECT * FROM mydataset.my_sessionized_range_table ORDER BY emp_id
+    expected:
+      # `ORDER BY emp_id` does not break the tie between rows that
+      # share the same emp_id; the per-partition order is therefore
+      # implementation-defined.
+      unordered: true
+      rows:
+        - ['10', '1000', '[2010-01-10, 2010-03-10)']
+        - ['10', '2000', '[2010-03-10, 2010-07-15)']
+        - ['10', '2000', '[2010-06-15, 2010-08-18)']
+        - ['20', '2000', '[2010-03-10, 2010-07-20)']
+        - ['20', '1000', '[2020-05-10, 2020-09-20)']
+
+  - desc: upstream example 2
+    setup:
+      - >-
+        CREATE TABLE mydataset.my_sessionized_range_table
+        (emp_id INT64, dept_id INT64, duration RANGE<DATE>)
+      - >-
+        INSERT mydataset.my_sessionized_range_table
+        (emp_id, dept_id, duration)
+        VALUES(10, 1000, RANGE<DATE> '[2010-01-10, 2010-03-10)'),
+              (10, 2000, RANGE<DATE> '[2010-03-10, 2010-07-15)'),
+              (10, 2000, RANGE<DATE> '[2010-06-15, 2010-08-18)'),
+              (20, 2000, RANGE<DATE> '[2010-03-10, 2010-07-20)'),
+              (20, 1000, RANGE<DATE> '[2020-05-10, 2020-09-20)')
+    sql: |-
+      SELECT
+        emp_id, duration, session_range
+      FROM
+        RANGE_SESSIONIZE(
+          TABLE mydataset.my_sessionized_range_table,
+          'duration',
+          ['emp_id'])
+      ORDER BY emp_id
+    expected:
+      unordered: true
+      rows:
+        - ['10', '[2010-01-10, 2010-03-10)', '[2010-01-10, 2010-08-18)']
+        - ['10', '[2010-03-10, 2010-07-15)', '[2010-01-10, 2010-08-18)']
+        - ['10', '[2010-06-15, 2010-08-18)', '[2010-01-10, 2010-08-18)']
+        - ['20', '[2010-03-10, 2010-07-20)', '[2010-03-10, 2010-07-20)']
+        - ['20', '[2020-05-10, 2020-09-20)', '[2020-05-10, 2020-09-20)']
+
+  - desc: upstream example 3
+    setup:
+      - >-
+        CREATE TABLE mydataset.my_sessionized_range_table
+        (emp_id INT64, dept_id INT64, duration RANGE<DATE>)
+      - >-
+        INSERT mydataset.my_sessionized_range_table
+        (emp_id, dept_id, duration)
+        VALUES(10, 1000, RANGE<DATE> '[2010-01-10, 2010-03-10)'),
+              (10, 2000, RANGE<DATE> '[2010-03-10, 2010-07-15)'),
+              (10, 2000, RANGE<DATE> '[2010-06-15, 2010-08-18)'),
+              (20, 2000, RANGE<DATE> '[2010-03-10, 2010-07-20)'),
+              (20, 1000, RANGE<DATE> '[2020-05-10, 2020-09-20)')
+    sql: |-
+      SELECT
+        emp_id, duration, session_range
+      FROM
+        RANGE_SESSIONIZE(
+          TABLE mydataset.my_sessionized_range_table,
+          'duration',
+          ['emp_id'],
+          'OVERLAPS')
+      ORDER BY emp_id
+    expected:
+      unordered: true
+      rows:
+        - ['10', '[2010-03-10, 2010-07-15)', '[2010-03-10, 2010-08-18)']
+        - ['10', '[2010-06-15, 2010-08-18)', '[2010-03-10, 2010-08-18)']
+        - ['10', '[2010-01-10, 2010-03-10)', '[2010-01-10, 2010-03-10)']
+        - ['20', '[2020-05-10, 2020-09-20)', '[2020-05-10, 2020-09-20)']
+        - ['20', '[2010-03-10, 2010-07-20)', '[2010-03-10, 2010-07-20)']
+
+  - desc: upstream example 4
+    setup:
+      - >-
+        CREATE TABLE mydataset.my_sessionized_range_table
+        (emp_id INT64, dept_id INT64, duration RANGE<DATE>)
+      - >-
+        INSERT mydataset.my_sessionized_range_table
+        (emp_id, dept_id, duration)
+        VALUES(10, 1000, RANGE<DATE> '[2010-01-10, 2010-03-10)'),
+              (10, 2000, RANGE<DATE> '[2010-03-10, 2010-07-15)'),
+              (10, 2000, RANGE<DATE> '[2010-06-15, 2010-08-18)'),
+              (20, 2000, RANGE<DATE> '[2010-03-10, 2010-07-20)'),
+              (20, 1000, RANGE<DATE> '[2020-05-10, 2020-09-20)')
+    sql: |-
+      SELECT emp_id, session_range AS normalized FROM (
+        SELECT emp_id, session_range
+        FROM RANGE_SESSIONIZE(
+          TABLE mydataset.my_sessionized_range_table,
+          'duration',
+          ['emp_id'],
+          'MEETS')
+      )
+      GROUP BY emp_id, normalized
+    expected:
+      # The upstream Example query has no ORDER BY; rows can come back
+      # in any order.
+      unordered: true
+      rows:
+        - ['20', '[2010-03-10, 2010-07-20)']
+        - ['10', '[2010-01-10, 2010-08-18)']
+        - ['20', '[2020-05-10, 2020-09-20)']

@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/aggregate/differential_privacy/avg.md
+dialect: googlesql
+cases:
+  - desc: DP AVG over clamped values is the clamp value (with small noise)
+    sql: |-
+      SELECT ABS((SELECT WITH DIFFERENTIAL_PRIVACY OPTIONS(epsilon=1000, delta=0.01, privacy_unit_column=x) AVG(x, contribution_bounds_per_group=>(0.0, 10.0)) FROM UNNEST([10.0, 20.0, 30.0]) AS x) - 10.0) <= 1.0
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/functions/geography/st_geogfromkml.md
+dialect: googlesql
+# ST_GEOGFROMKML round-trips a KML <Point> through ST_ASTEXT to the
+# WKT POINT form. Property documented in BigQuery / Spanner reference.
+cases:
+  - desc: KML Point round-trip to WKT POINT
+    sql: SELECT ST_ASTEXT(ST_GEOGFROMKML('<Point><coordinates>1,2</coordinates></Point>')) AS s
+    expected:
+      rows:
+        - ['POINT (1 2)']

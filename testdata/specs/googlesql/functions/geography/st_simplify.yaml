@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_simplify.md
+dialect: googlesql
+cases:
+  - desc: collapse near-collinear midpoint
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_SIMPLIFY(ST_GEOGFROMTEXT('LINESTRING(0 0, 0.5 0.0001, 1 0)'), 1000))
+    expected:
+      rows:
+        - ['{"type":"LineString","coordinates":[[0,0],[1,0]]}']

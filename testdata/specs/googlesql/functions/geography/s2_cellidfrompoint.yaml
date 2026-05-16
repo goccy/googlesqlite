@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/s2_cellidfrompoint.md
+dialect: googlesql
+cases:
+  - desc: level-10 cell-id is non-zero
+    sql: |-
+      SELECT S2_CELLIDFROMPOINT(ST_GEOGFROMTEXT('POINT(0 0)'), 10) > 0
+    expected:
+      rows:
+        - [true]

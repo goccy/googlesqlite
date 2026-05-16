@@ -1,0 +1,8 @@
+spec: docs/specs/bigquery/functions/objectref/obj_make_ref.md
+dialect: bigquery
+cases:
+  - desc: make ref from URI
+    sql: SELECT JSON_EXTRACT_SCALAR(PARSE_JSON(OBJ.MAKE_REF('gs://bucket/file.png')), '$.uri')
+    expected:
+      rows:
+        - ['gs://bucket/file.png']

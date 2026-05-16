@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/conversion/parse_numeric.md
+dialect: googlesql
+cases:
+  - desc: parse plain decimal
+    sql: SELECT CAST(PARSE_NUMERIC("1.5") AS STRING)
+    expected:
+      rows:
+        - ["1.5"]

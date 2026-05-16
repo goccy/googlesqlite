@@ -1,0 +1,1 @@
+SELECT UPPER('benchmark string')

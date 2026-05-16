@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/tokenlist_concat.md
+dialect: spanner
+cases:
+  - desc: concat covers both terms
+    sql: |-
+      SELECT SEARCH(TOKENLIST_CONCAT(TOKENIZE_FULLTEXT('hello'), TOKENIZE_FULLTEXT('world')), 'hello world')
+    expected:
+      rows:
+        - [true]

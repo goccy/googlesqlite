@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_datetime/from_days.md
+dialect: spanner
+cases:
+  - desc: convert day count to DATE
+    sql: |-
+      SELECT mysql.from_days(739000)
+    expected:
+      rows:
+        - ['2023-04-25']

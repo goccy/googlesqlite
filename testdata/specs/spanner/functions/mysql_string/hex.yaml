@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_string/hex.md
+dialect: spanner
+cases:
+  - desc: hex-encode literal BYTES
+    sql: SELECT mysql.hex(b'\x00\xff\xab')
+    expected:
+      rows:
+        - ['00FFAB']

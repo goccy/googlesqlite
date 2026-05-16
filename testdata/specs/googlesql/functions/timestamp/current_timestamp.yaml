@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/timestamp/current_timestamp.md
+dialect: googlesql
+cases:
+  - desc: current_timestamp is non-null
+    sql: SELECT CURRENT_TIMESTAMP() IS NOT NULL
+    expected:
+      rows:
+        - [true]

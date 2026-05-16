@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/functions/window/ntile.md
+dialect: googlesql
+cases:
+  - desc: ntile divides into buckets
+    sql: |
+      SELECT x, NTILE(2) OVER (ORDER BY x) AS bucket
+      FROM UNNEST([10, 20, 30, 40]) AS x
+      ORDER BY x
+    expected:
+      rows:
+        - [10, 1]
+        - [20, 1]
+        - [30, 2]
+        - [40, 2]

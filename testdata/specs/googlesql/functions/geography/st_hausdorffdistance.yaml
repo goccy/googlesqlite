@@ -1,0 +1,41 @@
+spec: docs/specs/googlesql/functions/geography/st_hausdorffdistance.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH data AS (
+        SELECT
+          ST_GEOGFROMTEXT('LINESTRING(20 70, 70 60, 10 70, 70 70)') AS geo1,
+          ST_GEOGFROMTEXT('LINESTRING(20 90, 30 90, 60 10, 90 10)') AS geo2
+      )
+      SELECT ST_HAUSDORFFDISTANCE(geo1, geo2, directed=>TRUE) AS distance
+      FROM data
+    expected:
+      rows:
+        - ['1688933.9832041925']
+  - desc: upstream example 2
+    sql: |-
+      WITH data AS (
+        SELECT
+          ST_GEOGFROMTEXT('LINESTRING(20 70, 70 60, 10 70, 70 70)') AS geo1,
+          ST_GEOGFROMTEXT('LINESTRING(20 90, 30 90, 60 10, 90 10)') AS geo2
+      )
+      SELECT ST_HAUSDORFFDISTANCE(geo2, geo1, directed=>TRUE) AS distance
+      FROM data
+    expected:
+      rows:
+        - ['5802892.745488612']
+  - desc: upstream example 3
+    sql: |-
+      WITH data AS (
+        SELECT
+          ST_GEOGFROMTEXT('LINESTRING(20 70, 70 60, 10 70, 70 70)') AS geo1,
+          ST_GEOGFROMTEXT('LINESTRING(20 90, 30 90, 60 10, 90 10)') AS geo2
+      )
+      SELECT ST_HAUSDORFFDISTANCE(geo1, geo2, directed=>FALSE) AS distance
+      FROM data
+    expected:
+      rows:
+        - ['5802892.745488612']

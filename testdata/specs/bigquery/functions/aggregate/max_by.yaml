@@ -1,0 +1,58 @@
+spec: docs/specs/bigquery/functions/aggregate/max_by.md
+dialect: bigquery
+cases:
+  - desc: returns value at the maximum key
+    sql: |
+      SELECT MAX_BY(name, score) FROM UNNEST([
+        STRUCT('alice' AS name, 10 AS score),
+        STRUCT('bob' AS name, 30 AS score),
+        STRUCT('carol' AS name, 20 AS score)
+      ])
+    expected:
+      rows:
+        - ['bob']
+  - desc: tie on the by-value — first-encountered row wins
+    sql: |
+      SELECT MAX_BY(name, score) FROM UNNEST([
+        STRUCT('alice' AS name, 30 AS score),
+        STRUCT('bob' AS name, 30 AS score),
+        STRUCT('carol' AS name, 20 AS score)
+      ])
+    expected:
+      rows:
+        - ['alice']
+  - desc: NULL keys are skipped, returns value at the highest non-NULL key
+    sql: |
+      SELECT MAX_BY(name, score) FROM UNNEST([
+        STRUCT('alice' AS name, CAST(NULL AS INT64) AS score),
+        STRUCT('bob' AS name, 30 AS score)
+      ])
+    expected:
+      rows:
+        - ['bob']
+  - desc: MAX_BY inside a GROUP BY query
+    sql: |
+      SELECT cat, MAX_BY(name, score) AS mx
+      FROM UNNEST([
+        STRUCT('alice' AS name, 5 AS score, 'cat1' AS cat),
+        STRUCT('bob' AS name, 10 AS score, 'cat1' AS cat),
+        STRUCT('carol' AS name, 1 AS score, 'cat2' AS cat)
+      ])
+      GROUP BY cat
+      ORDER BY cat
+    expected:
+      rows:
+        - ['cat1', 'bob']
+        - ['cat2', 'carol']
+  - desc: MAX_BY with a WHERE filter (precondition for HAVING-style usage)
+    sql: |
+      SELECT MAX_BY(name, score)
+      FROM UNNEST([
+        STRUCT('alice' AS name, 5 AS score, 'cat1' AS cat),
+        STRUCT('bob' AS name, 10 AS score, 'cat1' AS cat),
+        STRUCT('carol' AS name, 1 AS score, 'cat2' AS cat)
+      ])
+      WHERE cat = 'cat1'
+    expected:
+      rows:
+        - ['bob']

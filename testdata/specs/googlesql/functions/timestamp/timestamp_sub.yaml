@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/timestamp/timestamp_sub.md
+dialect: googlesql
+cases:
+  - desc: subtract 1 hour and check via unix seconds
+    sql: |
+      SELECT UNIX_SECONDS(TIMESTAMP_SUB(TIMESTAMP "2024-03-15 12:00:00+00", INTERVAL 1 HOUR))
+    expected:
+      rows:
+        - [1710500400]

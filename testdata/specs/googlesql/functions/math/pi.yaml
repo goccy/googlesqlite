@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/pi.md
+dialect: googlesql
+cases:
+  - desc: PI returns 3.14159...
+    sql: SELECT PI()
+    expected:
+      rows:
+        - [3.141592653589793]

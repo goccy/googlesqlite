@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/json/json_extract_scalar.md
+dialect: googlesql
+cases:
+  - desc: extract string field
+    sql: |
+      SELECT JSON_EXTRACT_SCALAR('{"a": "hello"}', "$.a")
+    expected:
+      rows:
+        - ["hello"]
+  - desc: extract nested integer
+    sql: |
+      SELECT JSON_EXTRACT_SCALAR('{"a": {"b": 42}}', "$.a.b")
+    expected:
+      rows:
+        - ["42"]

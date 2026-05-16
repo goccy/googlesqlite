@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/timestamp/pending_commit_timestamp.md
+dialect: spanner
+cases:
+  - desc: returns a non-null sentinel timestamp
+    sql: SELECT PENDING_COMMIT_TIMESTAMP() IS NOT NULL
+    expected:
+      rows:
+        - [true]

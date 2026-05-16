@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_geohash.md
+dialect: googlesql
+cases:
+  - desc: equator-origin precision-6 starts with 's' or '7'
+    sql: |-
+      SELECT LENGTH(ST_GEOHASH(ST_GEOGFROMTEXT('POINT(0 0)'), 6))
+    expected:
+      rows:
+        - [6]

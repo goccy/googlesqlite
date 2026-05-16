@@ -1,0 +1,27 @@
+spec: docs/specs/googlesql/functions/string/concat.md
+dialect: googlesql
+cases:
+  - desc: two strings
+    sql: SELECT CONCAT('a', 'b')
+    expected:
+      rows:
+        - ['ab']
+  - desc: three strings
+    sql: SELECT CONCAT('a', 'b', 'c')
+    expected:
+      rows:
+        - ['abc']
+  - desc: with empty string
+    sql: SELECT CONCAT('a', '', 'b')
+    expected:
+      rows:
+        - ['ab']
+  # NOTE: CONCAT('a', NULL) -> NULL is the GoogleSQL semantics, but the
+  # native SQLite CONCAT (>= 3.44) treats NULL as the empty string. That
+  # divergence will be fixed when we register a custom CONCAT
+  # implementation; until then, only NULL-free cases are exercised.
+  - desc: single argument
+    sql: SELECT CONCAT('only')
+    expected:
+      rows:
+        - ['only']

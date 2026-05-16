@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_public_suffix.md
+dialect: googlesql
+cases:
+  - desc: net_public_suffix extracts the expected piece
+    sql: SELECT NET.PUBLIC_SUFFIX('https://www.example.co.uk')
+    expected:
+      rows:
+        - ['co.uk']

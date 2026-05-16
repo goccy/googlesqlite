@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/strcmp.md
+dialect: spanner
+cases:
+  - desc: a < b
+    sql: |-
+      SELECT mysql.strcmp('a','b')
+    expected:
+      rows:
+        - [-1]

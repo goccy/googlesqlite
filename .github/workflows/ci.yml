@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Run every test binary in wazero Compiler mode against a shared
+    # on-disk compilation cache. Without this the embedded GoogleSQL
+    # wasm is re-AOT-compiled (or runs in the slow interpreter) in
+    # every one of the ~40 package test processes, which pushes
+    # `make test` past its 30-minute timeout.
+    env:
+      GOOGLESQLITE_WASM_COMPILATION_MODE: compiler
+      GOOGLESQLITE_WASM_CACHE_DIR: ${{ github.workspace }}/.wasm-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # Persist the wazero compilation cache across runs. The cache is
+      # keyed on go.sum (the embedded wasm only changes when the
+      # go-googlesql dependency changes) plus the OS and Go version.
+      - name: Cache wasm compilation
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.wasm-cache
+          key: wasm-cache-${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            wasm-cache-${{ runner.os }}-go-
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Lint
+        run: make lint
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Validate
+        run: make validate

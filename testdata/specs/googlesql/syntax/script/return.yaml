@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/return.md
+dialect: googlesql
+cases:
+  - desc: RETURN exits the current script
+    setup:
+      - RETURN
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

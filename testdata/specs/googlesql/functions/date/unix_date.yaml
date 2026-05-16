@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/unix_date.md
+dialect: googlesql
+cases:
+  - desc: 1970-01-01 is unix day 0
+    sql: SELECT UNIX_DATE(DATE '1970-01-01')
+    expected:
+      rows:
+        - [0]

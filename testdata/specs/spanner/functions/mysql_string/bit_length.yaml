@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_string/bit_length.md
+dialect: spanner
+cases:
+  - desc: ASCII characters are 8 bits each
+    sql: SELECT mysql.bit_length('abc')
+    expected:
+      rows:
+        - [24]
+  - desc: empty string is zero bits
+    sql: SELECT mysql.bit_length('')
+    expected:
+      rows:
+        - [0]

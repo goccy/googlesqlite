@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_utility/inet6_ntoa.md
+dialect: spanner
+cases:
+  - desc: 16 BYTES to IPv6 string
+    sql: |-
+      SELECT mysql.inet6_ntoa(FROM_HEX('00000000000000000000000000000001'))
+    expected:
+      rows:
+        - ['::1']

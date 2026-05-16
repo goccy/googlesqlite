@@ -1,0 +1,22 @@
+spec: docs/specs/googlesql/syntax/pipe/extend.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/pipe-syntax.md (`EXTEND`
+# pipe operator), rewritten to use inline `FROM (SELECT ...)`.
+cases:
+  - desc: extend with a doubled column
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      |> EXTEND x*2 AS doubled
+      |> ORDER BY x
+    expected:
+      rows:
+        - [1, 2]
+        - [2, 4]
+        - [3, 6]
+  - desc: extend with multiple expressions
+    sql: |-
+      FROM (SELECT 4 AS x)
+      |> EXTEND x+1 AS plus_one, x*x AS squared
+    expected:
+      rows:
+        - [4, 5, 16]

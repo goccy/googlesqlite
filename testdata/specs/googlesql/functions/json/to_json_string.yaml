@@ -1,0 +1,46 @@
+spec: docs/specs/googlesql/functions/json/to_json_string.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/json_functions.md (TO_JSON_STRING
+# section). Adds NULL-propagation cases (STRUCT field, ARRAY element,
+# top-level NULL, nested STRUCT<ARRAY<STRUCT>>) which exercise the
+# code path that previously panicked on a NULL argument.
+cases:
+  - desc: basic STRUCT of two fields
+    sql: SELECT TO_JSON_STRING(STRUCT(1 AS a, 'hi' AS b))
+    expected:
+      rows:
+        - ['{"a":1,"b":"hi"}']
+  - desc: NULL STRUCT field renders as JSON null
+    sql: SELECT TO_JSON_STRING(STRUCT(1 AS a, CAST(NULL AS STRING) AS b))
+    expected:
+      rows:
+        - ['{"a":1,"b":null}']
+  - desc: NULL ARRAY element renders as JSON null
+    sql: SELECT TO_JSON_STRING([1, NULL, 3])
+    expected:
+      rows:
+        - ['[1,null,3]']
+  - desc: top-level NULL input renders as the JSON null literal
+    sql: SELECT TO_JSON_STRING(CAST(NULL AS STRING))
+    expected:
+      rows:
+        - ['null']
+  - desc: nested STRUCT<ARRAY<STRUCT>> with inner NULL
+    sql: |-
+      SELECT TO_JSON_STRING(
+        STRUCT([CAST(NULL AS STRUCT<x INT64>)] AS arr))
+    expected:
+      rows:
+        - ['{"arr":[null]}']
+  - desc: ARRAY of STRUCT
+    sql: |-
+      SELECT TO_JSON_STRING(
+        [STRUCT(1 AS a, 'x' AS b), STRUCT(2, 'y')])
+    expected:
+      rows:
+        - ['[{"a":1,"b":"x"},{"a":2,"b":"y"}]']
+  - desc: empty ARRAY
+    sql: SELECT TO_JSON_STRING(CAST([] AS ARRAY<INT64>))
+    expected:
+      rows:
+        - ['[]']

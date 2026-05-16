@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/normalize.md
+dialect: googlesql
+cases:
+  - desc: NFC normalization is idempotent on ASCII
+    sql: SELECT NORMALIZE("hello")
+    expected:
+      rows:
+        - ["hello"]

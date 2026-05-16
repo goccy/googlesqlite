@@ -1,0 +1,16 @@
+spec: docs/specs/googlesql/information_schema/tables.md
+dialect: googlesql
+cases:
+  - desc: TABLES lists every table in the dataset
+    setup:
+      - CREATE TABLE tables_demo_ds.tables_demo_a (a INT64, b STRING)
+      - CREATE TABLE tables_demo_ds.tables_demo_b (c FLOAT64)
+    sql: |-
+      SELECT table_name
+      FROM tables_demo_ds.INFORMATION_SCHEMA.TABLES
+      WHERE table_name IN ('tables_demo_a', 'tables_demo_b')
+      ORDER BY table_name
+    expected:
+      rows:
+        - ['tables_demo_a']
+        - ['tables_demo_b']

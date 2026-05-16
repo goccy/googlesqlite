@@ -1,0 +1,15 @@
+spec: docs/specs/bigquery/functions/text_analysis/tf_idf.md
+dialect: bigquery
+cases:
+  - desc: three-document corpus emits per-row scores sorted by score desc
+    sql: |
+      SELECT TO_JSON_STRING(TF_IDF(t) OVER ())
+      FROM UNNEST([
+        STRUCT(['a','b','b','c'] AS t),
+        STRUCT(['a','a','b'] AS t),
+        STRUCT(['c','d'] AS t)
+      ])
+      LIMIT 1
+    expected:
+      rows:
+        - ['[{"term":"b","score":0.6438410362258904},{"term":"a","score":0.3219205181129452},{"term":"c","score":0.3219205181129452}]']

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/float.md
+dialect: googlesql
+cases:
+  - desc: float basic conversion
+    sql: SELECT FLOAT(JSON '3.14')
+    expected:
+      rows:
+        - [3.14]

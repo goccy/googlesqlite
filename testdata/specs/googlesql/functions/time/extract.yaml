@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/extract.md
+dialect: googlesql
+cases:
+  - desc: EXTRACT(MINUTE FROM TIME)
+    sql: SELECT EXTRACT(MINUTE FROM TIME '13:45:30')
+    expected:
+      rows:
+        - [45]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/geography/st_y.md
+dialect: googlesql
+cases:
+  - desc: ST_Y returns the latitude component of a POINT
+    sql: SELECT ST_Y(ST_GEOGPOINT(1.5, 2.5))
+    expected:
+      rows:
+        - [2.5]

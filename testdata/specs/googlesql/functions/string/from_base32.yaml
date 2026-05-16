@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/from_base32.md
+dialect: googlesql
+cases:
+  - desc: round-trip BYTES through base32 encoding
+    sql: SELECT FROM_BASE32(TO_BASE32(CAST('hi' AS BYTES))) = CAST('hi' AS BYTES)
+    expected:
+      rows:
+        - [true]

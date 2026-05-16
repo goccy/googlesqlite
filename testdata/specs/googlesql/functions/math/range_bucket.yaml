@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/range_bucket.md
+dialect: googlesql
+cases:
+  - desc: bucket index when value falls between boundaries
+    sql: SELECT RANGE_BUCKET(2, [1, 3, 5])
+    expected:
+      rows:
+        - [1]
+  - desc: bucket 0 when value is below all boundaries
+    sql: SELECT RANGE_BUCKET(0, [1, 3, 5])
+    expected:
+      rows:
+        - [0]

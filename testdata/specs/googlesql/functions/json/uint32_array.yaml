@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/uint32_array.md
+dialect: googlesql
+cases:
+  - desc: uint32_array extracts a typed array
+    sql: SELECT TO_JSON_STRING(UINT32_ARRAY(JSON '[1,2,3]'))
+    expected:
+      rows:
+        - ['[1,2,3]']

@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/euclidean_distance.md
+dialect: googlesql
+cases:
+  - desc: distance between two vectors
+    sql: SELECT EUCLIDEAN_DISTANCE([1.0, 2.0], [4.0, 6.0])
+    expected:
+      rows:
+        - [5.0]
+  - desc: zero distance for identical vectors
+    sql: SELECT EUCLIDEAN_DISTANCE([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
+    expected:
+      rows:
+        - [0.0]

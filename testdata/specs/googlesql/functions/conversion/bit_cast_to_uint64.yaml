@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/conversion/bit_cast_to_uint64.md
+dialect: googlesql
+cases:
+  - desc: bit-cast unsigned 64 round-trip
+    sql: SELECT BIT_CAST_TO_UINT64(CAST(42 AS UINT64))
+    expected:
+      rows:
+        - [42]

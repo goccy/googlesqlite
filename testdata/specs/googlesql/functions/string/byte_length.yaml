@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/byte_length.md
+dialect: googlesql
+cases:
+  - desc: ascii byte length
+    sql: SELECT BYTE_LENGTH('abc')
+    expected:
+      rows:
+        - [3]
+  - desc: empty string
+    sql: SELECT BYTE_LENGTH('')
+    expected:
+      rows:
+        - [0]

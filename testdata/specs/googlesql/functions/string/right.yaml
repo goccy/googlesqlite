@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/right.md
+dialect: googlesql
+cases:
+  - desc: rightmost three chars
+    sql: SELECT RIGHT('hello', 3)
+    expected:
+      rows:
+        - ['llo']

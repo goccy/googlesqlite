@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/graph/is_trail.md
+dialect: spanner
+cases:
+  - desc: single-edge path is a trivial trail
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS TR_P (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'CREATE TABLE IF NOT EXISTS TR_K (src_id INT64, dst_id INT64, PRIMARY KEY (src_id, dst_id) NOT ENFORCED)'
+      - 'INSERT OR IGNORE INTO TR_P VALUES (1, ''Alice''), (2, ''Bob'')'
+      - 'INSERT OR IGNORE INTO TR_K VALUES (1, 2)'
+      - 'CREATE OR REPLACE PROPERTY GRAPH TR_G NODE TABLES (TR_P AS P PROPERTIES (id, name)) EDGE TABLES (TR_K AS K SOURCE KEY (src_id) REFERENCES P (id) DESTINATION KEY (dst_id) REFERENCES P (id))'
+    sql: |-
+      GRAPH TR_G MATCH p = (a:P)-[k:K]->(b:P) RETURN IS_TRAIL(p) AS trail
+    expected:
+      rows:
+        - [true]

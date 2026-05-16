@@ -1,0 +1,30 @@
+spec: docs/specs/googlesql/functions/proto/extract.md
+dialect: googlesql
+# Original upstream Examples use fictional protos (Album, AlbumList,
+# chart_col, group_name) that have no Cloud BigQuery / Spanner
+# counterpart. The cases below substitute the auto-registered
+# well-known type `google.type.Date` so the spec is exercised
+# end-to-end without requiring a `CREATE PROTO BUNDLE` for
+# user-defined messages. See task #130 for the bundle path.
+cases:
+  - desc: EXTRACT(FIELD(...) FROM proto) reads a primitive field
+    sql: |-
+      SELECT EXTRACT(FIELD(year) FROM new google.type.Date(2019 as year, 10 as month, 30 as day)) AS year_value
+    expected:
+      rows:
+        - [2019]
+  - desc: EXTRACT(FIELD(...) FROM proto) returns each field independently
+    sql: |-
+      SELECT
+        EXTRACT(FIELD(year) FROM new google.type.Date(2019 as year, 10 as month, 30 as day)) AS y,
+        EXTRACT(FIELD(month) FROM new google.type.Date(2019 as year, 10 as month, 30 as day)) AS m,
+        EXTRACT(FIELD(day) FROM new google.type.Date(2019 as year, 10 as month, 30 as day)) AS d
+    expected:
+      rows:
+        - [2019, 10, 30]
+  - desc: EXTRACT(HAS(...) FROM proto) reports presence of a set field
+    sql: |-
+      SELECT EXTRACT(HAS(year) FROM new google.type.Date(2019 as year, 10 as month, 30 as day)) AS has_year
+    expected:
+      rows:
+        - [true]

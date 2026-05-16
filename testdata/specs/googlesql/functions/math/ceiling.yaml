@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/ceiling.md
+dialect: googlesql
+cases:
+  - desc: ceiling positive fraction
+    sql: SELECT CEILING(1.2)
+    expected:
+      rows:
+        - [2.0]
+  - desc: ceiling integer
+    sql: SELECT CEILING(3.0)
+    expected:
+      rows:
+        - [3.0]

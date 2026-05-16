@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/pow.md
+dialect: googlesql
+cases:
+  - desc: 2 to the 3
+    sql: SELECT POW(2.0, 3.0)
+    expected:
+      rows:
+        - [8.0]

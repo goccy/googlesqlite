@@ -1,0 +1,122 @@
+---
+name: ST_SIMPLIFY
+dialect: googlesql
+category: functions/geography
+status: implemented
+notes: |
+  Douglas–Peucker simplification using the meter tolerance converted to degrees. Runtime entry: BindStSimplify in internal/functions/geography/.
+source_url: docs/third_party/googlesql-docs/geography_functions.md
+upstream_url: https://github.com/google/googlesql/blob/master/docs/geography_functions.md#st_simplify
+last_synced: 2026-05-04
+testdata: testdata/specs/googlesql/functions/geography/st_simplify.yaml
+---
+
+# ST_SIMPLIFY
+
+## Summary
+
+(TBD — refine from the upstream reference below.)
+
+## Signatures
+
+(TBD)
+
+## Behavior
+
+(TBD)
+
+## Examples
+
+(TBD)
+
+## Edge cases
+
+(TBD)
+
+## Reference (upstream)
+
+Verbatim copy from `docs/third_party/googlesql-docs/geography_functions.md`. Auto-managed by
+`specctl normalize`; do not edit by hand.
+
+## `ST_SIMPLIFY`
+
+```googlesql
+ST_SIMPLIFY(geography, tolerance_meters)
+```
+
+**Description**
+
+Returns a simplified version of `geography`, the given input
+`GEOGRAPHY`. The input `GEOGRAPHY` is simplified by replacing nearly straight
+chains of short edges with a single long edge. The input `geography` will not
+change by more than the tolerance specified by `tolerance_meters`. Thus,
+simplified edges are guaranteed to pass within `tolerance_meters` of the
+*original* positions of all vertices that were removed from that edge. The given
+`tolerance_meters` is in meters on the surface of the Earth.
+
+Note that `ST_SIMPLIFY` preserves topological relationships, which means that
+no new crossing edges will be created and the output will be valid. For a large
+enough tolerance, adjacent shapes may collapse into a single object, or a shape
+could be simplified to a shape with a smaller dimension.
+
+**Constraints**
+
+For `ST_SIMPLIFY` to have any effect, `tolerance_meters` must be non-zero.
+
+`ST_SIMPLIFY` returns an error if the tolerance specified by `tolerance_meters`
+is one of the following:
+
++ A negative tolerance.
++ Greater than ~7800 kilometers.
+
+**Return type**
+
+`GEOGRAPHY`
+
+**Examples**
+
+The following example shows how `ST_SIMPLIFY` simplifies the input line
+`GEOGRAPHY` by removing intermediate vertices.
+
+```googlesql
+WITH example AS
+ (SELECT ST_GEOGFROMTEXT('LINESTRING(0 0, 0.05 0, 0.1 0, 0.15 0, 2 0)') AS line)
+SELECT
+   line AS original_line,
+   ST_SIMPLIFY(line, 1) AS simplified_line
+FROM example;
+
+/*---------------------------------------------+----------------------+
+ |                original_line                |   simplified_line    |
+ +---------------------------------------------+----------------------+
+ | LINESTRING(0 0, 0.05 0, 0.1 0, 0.15 0, 2 0) | LINESTRING(0 0, 2 0) |
+ +---------------------------------------------+----------------------*/
+```
+
+The following example illustrates how the result of `ST_SIMPLIFY` can have a
+lower dimension than the original shape.
+
+```googlesql
+WITH example AS
+ (SELECT
+    ST_GEOGFROMTEXT('POLYGON((0 0, 0.1 0, 0.1 0.1, 0 0))') AS polygon,
+    t AS tolerance
+  FROM UNNEST([1000, 10000, 100000]) AS t)
+SELECT
+  polygon AS original_triangle,
+  tolerance AS tolerance_meters,
+  ST_SIMPLIFY(polygon, tolerance) AS simplified_result
+FROM example
+
+/*-------------------------------------+------------------+-------------------------------------+
+ |          original_triangle          | tolerance_meters |          simplified_result          |
+ +-------------------------------------+------------------+-------------------------------------+
+ | POLYGON((0 0, 0.1 0, 0.1 0.1, 0 0)) |             1000 | POLYGON((0 0, 0.1 0, 0.1 0.1, 0 0)) |
+ | POLYGON((0 0, 0.1 0, 0.1 0.1, 0 0)) |            10000 |            LINESTRING(0 0, 0.1 0.1) |
+ | POLYGON((0 0, 0.1 0, 0.1 0.1, 0 0)) |           100000 |                          POINT(0 0) |
+ +-------------------------------------+------------------+-------------------------------------*/
+```
+
+## References
+
+- Apache 2.0 derivative of `docs/third_party/googlesql-docs/geography_functions.md`.

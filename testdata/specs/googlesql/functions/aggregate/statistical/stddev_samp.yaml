@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/statistical/stddev_samp.md
+dialect: googlesql
+cases:
+  - desc: stddev_samp of two values
+    sql: SELECT ROUND(STDDEV_SAMP(x), 4) FROM UNNEST([1.0, 3.0]) AS x
+    expected:
+      rows:
+        - [1.4142]

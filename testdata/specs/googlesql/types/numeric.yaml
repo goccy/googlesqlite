@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/numeric.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata/numeric.test
+# (Apache-2.0 derivative) -- simple NUMERIC construction cases.
+cases:
+  - desc: cast int to NUMERIC
+    sql: SELECT CAST(1 AS NUMERIC) AS n
+    expected:
+      rows:
+        - ['1']
+  - desc: NUMERIC literal
+    sql: SELECT NUMERIC '3.14' AS n
+    expected:
+      rows:
+        - ['3.14']

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/from_hex.md
+dialect: googlesql
+cases:
+  - desc: round-trip with TO_HEX
+    sql: SELECT TO_HEX(FROM_HEX('616263'))
+    expected:
+      rows:
+        - ['616263']

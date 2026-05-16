@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/cosine_distance.md
+dialect: googlesql
+cases:
+  - desc: orthogonal vectors have distance 1
+    sql: SELECT COSINE_DISTANCE([1.0, 0.0], [0.0, 1.0])
+    expected:
+      rows:
+        - [1.0]
+  - desc: identical vectors have distance 0
+    sql: SELECT COSINE_DISTANCE([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
+    expected:
+      rows:
+        - [0.0]

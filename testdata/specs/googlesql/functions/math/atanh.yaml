@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/atanh.md
+dialect: googlesql
+cases:
+  - desc: ATANH(0) is 0
+    sql: SELECT ATANH(0)
+    expected:
+      rows:
+        - [0.0]

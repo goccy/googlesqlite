@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/pi_bignumeric.md
+dialect: googlesql
+cases:
+  - desc: PI_BIGNUMERIC returns a non-NULL bignumeric value
+    sql: SELECT PI_BIGNUMERIC() IS NOT NULL
+    expected:
+      rows:
+        - [true]

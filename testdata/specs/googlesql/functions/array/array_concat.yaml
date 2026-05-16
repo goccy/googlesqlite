@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_concat.md
+dialect: googlesql
+cases:
+  - desc: concat two int arrays
+    sql: SELECT ARRAY_CONCAT([1, 2], [3, 4])
+    expected:
+      rows:
+        - [[1, 2, 3, 4]]

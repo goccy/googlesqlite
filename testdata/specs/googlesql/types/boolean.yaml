@@ -1,0 +1,25 @@
+spec: docs/specs/googlesql/types/boolean.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata/type_queries.test
+# (Apache-2.0 derivative) -- type_5 case covers the BOOL ascii cell.
+# Additional simple boolean expressions drawn from the upstream
+# data-types.md narrative.
+cases:
+  - desc: cast true to BOOL
+    sql: |-
+      SELECT CAST(true AS BOOL) AS bool_val
+    expected:
+      rows:
+        - [true]
+  - desc: bool literal true
+    sql: |-
+      SELECT TRUE AS bool_val
+    expected:
+      rows:
+        - [true]
+  - desc: bool literal false
+    sql: |-
+      SELECT FALSE AS bool_val
+    expected:
+      rows:
+        - [false]

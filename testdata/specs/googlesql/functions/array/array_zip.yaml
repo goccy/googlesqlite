@@ -1,0 +1,45 @@
+spec: docs/specs/googlesql/functions/array/array_zip.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/array_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT ARRAY_ZIP([1, 2], ['a', 'b']) AS results
+    expected:
+      rows:
+        - ['[(1, ''a''), (2, ''b'')]']
+  - desc: upstream example 2
+    sql: |-
+      WITH T AS (
+        SELECT ['a', 'b'] AS alias_inferred
+      )
+      SELECT ARRAY_ZIP([1, 2] AS A1, alias_inferred) AS results
+      FROM T
+    expected:
+      rows:
+        - ['[{1 A1, ''a'' alias_inferred}, {2 A1, ''b'' alias_inferred}]']
+  - desc: upstream example 3
+    sql: |-
+      SELECT ARRAY_ZIP([1, 2], [3, 4], transformation => (e1, e2) -> (e1 + e2))
+    expected:
+      rows:
+        - ['[4, 6]']
+  - desc: upstream example 4
+    sql: |-
+      SELECT ARRAY_ZIP([1, 2], [3, 4], (e1, e2) -> (e1 + e2))
+    expected:
+      rows:
+        - ['[4, 6]']
+  - desc: upstream example 5
+    sql: |-
+      SELECT ARRAY_ZIP([1, 2], ['a', 'b', 'c', 'd'], [], mode => 'PAD') AS results
+    expected:
+      rows:
+        - ['[{1, ''a'', NULL}, {2, ''b'', NULL}, {NULL, ''c'', NULL}, {NULL, ''d'', NULL}]']
+  - desc: upstream example 6
+    sql: |-
+      SELECT ARRAY_ZIP([1, 2], ['a', 'b', 'c', 'd'], mode => 'TRUNCATE') AS results
+    expected:
+      rows:
+        - ['[(1, ''a''), (2, ''b'')]']

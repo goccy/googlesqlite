@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/double_array.md
+dialect: googlesql
+cases:
+  - desc: double_array extracts a typed array
+    sql: SELECT TO_JSON_STRING(DOUBLE_ARRAY(JSON '[1.0,2.5]'))
+    expected:
+      rows:
+        - ['[1,2.5]']

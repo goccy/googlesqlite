@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/exp.md
+dialect: googlesql
+cases:
+  - desc: e^0
+    sql: SELECT EXP(0.0)
+    expected:
+      rows:
+        - [1.0]

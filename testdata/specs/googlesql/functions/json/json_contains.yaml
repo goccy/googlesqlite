@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/json/json_contains.md
+dialect: googlesql
+cases:
+  - desc: object contains itself
+    sql: SELECT JSON_CONTAINS(JSON '{"a":1}', JSON '{"a":1}')
+    expected:
+      rows:
+        - [true]
+  - desc: partial match returns true
+    sql: SELECT JSON_CONTAINS(JSON '{"a":1,"b":2}', JSON '{"a":1}')
+    expected:
+      rows:
+        - [true]
+  - desc: missing key returns false
+    sql: SELECT JSON_CONTAINS(JSON '{"a":1}', JSON '{"b":2}')
+    expected:
+      rows:
+        - [false]

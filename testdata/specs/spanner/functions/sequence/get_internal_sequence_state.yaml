@@ -1,0 +1,10 @@
+spec: docs/specs/spanner/functions/sequence/get_internal_sequence_state.md
+dialect: spanner
+# GET_INTERNAL_SEQUENCE_STATE returns the current internal counter
+# state of a sequence as INT64. Stub returns a non-NULL value.
+cases:
+  - desc: returns a non-NULL INT64
+    sql: SELECT GET_INTERNAL_SEQUENCE_STATE('my_seq') IS NOT NULL AS r
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,197 @@
+spec: docs/specs/googlesql/types/struct.md
+dialect: googlesql
+# Sourced from googlesql-wasm compliance/testdata/struct_queries.test
+# and compliance/testdata/struct_positional_accessor.test. Each case
+# verifies one row-shape against the upstream ARRAY<STRUCT<...>>[...]
+# canonical form, translated to our runner's brace short form
+# (`{v1, v2, ...}` — values only, names live on the column type).
+cases:
+  - desc: nested subquery field b
+    sql: SELECT (SELECT t FROM (SELECT 3 a, 5 b) t).b
+    expected:
+      rows:
+        - [5]
+  - desc: nested subquery field a
+    sql: SELECT (SELECT t FROM (SELECT 3 a, 5 b) t).a
+    expected:
+      rows:
+        - [3]
+  - desc: nested subquery expanded columns and computed sum
+    sql: SELECT x.a, x.b, x.a + x.b FROM (SELECT (SELECT t FROM (SELECT 3 a, 5 b) t) x)
+    expected:
+      rows:
+        - [3, 5, 8]
+  - desc: struct with one field
+    sql: SELECT STRUCT(1)
+    expected:
+      rows:
+        - ['{1}']
+  - desc: struct with duplicate field names of different types
+    sql: SELECT STRUCT("abc" AS a, 3 AS a)
+    expected:
+      rows:
+        - ['{abc, 3}']
+  - desc: struct with duplicate field names of the same type
+    sql: SELECT STRUCT("abc" AS a, "3" AS a)
+    expected:
+      rows:
+        - ['{abc, 3}']
+  - desc: struct with anonymous fields of different types
+    sql: SELECT STRUCT("abc", 3)
+    expected:
+      rows:
+        - ['{abc, 3}']
+  - desc: struct with anonymous fields of the same type
+    sql: SELECT STRUCT("abc", "3")
+    expected:
+      rows:
+        - ['{abc, 3}']
+  - desc: struct from subquery
+    sql: SELECT STRUCT(2*v) FROM (SELECT 1 AS v) t
+    expected:
+      rows:
+        - ['{2}']
+  - desc: struct containing struct
+    sql: SELECT STRUCT(STRUCT(11, 12))
+    expected:
+      rows:
+        - ['{{11, 12}}']
+  - desc: struct containing array
+    sql: SELECT STRUCT(ARRAY<INT64>[21, 22])
+    expected:
+      rows:
+        - ['{[21, 22]}']
+  - desc: struct containing array of struct
+    sql: SELECT STRUCT(ARRAY<STRUCT<INT64, INT64>>[(11, 12), (21, 22)])
+    expected:
+      rows:
+        - ['{[{11, 12}, {21, 22}]}']
+  - desc: struct select as value
+    sql: SELECT STRUCT("abc", 3)
+    expected:
+      rows:
+        - ['{abc, 3}']
+  - desc: struct cast int64 double
+    sql: SELECT CAST(STRUCT<DOUBLE, INT32>(3.5, 5) AS STRUCT<INT64, DOUBLE>)
+    expected:
+      rows:
+        - ['{4, 5}']
+  - desc: struct union all
+    sql: |-
+      SELECT s FROM (
+        SELECT STRUCT("abc" AS a, 3 AS b) AS s
+        UNION ALL SELECT STRUCT("def" AS a, 5 AS b)
+        UNION ALL SELECT STRUCT("def" AS a, 5 AS b)
+      )
+      ORDER BY s.a, s.b
+    expected:
+      rows:
+        - ['{abc, 3}']
+        - ['{def, 5}']
+        - ['{def, 5}']
+  - desc: struct case requiring coercion
+    sql: |-
+      SELECT CASE
+        WHEN TRUE THEN STRUCT(1.4, 1)
+        ELSE STRUCT(3, 3.5)
+      END
+    expected:
+      rows:
+        - ['{1.4, 1}']
+  - desc: struct equality matching
+    sql: SELECT STRUCT(3 AS a, 5.5 AS b) = STRUCT(3 AS c, 5.5 AS d)
+    expected:
+      rows:
+        - [true]
+  - desc: struct equality different field names
+    sql: |-
+      SELECT STRUCT<a int64, b double>(3, 5.5) =
+             STRUCT<c int64, d double>(3, 5.5)
+    expected:
+      rows:
+        - [true]
+  - desc: struct in literal list
+    sql: SELECT STRUCT(3, 5) IN (STRUCT(3, 5), STRUCT(4, 6))
+    expected:
+      rows:
+        - [true]
+  - desc: struct access named field
+    sql: SELECT s.a FROM (SELECT STRUCT("abc" AS a, 3 AS b) AS s) t
+    expected:
+      rows:
+        - ['abc']
+  - desc: struct alias as value
+    sql: SELECT t FROM (SELECT STRUCT("abc" AS a, 3 AS b) AS t) x
+    expected:
+      rows:
+        - ['{abc, 3}']
+  - desc: struct from table reference cast
+    sql: SELECT CAST(q AS STRUCT<a INT64>) FROM (SELECT 1) AS q
+    expected:
+      rows:
+        - ['{1}']
+  - desc: struct positional accessor offset 0 double
+    sql: SELECT STRUCT(3.14, TRUE)[OFFSET(0)] AS c
+    expected:
+      rows:
+        - [3.14]
+  - desc: struct positional accessor offset 1 bool
+    sql: SELECT STRUCT(3.14, TRUE)[OFFSET(1)] AS c
+    expected:
+      rows:
+        - [true]
+  - desc: struct positional accessor ordinal 1 double
+    sql: SELECT STRUCT(3.14, TRUE)[ORDINAL(1)] AS c
+    expected:
+      rows:
+        - [3.14]
+  - desc: struct positional accessor ordinal 2 bool
+    sql: SELECT STRUCT(3.14, TRUE)[ORDINAL(2)] AS c
+    expected:
+      rows:
+        - [true]
+  - desc: struct positional accessor on null struct
+    sql: SELECT CAST(NULL AS STRUCT<DOUBLE>)[OFFSET(0)] AS c
+    expected:
+      rows:
+        - [null]
+  - desc: struct positional accessor double via WITH
+    sql: |-
+      WITH t AS (SELECT STRUCT(3.14 AS d, TRUE) AS s)
+      SELECT s[OFFSET(0)] AS c FROM t
+    expected:
+      rows:
+        - [3.14]
+  - desc: struct field plus positional accessor mixed
+    sql: |-
+      WITH t AS (SELECT STRUCT(3.14 AS d, TRUE) AS s)
+      SELECT s.d AS a, s[OFFSET(0)] AS b, s[ORDINAL(1)] AS c FROM t
+    expected:
+      rows:
+        - [3.14, 3.14, 3.14]
+  - desc: struct multiple fields named and positional
+    sql: |-
+      WITH t AS (SELECT STRUCT(3.14 AS d, TRUE AS f) AS s)
+      SELECT s.d AS d, s.f AS f, s[OFFSET(0)] AS a, s[OFFSET(1)] AS b FROM t
+    expected:
+      rows:
+        - [3.14, true, 3.14, true]
+  - desc: struct multiple anonymous fields positional
+    sql: |-
+      WITH t AS (SELECT STRUCT(3.14, TRUE) AS s)
+      SELECT s[OFFSET(0)] AS a, s[OFFSET(1)] AS b FROM t
+    expected:
+      rows:
+        - [3.14, true]
+  - desc: struct same name fields positional access
+    sql: |-
+      WITH t AS (SELECT STRUCT(3.14 AS d, TRUE AS d) AS s)
+      SELECT
+        s[OFFSET(0)] AS a,
+        s[ORDINAL(1)] AS b,
+        s[OFFSET(1)] AS c,
+        s[ORDINAL(2)] AS d
+      FROM t
+    expected:
+      rows:
+        - [3.14, 3.14, true, true]

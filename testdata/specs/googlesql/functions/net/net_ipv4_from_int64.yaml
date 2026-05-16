@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_ipv4_from_int64.md
+dialect: googlesql
+cases:
+  - desc: packed-int round-trip via int64
+    sql: SELECT NET.IPV4_TO_INT64(NET.IPV4_FROM_INT64(3232235777))
+    expected:
+      rows:
+        - [3232235777]

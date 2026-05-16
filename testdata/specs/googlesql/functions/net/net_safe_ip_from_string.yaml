@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_safe_ip_from_string.md
+dialect: googlesql
+cases:
+  - desc: invalid IP returns NULL
+    sql: SELECT NET.SAFE_IP_FROM_STRING('not-an-ip')
+    expected:
+      rows:
+        - [null]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/approximate/approx_quantiles.md
+dialect: googlesql
+cases:
+  - desc: approx_quantiles returns non-null array
+    sql: SELECT APPROX_QUANTILES(x, 2) IS NOT NULL FROM UNNEST([1, 2, 3, 4]) AS x
+    expected:
+      rows:
+        - [true]

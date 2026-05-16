@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/to_base64.md
+dialect: googlesql
+cases:
+  - desc: base64 encode bytes
+    sql: SELECT TO_BASE64(b'hello')
+    expected:
+      rows:
+        - ['aGVsbG8=']

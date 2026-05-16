@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_timestamp/datediff.md
+dialect: spanner
+cases:
+  - desc: days between two DATEs
+    sql: |-
+      SELECT mysql.datediff(DATE '2024-03-15', DATE '2024-03-10')
+    expected:
+      rows:
+        - [5]

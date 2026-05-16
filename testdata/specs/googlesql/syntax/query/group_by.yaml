@@ -1,0 +1,55 @@
+spec: docs/specs/googlesql/syntax/query/group_by.md
+dialect: googlesql
+# Covers GROUP BY with the four equality-on-composite-value cases the
+# downstream fork patched: scalar key, struct-field key, NULL-in-key
+# bucketing, and ARRAY-in-row column.
+cases:
+  - desc: scalar GROUP BY with COUNT
+    sql: |-
+      SELECT k, COUNT(*) AS n
+      FROM UNNEST([STRUCT('a' AS k), STRUCT('a'), STRUCT('b')])
+      GROUP BY k
+      ORDER BY k
+    expected:
+      rows:
+        - ['a', 2]
+        - ['b', 1]
+  - desc: GROUP BY on individual STRUCT fields
+    sql: |-
+      SELECT s.x AS gx, s.y AS gy, COUNT(*) AS n
+      FROM UNNEST([STRUCT(1 AS x, 'a' AS y), STRUCT(1, 'a'), STRUCT(2, 'b')]) AS s
+      GROUP BY s.x, s.y
+      ORDER BY gx
+    expected:
+      rows:
+        - [1, 'a', 2]
+        - [2, 'b', 1]
+  - desc: NULL becomes its own GROUP BY bucket
+    sql: |-
+      SELECT k, COUNT(*) AS n
+      FROM UNNEST([
+        STRUCT(1 AS k),
+        STRUCT(CAST(NULL AS INT64)),
+        STRUCT(1),
+        STRUCT(CAST(NULL AS INT64))
+      ])
+      GROUP BY k
+      ORDER BY k NULLS LAST
+    expected:
+      rows:
+        - [1, 2]
+        - [null, 2]
+  - desc: GROUP BY a scalar column that carries an ARRAY field in the row
+    sql: |-
+      SELECT k, COUNT(*) AS n
+      FROM UNNEST([
+        STRUCT('a' AS k, [1, 2] AS arr),
+        STRUCT('a', [1, 2]),
+        STRUCT('b', [3, 4])
+      ])
+      GROUP BY k
+      ORDER BY k
+    expected:
+      rows:
+        - ['a', 2]
+        - ['b', 1]

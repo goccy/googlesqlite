@@ -1,0 +1,14 @@
+spec: docs/specs/bigquery/functions/aead/keys_keyset_from_json.md
+dialect: bigquery
+# KEYS.KEYSET_FROM_JSON is the inverse of KEYS.KEYSET_TO_JSON.
+# Documented round-trip: parsing the JSON form back returns a
+# non-NULL keyset BYTES.
+cases:
+  - desc: JSON->keyset round-trip is non-NULL
+    sql: |-
+      WITH k AS (SELECT KEYS.NEW_KEYSET('AEAD_AES_GCM_256') AS ks)
+      SELECT keys.keyset_from_json(KEYS.KEYSET_TO_JSON(ks)) IS NOT NULL AS r
+      FROM k
+    expected:
+      rows:
+        - [true]

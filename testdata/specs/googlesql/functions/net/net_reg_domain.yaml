@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_reg_domain.md
+dialect: googlesql
+cases:
+  - desc: net_reg_domain extracts the expected piece
+    sql: SELECT NET.REG_DOMAIN('https://www.example.co.uk')
+    expected:
+      rows:
+        - ['example.co.uk']

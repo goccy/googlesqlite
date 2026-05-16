@@ -1,0 +1,18 @@
+spec: docs/specs/spanner/functions/mysql_datetime/day.md
+dialect: spanner
+cases:
+  - desc: extract day-of-month from a TIMESTAMP literal
+    sql: SELECT mysql.day(TIMESTAMP "2024-03-15 12:34:56+00")
+    expected:
+      rows:
+        - [15]
+  - desc: extract day-of-month from a DATE literal
+    sql: SELECT mysql.day(DATE "2024-12-31")
+    expected:
+      rows:
+        - [31]
+  - desc: NULL propagates
+    sql: SELECT mysql.day(CAST(NULL AS TIMESTAMP))
+    expected:
+      rows:
+        - [null]

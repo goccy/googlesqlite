@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/timestamp/unix_micros.md
+dialect: googlesql
+cases:
+  - desc: epoch micros
+    sql: SELECT UNIX_MICROS(TIMESTAMP "2024-03-15 12:00:00+00")
+    expected:
+      rows:
+        - [1710504000000000]

@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/insert.md
+dialect: spanner
+cases:
+  - desc: replace mid-string
+    sql: |-
+      SELECT mysql.insert('foobar', 2, 3, 'XYZ')
+    expected:
+      rows:
+        - ['fXYZar']

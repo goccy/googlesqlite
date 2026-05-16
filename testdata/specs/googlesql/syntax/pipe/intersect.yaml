@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/syntax/pipe/intersect.md
+dialect: googlesql
+cases:
+  - desc: intersect distinct
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      |> INTERSECT DISTINCT (SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4)
+      |> ORDER BY x
+    expected:
+      rows:
+        - [2]
+        - [3]

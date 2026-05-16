@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/geography/st_geogfromtext.md
+dialect: googlesql
+cases:
+  - desc: parse WKT and format back
+    sql: SELECT ST_ASTEXT(ST_GEOGFROMTEXT('POINT(3 4)'))
+    expected:
+      rows:
+        - ['POINT (3 4)']

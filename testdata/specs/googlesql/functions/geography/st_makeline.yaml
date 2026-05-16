@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_makeline.md
+dialect: googlesql
+cases:
+  - desc: Two points to LineString
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_MAKELINE(ST_GEOGFROMTEXT('POINT(0 0)'), ST_GEOGFROMTEXT('POINT(1 0)')))
+    expected:
+      rows:
+        - ['{"type":"LineString","coordinates":[[0,0],[1,0]]}']

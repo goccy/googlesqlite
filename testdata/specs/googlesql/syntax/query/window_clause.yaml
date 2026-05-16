@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/syntax/query/window_clause.md
+dialect: googlesql
+cases:
+  - desc: named window via WINDOW clause
+    sql: |-
+      SELECT x, SUM(x) OVER w AS running
+      FROM UNNEST([1, 2, 3]) AS x
+      WINDOW w AS (ORDER BY x ROWS UNBOUNDED PRECEDING)
+      ORDER BY x
+    expected:
+      rows:
+        - [1, 1]
+        - [2, 3]
+        - [3, 6]

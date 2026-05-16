@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_exteriorring.md
+dialect: googlesql
+cases:
+  - desc: polygon outer ring as linestring
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_EXTERIORRING(ST_GEOGFROMTEXT('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')))
+    expected:
+      rows:
+        - ['{"type":"LineString","coordinates":[[0,0],[1,0],[1,1],[0,1],[0,0]]}']

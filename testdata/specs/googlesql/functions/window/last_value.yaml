@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/functions/window/last_value.md
+dialect: googlesql
+cases:
+  - desc: last_value over default frame
+    sql: |
+      SELECT x,
+             LAST_VALUE(x) OVER (
+               ORDER BY x
+               ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+             ) AS lv
+      FROM UNNEST([10, 20, 30]) AS x
+      ORDER BY x
+    expected:
+      rows:
+        - [10, 30]
+        - [20, 30]
+        - [30, 30]

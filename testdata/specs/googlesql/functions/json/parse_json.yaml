@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/parse_json.md
+dialect: googlesql
+cases:
+  - desc: parse_json basic behaviour
+    sql: SELECT JSON_TYPE(PARSE_JSON('{"a":1}'))
+    expected:
+      rows:
+        - ['object']

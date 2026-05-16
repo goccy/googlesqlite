@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/ln.md
+dialect: googlesql
+cases:
+  - desc: ln(1) is 0
+    sql: SELECT LN(1.0)
+    expected:
+      rows:
+        - [0.0]

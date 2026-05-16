@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/string.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata/strings.test
+# (Apache-2.0 derivative) -- strings_basic case.
+cases:
+  - desc: simple string literal
+    sql: SELECT "abc" AS s
+    expected:
+      rows:
+        - ['abc']
+  - desc: single-quoted string literal
+    sql: SELECT 'hello' AS s
+    expected:
+      rows:
+        - ['hello']

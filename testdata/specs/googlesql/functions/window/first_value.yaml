@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/window/first_value.md
+dialect: googlesql
+cases:
+  - desc: first_value over ordered window
+    sql: |
+      SELECT x, FIRST_VALUE(x) OVER (ORDER BY x) AS fv
+      FROM UNNEST([10, 20, 30]) AS x
+      ORDER BY x
+    expected:
+      rows:
+        - [10, 10]
+        - [20, 10]
+        - [30, 10]

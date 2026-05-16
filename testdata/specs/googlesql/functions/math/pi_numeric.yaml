@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/pi_numeric.md
+dialect: googlesql
+cases:
+  - desc: PI_NUMERIC returns a non-NULL numeric value
+    sql: SELECT PI_NUMERIC() IS NOT NULL
+    expected:
+      rows:
+        - [true]

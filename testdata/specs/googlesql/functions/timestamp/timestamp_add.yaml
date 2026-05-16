@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/timestamp/timestamp_add.md
+dialect: googlesql
+cases:
+  - desc: add 1 hour and check via unix seconds
+    sql: |
+      SELECT UNIX_SECONDS(TIMESTAMP_ADD(TIMESTAMP "2024-03-15 12:00:00+00", INTERVAL 1 HOUR))
+    expected:
+      rows:
+        - [1710507600]

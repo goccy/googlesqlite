@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/cot.md
+dialect: googlesql
+cases:
+  - desc: cot of typical input is finite
+    sql: SELECT IS_NAN(COT(1.0))
+    expected:
+      rows:
+        - [false]

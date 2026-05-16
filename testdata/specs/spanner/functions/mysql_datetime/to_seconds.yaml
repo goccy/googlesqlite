@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/to_seconds.md
+dialect: spanner
+cases:
+  - desc: one full day equals 86400 seconds
+    sql: SELECT mysql.to_seconds(DATE '2024-03-15') - mysql.to_seconds(DATE '2024-03-14')
+    expected:
+      rows:
+        - [86400]

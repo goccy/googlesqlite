@@ -1,0 +1,33 @@
+spec: docs/specs/bigquery/functions/text_analysis/text_analyze.md
+dialect: bigquery
+cases:
+  - desc: LOG_ANALYZER lowercases and splits on punctuation/whitespace
+    sql: SELECT TO_JSON_STRING(TEXT_ANALYZE('The quick brown FOX'))
+    expected:
+      rows:
+        - ['["the","quick","brown","fox"]']
+  - desc: LOG_ANALYZER drops punctuation and keeps digits
+    sql: SELECT TO_JSON_STRING(TEXT_ANALYZE('Hello, World! 123'))
+    expected:
+      rows:
+        - ['["hello","world","123"]']
+  - desc: NO_OP_ANALYZER preserves the entire input verbatim
+    sql: SELECT TO_JSON_STRING(TEXT_ANALYZE('Foo Bar', 'NO_OP_ANALYZER'))
+    expected:
+      rows:
+        - ['["Foo Bar"]']
+  - desc: CJK characters become per-character tokens
+    sql: SELECT TO_JSON_STRING(TEXT_ANALYZE('日本語'))
+    expected:
+      rows:
+        - ['["日","本","語"]']
+  - desc: mixed CJK and Latin
+    sql: SELECT TO_JSON_STRING(TEXT_ANALYZE('混合 hello'))
+    expected:
+      rows:
+        - ['["混","合","hello"]']
+  - desc: NULL input propagates
+    sql: SELECT TEXT_ANALYZE(CAST(NULL AS STRING))
+    expected:
+      rows:
+        - [null]

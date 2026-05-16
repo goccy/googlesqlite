@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_datetime/year.md
+dialect: spanner
+cases:
+  - desc: year from a TIMESTAMP literal
+    sql: SELECT mysql.year(TIMESTAMP "2024-03-15 12:34:56+00")
+    expected:
+      rows:
+        - [2024]
+  - desc: year from a DATE literal
+    sql: SELECT mysql.year(DATE "1999-12-31")
+    expected:
+      rows:
+        - [1999]

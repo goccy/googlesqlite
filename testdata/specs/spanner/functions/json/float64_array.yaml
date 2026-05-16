@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/json/float64_array.md
+dialect: spanner
+cases:
+  - desc: float64_array from json
+    sql: SELECT FLOAT64_ARRAY(JSON '[1.0, 2.0, 3.0]')
+    expected:
+      rows:
+        - [[1.0, 2.0, 3.0]]

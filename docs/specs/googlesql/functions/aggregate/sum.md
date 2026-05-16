@@ -1,0 +1,211 @@
+---
+name: SUM
+dialect: googlesql
+category: functions/aggregate
+status: implemented
+source_url: docs/third_party/googlesql-docs/aggregate_functions.md
+upstream_url: https://github.com/google/googlesql/blob/master/docs/aggregate_functions.md#sum
+last_synced: 2026-05-04
+testdata: testdata/specs/googlesql/functions/aggregate/sum.yaml
+---
+
+# SUM
+
+## Summary
+
+(TBD — refine from the upstream reference below.)
+
+## Signatures
+
+(TBD)
+
+## Behavior
+
+(TBD)
+
+## Examples
+
+(TBD)
+
+## Edge cases
+
+(TBD)
+
+## Reference (upstream)
+
+Verbatim copy from `docs/third_party/googlesql-docs/aggregate_functions.md`. Auto-managed by
+`specctl normalize`; do not edit by hand.
+
+## `SUM`
+
+```googlesql
+SUM(
+  [ DISTINCT ]
+  expression
+  [ WHERE where_expression ]
+  [ HAVING { MAX | MIN } having_expression ]
+)
+[ OVER over_clause ]
+
+over_clause:
+  { named_window | ( [ window_specification ] ) }
+
+window_specification:
+  [ named_window ]
+  [ PARTITION BY partition_expression [, ...] ]
+  [ ORDER BY expression [ { ASC | DESC }  ] [, ...] ]
+  [ window_frame_clause ]
+
+```
+
+**Description**
+
+Returns the sum of non-`NULL` values in an aggregated group.
+
+To learn more about the optional aggregate clauses that you can pass
+into this function, see
+[Aggregate function calls][aggregate-function-calls].
+
+This function can be used with the
+[`AGGREGATION_THRESHOLD` clause][agg-threshold-clause].
+
+<!-- mdlint off(WHITESPACE_LINE_LENGTH) -->
+
+[aggregate-function-calls]: https://github.com/google/googlesql/blob/master/docs/aggregate-function-calls.md
+
+[agg-threshold-clause]: https://github.com/google/googlesql/blob/master/docs/query-syntax.md#agg_threshold_clause
+
+<!-- mdlint on -->
+
+To learn more about the `OVER` clause and how to use it, see
+[Window function calls][window-function-calls].
+
+<!-- mdlint off(WHITESPACE_LINE_LENGTH) -->
+
+[window-function-calls]: https://github.com/google/googlesql/blob/master/docs/window-function-calls.md
+
+<!-- mdlint on -->
+
+`SUM` can be used with differential privacy. For more information, see
+[Differentially private aggregate functions][dp-functions].
+
+Caveats:
+
++ If the aggregated group is empty or the argument is `NULL` for all rows in
+  the group, returns `NULL`.
++ If the argument is `NaN` for any row in the group, returns `NaN`.
++ If the argument is `[+|-]Infinity` for any row in the group, returns either
+  `[+|-]Infinity` or `NaN`.
++ If there is numeric overflow, produces an error.
++ If a [floating-point type][floating-point-types] is returned, the result is
+  [non-deterministic][non-deterministic], which means you might receive a
+  different result each time you use this function.
+
+[floating-point-types]: https://github.com/google/googlesql/blob/master/docs/data-types.md#floating_point_types
+
+[non-deterministic]: https://github.com/google/googlesql/blob/master/docs/data-types.md#floating_point_semantics
+
+**Supported Argument Types**
+
++ Any supported numeric data type
++ `INTERVAL`
+
+**Return Data Types**
+
+<table>
+
+<thead>
+<tr>
+<th>INPUT</th><th><code>INT32</code></th><th><code>INT64</code></th><th><code>UINT32</code></th><th><code>UINT64</code></th><th><code>NUMERIC</code></th><th><code>BIGNUMERIC</code></th><th><code>FLOAT</code></th><th><code>DOUBLE</code></th><th><code>INTERVAL</code></th>
+</tr>
+</thead>
+<tbody>
+<tr><th>OUTPUT</th><td style="vertical-align:middle"><code>INT64</code></td><td style="vertical-align:middle"><code>INT64</code></td><td style="vertical-align:middle"><code>UINT64</code></td><td style="vertical-align:middle"><code>UINT64</code></td><td style="vertical-align:middle"><code>NUMERIC</code></td><td style="vertical-align:middle"><code>BIGNUMERIC</code></td><td style="vertical-align:middle"><code>DOUBLE</code></td><td style="vertical-align:middle"><code>DOUBLE</code></td><td style="vertical-align:middle"><code>INTERVAL</code></td></tr>
+</tbody>
+
+</table>
+
+**Examples**
+
+```googlesql
+SELECT SUM(x) AS sum
+FROM UNNEST([1, 2, 3, 4, 5, 4, 3, 2, 1]) AS x;
+
+/*-----+
+ | sum |
+ +-----+
+ | 25  |
+ +-----*/
+```
+
+```googlesql
+SELECT SUM(DISTINCT x) AS sum
+FROM UNNEST([1, 2, 3, 4, 5, 4, 3, 2, 1]) AS x;
+
+/*-----+
+ | sum |
+ +-----+
+ | 15  |
+ +-----*/
+```
+
+```googlesql
+SELECT
+  x,
+  SUM(x) OVER (PARTITION BY MOD(x, 3)) AS sum
+FROM UNNEST([1, 2, 3, 4, 5, 4, 3, 2, 1]) AS x;
+
+/*---+-----+
+ | x | sum |
+ +---+-----+
+ | 3 | 6   |
+ | 3 | 6   |
+ | 1 | 10  |
+ | 4 | 10  |
+ | 4 | 10  |
+ | 1 | 10  |
+ | 2 | 9   |
+ | 5 | 9   |
+ | 2 | 9   |
+ +---+-----*/
+```
+
+```googlesql
+SELECT
+  x,
+  SUM(DISTINCT x) OVER (PARTITION BY MOD(x, 3)) AS sum
+FROM UNNEST([1, 2, 3, 4, 5, 4, 3, 2, 1]) AS x;
+
+/*---+-----+
+ | x | sum |
+ +---+-----+
+ | 3 | 3   |
+ | 3 | 3   |
+ | 1 | 5   |
+ | 4 | 5   |
+ | 4 | 5   |
+ | 1 | 5   |
+ | 2 | 7   |
+ | 5 | 7   |
+ | 2 | 7   |
+ +---+-----*/
+```
+
+```googlesql
+SELECT SUM(x) AS sum
+FROM UNNEST([]) AS x;
+
+/*------+
+ | sum  |
+ +------+
+ | NULL |
+ +------*/
+```
+
+[dp-functions]: https://github.com/google/googlesql/blob/master/docs/aggregate-dp-functions.md
+
+[agg-function-calls]: https://github.com/google/googlesql/blob/master/docs/aggregate-function-calls.md
+
+## References
+
+- Apache 2.0 derivative of `docs/third_party/googlesql-docs/aggregate_functions.md`.

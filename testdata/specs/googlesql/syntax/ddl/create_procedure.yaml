@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/ddl/create_procedure.md
+dialect: googlesql
+cases:
+  - desc: CREATE PROCEDURE accepts a procedure body
+    setup:
+      - CREATE PROCEDURE cp_ds.p1() BEGIN SELECT 1; END
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

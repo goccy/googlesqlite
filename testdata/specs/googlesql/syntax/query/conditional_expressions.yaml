@@ -1,0 +1,33 @@
+spec: docs/specs/googlesql/syntax/query/conditional_expressions.md
+dialect: googlesql
+cases:
+  - desc: CASE picks the first matching branch
+    sql: SELECT CASE WHEN 1 > 0 THEN 'pos' WHEN 1 < 0 THEN 'neg' ELSE 'zero' END
+    expected:
+      rows:
+        - ['pos']
+  - desc: CASE with value form
+    sql: SELECT CASE 2 WHEN 1 THEN 'one' WHEN 2 THEN 'two' ELSE 'other' END
+    expected:
+      rows:
+        - ['two']
+  - desc: IF returns then-branch when condition is true
+    sql: SELECT IF(1 > 0, 'pos', 'neg') AS result
+    expected:
+      rows:
+        - ['pos']
+  - desc: IFNULL replaces NULL with the default
+    sql: SELECT IFNULL(NULL, 'default') AS result
+    expected:
+      rows:
+        - ['default']
+  - desc: COALESCE returns the first non-NULL argument
+    sql: SELECT COALESCE(NULL, NULL, 'x', 'y') AS first_non_null
+    expected:
+      rows:
+        - ['x']
+  - desc: NULLIF returns NULL when the arguments are equal
+    sql: SELECT NULLIF(1, 1) AS r1, NULLIF(1, 2) AS r2
+    expected:
+      rows:
+        - [null, 1]

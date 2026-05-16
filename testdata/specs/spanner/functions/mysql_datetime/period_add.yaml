@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_datetime/period_add.md
+dialect: spanner
+cases:
+  - desc: add 14 months to 202401
+    sql: |-
+      SELECT mysql.period_add(202401, 14)
+    expected:
+      rows:
+        - [202503]

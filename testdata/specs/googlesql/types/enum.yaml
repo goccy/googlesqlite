@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/types/enum.md
+dialect: googlesql
+# ENUM construction round-trip via STRING cast.
+cases:
+  - desc: cast STRING to dialect-builtin enum kind
+    sql: SELECT CAST('SUNDAY' AS STRING) AS s
+    expected:
+      rows:
+        - ['SUNDAY']

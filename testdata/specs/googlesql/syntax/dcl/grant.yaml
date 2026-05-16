@@ -1,0 +1,19 @@
+spec: docs/specs/googlesql/syntax/dcl/grant.md
+dialect: googlesql
+cases:
+  - desc: GRANT SELECT on a table to a user
+    setup:
+      - CREATE TABLE grant_ds.t1 (a INT64)
+      - "GRANT SELECT ON TABLE grant_ds.t1 TO 'user:alice@example.com'"
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]
+  - desc: GRANT multiple privileges to a group
+    setup:
+      - CREATE TABLE grant_ds.t2 (a INT64)
+      - "GRANT SELECT, UPDATE, DELETE ON TABLE grant_ds.t2 TO 'group:engineering@example.com'"
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

@@ -1,0 +1,8 @@
+spec: docs/specs/bigquery/functions/kll/kll_quantiles_init_float64.md
+dialect: bigquery
+cases:
+  - desc: kll_quantiles_init_float64 basic pipeline
+    sql: SELECT BYTE_LENGTH(KLL_QUANTILES.INIT_FLOAT64(x)) > 0 FROM UNNEST([1.0,2.0,3.0]) AS x
+    expected:
+      rows:
+        - [true]

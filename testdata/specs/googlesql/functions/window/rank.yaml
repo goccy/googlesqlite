@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/functions/window/rank.md
+dialect: googlesql
+cases:
+  - desc: rank with ties
+    sql: |
+      SELECT x, RANK() OVER (ORDER BY x) AS r
+      FROM UNNEST([10, 20, 20, 30]) AS x
+      ORDER BY x
+    expected:
+      rows:
+        - [10, 1]
+        - [20, 2]
+        - [20, 2]
+        - [30, 4]

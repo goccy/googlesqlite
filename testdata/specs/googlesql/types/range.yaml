@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/range.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata/range_functions.test
+# (Apache-2.0 derivative). Basic RANGE literal cases.
+cases:
+  - desc: RANGE_START on date range
+    sql: SELECT RANGE_START(RANGE<DATE> '[2022-01-01, 2023-01-01)') AS s
+    expected:
+      rows:
+        - ['2022-01-01']
+  - desc: RANGE_END on date range
+    sql: SELECT RANGE_END(RANGE<DATE> '[2022-01-01, 2023-01-01)') AS e
+    expected:
+      rows:
+        - ['2023-01-01']

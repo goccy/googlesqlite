@@ -1,0 +1,10 @@
+spec: docs/specs/bigquery/functions/vector/vector_index_statistics.md
+dialect: bigquery
+cases:
+  - desc: VECTOR_INDEX.STATISTICS lowers to an empty subquery
+    sql: |-
+      CREATE TABLE IF NOT EXISTS vec_stats_t (id INT64);
+      SELECT COALESCE((SELECT drift FROM VECTOR_INDEX.STATISTICS(TABLE vec_stats_t) LIMIT 1), -1.0) AS placeholder
+    expected:
+      rows:
+        - [-1.0]

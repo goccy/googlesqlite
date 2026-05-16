@@ -1,0 +1,12 @@
+spec: docs/specs/spanner/functions/mysql_datetime/utc_date.md
+dialect: spanner
+# Spanner exposes the MySQL-compatibility helpers under the `mysql`
+# namespace. UTC_DATE() returns the current UTC date; the precise
+# value depends on the test wallclock, so the assertion is the
+# documented STRING shape ("yyyy-mm-dd", 10 chars, two dashes).
+cases:
+  - desc: UTC_DATE returns 10-character yyyy-mm-dd
+    sql: SELECT LENGTH(CAST(mysql.utc_date() AS STRING)) = 10 AS r
+    expected:
+      rows:
+        - [true]

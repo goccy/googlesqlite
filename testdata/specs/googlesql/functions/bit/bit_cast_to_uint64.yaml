@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/bit/bit_cast_to_uint64.md
+dialect: googlesql
+cases:
+  - desc: positive value passes through
+    sql: SELECT BIT_CAST_TO_UINT64(123)
+    expected:
+      rows:
+        - [123]

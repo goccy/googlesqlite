@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/score.md
+dialect: spanner
+cases:
+  - desc: count occurrences
+    sql: |-
+      SELECT SCORE(TOKENIZE_FULLTEXT('a a b c'), 'a')
+    expected:
+      rows:
+        - [2.0]

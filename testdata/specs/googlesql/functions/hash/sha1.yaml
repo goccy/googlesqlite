@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/hash/sha1.md
+dialect: googlesql
+cases:
+  - desc: sha1 of empty bytes
+    sql: SELECT TO_HEX(SHA1(b""))
+    expected:
+      rows:
+        - ["da39a3ee5e6b4b0d3255bfef95601890afd80709"]

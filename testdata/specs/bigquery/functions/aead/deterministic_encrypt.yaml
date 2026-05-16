@@ -1,0 +1,14 @@
+spec: docs/specs/bigquery/functions/aead/deterministic_encrypt.md
+dialect: bigquery
+cases:
+  - desc: deterministic encrypt is reproducible
+    sql: |-
+      WITH ks AS (
+        SELECT KEYS.NEW_KEYSET('DETERMINISTIC_AEAD_AES_SIV_CMAC_256') AS k
+      )
+      SELECT
+        DETERMINISTIC_ENCRYPT((SELECT k FROM ks), 'plain', 'aad')
+        = DETERMINISTIC_ENCRYPT((SELECT k FROM ks), 'plain', 'aad')
+    expected:
+      rows:
+        - [true]

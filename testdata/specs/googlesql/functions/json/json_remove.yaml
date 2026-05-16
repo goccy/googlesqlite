@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_remove.md
+dialect: googlesql
+cases:
+  - desc: json_remove basic behaviour
+    sql: SELECT JSON_TYPE(JSON_REMOVE(JSON '{"a":1, "b":2}', '$.a'))
+    expected:
+      rows:
+        - ['object']

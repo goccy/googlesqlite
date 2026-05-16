@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/interval/justify_interval.md
+dialect: googlesql
+cases:
+  - desc: JUSTIFY_INTERVAL executes without error
+    sql: SELECT JUSTIFY_INTERVAL(INTERVAL 90 DAY) IS NOT NULL
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_extract_array.md
+dialect: googlesql
+cases:
+  - desc: extract integer array via path expression
+    sql: SELECT TO_JSON_STRING(JSON_EXTRACT_ARRAY(JSON '[1,2,3]'))
+    expected:
+      rows:
+        - ['[1,2,3]']

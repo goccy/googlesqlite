@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/conversion/bit_cast_to_uint32.md
+dialect: googlesql
+cases:
+  - desc: bit-cast unsigned 32 round-trip
+    sql: SELECT BIT_CAST_TO_UINT32(CAST(42 AS UINT32))
+    expected:
+      rows:
+        - [42]

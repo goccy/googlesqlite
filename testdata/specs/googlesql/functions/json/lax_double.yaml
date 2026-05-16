@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_double.md
+dialect: googlesql
+cases:
+  - desc: lax_double basic behaviour
+    sql: SELECT LAX_DOUBLE(JSON '3.14')
+    expected:
+      rows:
+        - [3.14]

@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_snaptogrid.md
+dialect: googlesql
+cases:
+  - desc: snap to 0.1 grid
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_SNAPTOGRID(ST_GEOGFROMTEXT('POINT(0.123 0.456)'), 0.1))
+    expected:
+      rows:
+        - ['{"type":"Point","coordinates":[0.1,0.5]}']

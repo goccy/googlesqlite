@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/search_ngrams.md
+dialect: spanner
+cases:
+  - desc: ngrams match
+    sql: |-
+      SELECT SEARCH_NGRAMS(TOKENIZE_NGRAMS('hello world', 3), 'wor')
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,30 @@
+spec: docs/specs/googlesql/types/protocol_buffer.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/data-types.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT
+           NEW googlesql.examples.music.Album (
+             album AS album_name,
+             count AS (googlesql.examples.music.downloads)
+           )
+           FROM (SELECT 'New Moon' AS album, 30 AS count)
+    expected:
+      rows:
+        - ['{album_name: ''New Moon'' [...music.downloads]: 30}']
+  - desc: upstream example 2
+    sql: |-
+      SELECT
+           NEW googlesql.examples.music.Album(
+             'New Moon' AS album_name,
+             NEW googlesql.examples.music.AlbumExtension(
+              DATE(1956,1,1) AS release_date
+             )
+           AS (googlesql.examples.music.AlbumExtension.album_extension))
+    expected:
+      rows:
+        - ['album_name: "New Moon"']
+        - ['[...music.AlbumExtension.album_extension] {']
+        - ['release_date: -5114']

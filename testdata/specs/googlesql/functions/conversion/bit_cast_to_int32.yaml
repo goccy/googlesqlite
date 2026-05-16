@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/conversion/bit_cast_to_int32.md
+dialect: googlesql
+cases:
+  - desc: bit-cast preserves int width 32 cycle
+    sql: SELECT BIT_CAST_TO_INT32(CAST(42 AS INT32))
+    expected:
+      rows:
+        - [42]

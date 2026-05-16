@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/format_date.md
+dialect: googlesql
+cases:
+  - desc: ISO-style formatting
+    sql: SELECT FORMAT_DATE("%Y-%m-%d", DATE "2024-01-15")
+    expected:
+      rows:
+        - ["2024-01-15"]

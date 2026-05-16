@@ -1,0 +1,27 @@
+spec: docs/specs/googlesql/functions/geography/st_dumppoints.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+#
+# Same docs-table wrapping artifact as st_dump.yaml: the
+# GEOMETRYCOLLECTION cell wraps over two display lines in the
+# upstream table, but it is a single result row. The expected
+# values below reflect upstream's three actual rows.
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH example AS (
+        SELECT ST_GEOGFROMTEXT('POINT(0 0)') AS geography
+        UNION ALL
+        SELECT ST_GEOGFROMTEXT('MULTIPOINT(0 0, 1 1)') AS geography
+        UNION ALL
+        SELECT ST_GEOGFROMTEXT('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(1 2, 2 1))'))
+      SELECT
+        geography AS original_geography,
+        ST_DUMPPOINTS(geography) AS dumped_points_geographies
+      FROM example
+    expected:
+      unordered: true
+      rows:
+        - ['POINT(0 0)', '[POINT(0 0)]']
+        - ['MULTIPOINT(0 0, 1 1)', '[POINT(0 0), POINT(1 1)]']
+        - ['GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(1 2, 2 1))', '[POINT(0 0), POINT(1 2), POINT(2 1)]']

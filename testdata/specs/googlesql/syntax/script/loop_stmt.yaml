@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/loop_stmt.md
+dialect: googlesql
+cases:
+  - desc: LOOP with immediate BREAK
+    setup:
+      - LOOP BREAK; END LOOP
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

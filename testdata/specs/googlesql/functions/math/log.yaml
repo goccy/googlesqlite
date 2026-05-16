@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/log.md
+dialect: googlesql
+cases:
+  - desc: LOG with no base is natural log
+    sql: SELECT ROUND(LOG(EXP(1)), 6)
+    expected:
+      rows:
+        - [1.0]

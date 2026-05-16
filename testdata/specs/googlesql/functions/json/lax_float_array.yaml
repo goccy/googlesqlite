@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_float_array.md
+dialect: googlesql
+cases:
+  - desc: lax_float_array extracts a typed array with NULLs on bad elements
+    sql: SELECT TO_JSON_STRING(LAX_FLOAT_ARRAY(JSON '[1.0,2.5]'))
+    expected:
+      rows:
+        - ['[1,2.5]']

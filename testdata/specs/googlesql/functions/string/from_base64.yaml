@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/from_base64.md
+dialect: googlesql
+cases:
+  - desc: base64 round-trip
+    sql: SELECT TO_BASE64(FROM_BASE64('aGVsbG8='))
+    expected:
+      rows:
+        - ['aGVsbG8=']

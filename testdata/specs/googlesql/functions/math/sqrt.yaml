@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/math/sqrt.md
+dialect: googlesql
+cases:
+  - desc: square root of perfect square
+    sql: SELECT SQRT(16.0)
+    expected:
+      rows:
+        - [4.0]
+  - desc: zero
+    sql: SELECT SQRT(0.0)
+    expected:
+      rows:
+        - [0.0]
+  - desc: one
+    sql: SELECT SQRT(1.0)
+    expected:
+      rows:
+        - [1.0]
+  - desc: null propagates
+    sql: SELECT SQRT(NULL)
+    expected:
+      rows:
+        - [null]

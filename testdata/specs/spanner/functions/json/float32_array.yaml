@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/json/float32_array.md
+dialect: spanner
+cases:
+  - desc: float32_array from json
+    sql: SELECT FLOAT32_ARRAY(JSON '[1.5, 2.5, 3.5]')
+    expected:
+      rows:
+        - [[1.5, 2.5, 3.5]]

@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_geogfromgeojson.md
+dialect: googlesql
+cases:
+  - desc: Roundtrip via GeoJSON
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_GEOGFROMGEOJSON('{"type":"Point","coordinates":[3,4]}'))
+    expected:
+      rows:
+        - ['{"type":"Point","coordinates":[3,4]}']

@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_union_agg.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT ST_UNION_AGG(items) AS results
+      FROM UNNEST([
+        ST_GEOGFROMTEXT('LINESTRING(-122.12 47.67, -122.19 47.69)'),
+        ST_GEOGFROMTEXT('LINESTRING(-122.12 47.67, -100.19 47.69)'),
+        ST_GEOGFROMTEXT('LINESTRING(-122.12 47.67, -122.19 47.69)')]) as items
+    expected:
+      rows:
+        - ['LINESTRING(-100.19 47.69, -122.12 47.67, -122.19 47.69)']

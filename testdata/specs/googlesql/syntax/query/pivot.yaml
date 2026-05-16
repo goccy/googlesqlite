@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/syntax/query/pivot.md
+dialect: googlesql
+cases:
+  - desc: pivot by category, sum values
+    sql: |-
+      SELECT * FROM (
+        SELECT 'a' AS k, 1 AS v UNION ALL
+        SELECT 'b', 2 UNION ALL
+        SELECT 'a', 3
+      )
+      PIVOT (SUM(v) FOR k IN ('a', 'b'))
+    expected:
+      rows:
+        - [4, 2]

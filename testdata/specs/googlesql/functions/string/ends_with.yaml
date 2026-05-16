@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/ends_with.md
+dialect: googlesql
+cases:
+  - desc: matches suffix
+    sql: SELECT ENDS_WITH('hello', 'lo')
+    expected:
+      rows:
+        - [true]
+  - desc: does not match
+    sql: SELECT ENDS_WITH('hello', 'he')
+    expected:
+      rows:
+        - [false]

@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/dayofmonth.md
+dialect: spanner
+cases:
+  - desc: day-of-month from a DATE literal
+    sql: SELECT mysql.dayofmonth(DATE "2024-03-15")
+    expected:
+      rows:
+        - [15]

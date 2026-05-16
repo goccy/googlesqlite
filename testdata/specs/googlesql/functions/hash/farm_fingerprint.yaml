@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/hash/farm_fingerprint.md
+dialect: googlesql
+cases:
+  - desc: empty string fingerprint is non-null
+    sql: SELECT FARM_FINGERPRINT("") IS NOT NULL
+    expected:
+      rows:
+        - [true]

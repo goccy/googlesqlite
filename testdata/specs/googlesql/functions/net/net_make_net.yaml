@@ -1,0 +1,20 @@
+spec: docs/specs/googlesql/functions/net/net_make_net.md
+dialect: googlesql
+# Authoritative form from BigQuery docs: NET.MAKE_NET(ip, prefix_len)
+# concatenates the address and the prefix length with `/`.
+cases:
+  - desc: basic IPv4 prefix
+    sql: SELECT NET.MAKE_NET('192.168.1.0', 24) AS v
+    expected:
+      rows:
+        - ['192.168.1.0/24']
+  - desc: host-level IPv4
+    sql: SELECT NET.MAKE_NET('10.0.0.1', 32) AS v
+    expected:
+      rows:
+        - ['10.0.0.1/32']
+  - desc: zero-prefix anywhere-net
+    sql: SELECT NET.MAKE_NET('0.0.0.0', 0) AS v
+    expected:
+      rows:
+        - ['0.0.0.0/0']

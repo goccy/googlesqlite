@@ -1,0 +1,22 @@
+spec: docs/specs/googlesql/syntax/pipe/union.md
+dialect: googlesql
+cases:
+  - desc: union all retains duplicates
+    sql: |-
+      FROM (SELECT 1 AS x)
+      |> UNION ALL (SELECT 1)
+      |> ORDER BY x
+    expected:
+      rows:
+        - [1]
+        - [1]
+  - desc: union distinct deduplicates
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2)
+      |> UNION DISTINCT (SELECT 2 UNION ALL SELECT 3)
+      |> ORDER BY x
+    expected:
+      rows:
+        - [1]
+        - [2]
+        - [3]

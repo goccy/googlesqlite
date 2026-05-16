@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/substring.md
+dialect: googlesql
+cases:
+  - desc: SUBSTRING from position 1, length 3
+    sql: SELECT SUBSTRING('abcdef', 1, 3)
+    expected:
+      rows:
+        - ['abc']

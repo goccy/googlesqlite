@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/datetime/extract.md
+dialect: googlesql
+cases:
+  - desc: EXTRACT(HOUR FROM DATETIME)
+    sql: SELECT EXTRACT(HOUR FROM DATETIME '2024-06-15 13:45:00')
+    expected:
+      rows:
+        - [13]

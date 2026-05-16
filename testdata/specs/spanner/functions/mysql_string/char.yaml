@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/char.md
+dialect: spanner
+cases:
+  - desc: encode ASCII code points
+    sql: |-
+      SELECT mysql.char(72, 105)
+    expected:
+      rows:
+        - ['Hi']

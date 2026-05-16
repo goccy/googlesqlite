@@ -1,0 +1,12 @@
+spec: docs/specs/bigquery/functions/aggregate/agg.md
+dialect: bigquery
+cases:
+  - desc: AGG over a SUM measure returns the underlying aggregate
+    setup:
+      - CREATE TABLE Locations (id INT64 PRIMARY KEY NOT ENFORCED, name STRING, population INT64)
+      - INSERT INTO Locations VALUES (101, 'Anytown', 1000), (102, 'Other', 500)
+      - CREATE OR REPLACE PROPERTY GRAPH G NODE TABLES (Locations AS L PROPERTIES (id, name, population, MEASURE(SUM(population)) AS total))
+    sql: GRAPH G MATCH (l:L) RETURN AGG(l.total) AS t
+    expected:
+      rows:
+        - [1500]

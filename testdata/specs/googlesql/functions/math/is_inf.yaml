@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/is_inf.md
+dialect: googlesql
+cases:
+  - desc: is_inf on number
+    sql: SELECT IS_INF(1.0)
+    expected:
+      rows:
+        - [false]

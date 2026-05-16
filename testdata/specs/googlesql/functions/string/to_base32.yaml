@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/to_base32.md
+dialect: googlesql
+cases:
+  - desc: TO_BASE32 of empty bytes is empty
+    sql: SELECT TO_BASE32(CAST('' AS BYTES))
+    expected:
+      rows:
+        - ['']

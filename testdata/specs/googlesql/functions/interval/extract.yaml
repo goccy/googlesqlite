@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/interval/extract.md
+dialect: googlesql
+cases:
+  - desc: extract year from interval
+    sql: SELECT EXTRACT(YEAR FROM INTERVAL "1-2 0 0:0:0" YEAR TO SECOND)
+    expected:
+      rows:
+        - [1]

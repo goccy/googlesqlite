@@ -1,0 +1,61 @@
+spec: docs/specs/googlesql/functions/datetime/datetime_diff.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/datetime_functions.md (DATETIME_DIFF
+# section). Includes sub-day granularity (HOUR/MINUTE/SECOND/MICRO)
+# and calendar-boundary granularity (MONTH/QUARTER/YEAR) to catch
+# drift at month-end and year-end.
+cases:
+  - desc: HOUR diff within the same calendar day
+    sql: SELECT DATETIME_DIFF(DATETIME "2024-03-15T15:00:00", DATETIME "2024-03-15T12:00:00", HOUR)
+    expected:
+      rows:
+        - [3]
+  - desc: MINUTE diff
+    sql: SELECT DATETIME_DIFF(DATETIME "2024-03-15T12:30:00", DATETIME "2024-03-15T12:00:00", MINUTE)
+    expected:
+      rows:
+        - [30]
+  - desc: SECOND diff
+    sql: SELECT DATETIME_DIFF(DATETIME "2024-03-15T12:00:10", DATETIME "2024-03-15T12:00:00", SECOND)
+    expected:
+      rows:
+        - [10]
+  - desc: MICROSECOND diff at sub-second precision
+    sql: |-
+      SELECT DATETIME_DIFF(
+        DATETIME "2024-03-15T12:00:00.000123",
+        DATETIME "2024-03-15T12:00:00",
+        MICROSECOND)
+    expected:
+      rows:
+        - [123]
+  - desc: DAY boundary (midnight to next midnight)
+    sql: SELECT DATETIME_DIFF(DATETIME "2024-03-16T00:00:00", DATETIME "2024-03-15T00:00:00", DAY)
+    expected:
+      rows:
+        - [1]
+  - desc: month-end-of-month MONTH boundary (1/31 → 2/28)
+    sql: SELECT DATETIME_DIFF(DATETIME "2020-02-28T00:00:00", DATETIME "2020-01-31T00:00:00", MONTH)
+    expected:
+      rows:
+        - [1]
+  - desc: year boundary across the last second of the year
+    sql: SELECT DATETIME_DIFF(DATETIME "2021-01-01T00:00:00", DATETIME "2020-12-31T23:59:59", YEAR)
+    expected:
+      rows:
+        - [1]
+  - desc: QUARTER boundary
+    sql: SELECT DATETIME_DIFF(DATETIME "2024-04-01T00:00:00", DATETIME "2024-01-01T00:00:00", QUARTER)
+    expected:
+      rows:
+        - [1]
+  - desc: negative direction
+    sql: SELECT DATETIME_DIFF(DATETIME "2020-01-01T00:00:00", DATETIME "2020-03-01T00:00:00", MONTH)
+    expected:
+      rows:
+        - [-2]
+  - desc: NULL input propagates
+    sql: SELECT DATETIME_DIFF(CAST(NULL AS DATETIME), DATETIME "2024-01-01T00:00:00", HOUR)
+    expected:
+      rows:
+        - [null]

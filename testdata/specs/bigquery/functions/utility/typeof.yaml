@@ -1,0 +1,23 @@
+spec: docs/specs/bigquery/functions/utility/typeof.md
+dialect: bigquery
+cases:
+  - desc: integer literal reports INT64
+    sql: SELECT TYPEOF(123)
+    expected:
+      rows:
+        - ['INT64']
+  - desc: string literal reports STRING
+    sql: SELECT TYPEOF('hello')
+    expected:
+      rows:
+        - ['STRING']
+  - desc: floating-point literal reports DOUBLE
+    sql: SELECT TYPEOF(4.7)
+    expected:
+      rows:
+        - ['DOUBLE']
+  - desc: NULL collapses to INT64 supertype
+    sql: SELECT TYPEOF(NULL)
+    expected:
+      rows:
+        - ['INT64']

@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/bit/bit_cast_to_int64.md
+dialect: googlesql
+cases:
+  - desc: positive round-trip
+    sql: SELECT BIT_CAST_TO_INT64(123)
+    expected:
+      rows:
+        - [123]
+  - desc: nested round-trip with UINT64
+    sql: SELECT BIT_CAST_TO_INT64(BIT_CAST_TO_UINT64(-1))
+    expected:
+      rows:
+        - [-1]

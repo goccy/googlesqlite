@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_ip_trunc.md
+dialect: googlesql
+cases:
+  - desc: NET.IP_TRUNC of an IPv4 to /24 returns the network bytes
+    sql: SELECT NET.IP_TO_STRING(NET.IP_TRUNC(NET.IP_FROM_STRING('192.168.1.10'), 24))
+    expected:
+      rows:
+        - ['192.168.1.0']

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/least.md
+dialect: googlesql
+cases:
+  - desc: least of three
+    sql: SELECT LEAST(7, 2, 5)
+    expected:
+      rows:
+        - [2]

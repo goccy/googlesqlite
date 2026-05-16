@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/bool_array.md
+dialect: googlesql
+cases:
+  - desc: bool_array extracts a typed array
+    sql: SELECT TO_JSON_STRING(BOOL_ARRAY(JSON '[true,false]'))
+    expected:
+      rows:
+        - ['[true,false]']

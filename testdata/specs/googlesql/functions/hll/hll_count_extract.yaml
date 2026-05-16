@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/hll/hll_count_extract.md
+dialect: googlesql
+cases:
+  - desc: HLL_COUNT.EXTRACT through INIT pipeline returns approximate cardinality
+    sql: SELECT HLL_COUNT.EXTRACT(HLL_COUNT.INIT(x)) >= 0 FROM UNNEST([1, 2, 3]) AS x
+    expected:
+      rows:
+        - [true]

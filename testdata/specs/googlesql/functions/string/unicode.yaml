@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/unicode.md
+dialect: googlesql
+cases:
+  - desc: UNICODE returns the codepoint of the first rune
+    sql: SELECT UNICODE('A')
+    expected:
+      rows:
+        - [65]

@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/syntax/query/rollup.md
+dialect: googlesql
+cases:
+  - desc: rollup adds the grand-total row to the regular groupings
+    sql: |-
+      SELECT k, SUM(v) AS total
+      FROM UNNEST([STRUCT('a' AS k, 1 AS v), ('a', 2), ('b', 3)])
+      GROUP BY ROLLUP(k)
+      ORDER BY k NULLS LAST
+    expected:
+      rows:
+        - ['a', 3]
+        - ['b', 3]
+        - [null, 6]

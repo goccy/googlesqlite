@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/tokenize_fulltext.md
+dialect: spanner
+cases:
+  - desc: produces non-empty TOKENLIST
+    sql: |-
+      SELECT LENGTH(CAST(TOKENIZE_FULLTEXT('hello') AS STRING)) > 0
+    expected:
+      rows:
+        - [true]

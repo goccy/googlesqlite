@@ -1,0 +1,12 @@
+spec: docs/specs/bigquery/functions/aead/keys_keyset_chain.md
+dialect: bigquery
+# KEYS.KEYSET_CHAIN combines a KMS resource path with a wrapped
+# keyset BYTES literal. The result is non-NULL when both inputs are
+# present. The second arg must be a literal / query parameter at
+# analyze time -- we supply a BYTES literal.
+cases:
+  - desc: chain with literal wrapped keyset is non-NULL
+    sql: SELECT KEYS.KEYSET_CHAIN('projects/p/locations/l/keyRings/r/cryptoKeys/k', b'\x00\x01\x02') IS NOT NULL AS r
+    expected:
+      rows:
+        - [true]

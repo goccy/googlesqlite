@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/raise.md
+dialect: googlesql
+cases:
+  - desc: RAISE USING MESSAGE accepts a message
+    setup:
+      - RAISE USING MESSAGE = 'demo error'
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

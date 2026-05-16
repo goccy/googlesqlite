@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/time_sub.md
+dialect: googlesql
+cases:
+  - desc: subtract 30 seconds
+    sql: SELECT CAST(TIME_SUB(TIME "12:30:30", INTERVAL 30 SECOND) AS STRING)
+    expected:
+      rows:
+        - ["12:30:00"]

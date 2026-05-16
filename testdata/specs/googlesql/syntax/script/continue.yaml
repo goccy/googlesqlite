@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/continue.md
+dialect: googlesql
+cases:
+  - desc: CONTINUE returns to the top of the loop
+    setup:
+      - WHILE 1 = 2 DO CONTINUE; END WHILE
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

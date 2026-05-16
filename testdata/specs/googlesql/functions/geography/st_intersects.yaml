@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/geography/st_intersects.md
+dialect: googlesql
+cases:
+  - desc: coincident points intersect
+    sql: SELECT ST_INTERSECTS(ST_GEOGPOINT(0,0), ST_GEOGPOINT(0,0))
+    expected:
+      rows:
+        - [true]

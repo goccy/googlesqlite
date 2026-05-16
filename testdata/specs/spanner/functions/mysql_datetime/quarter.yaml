@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_datetime/quarter.md
+dialect: spanner
+cases:
+  - desc: Q1 from a January DATE
+    sql: SELECT mysql.quarter(DATE "2024-01-15")
+    expected:
+      rows:
+        - [1]
+  - desc: Q4 from a December DATE
+    sql: SELECT mysql.quarter(DATE "2024-12-31")
+    expected:
+      rows:
+        - [4]

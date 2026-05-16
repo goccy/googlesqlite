@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/security/session_user.md
+dialect: googlesql
+cases:
+  - desc: SESSION_USER returns a non-NULL identifier
+    sql: SELECT SESSION_USER() IS NOT NULL
+    expected:
+      rows:
+        - [true]

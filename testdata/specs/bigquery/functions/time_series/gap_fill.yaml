@@ -1,0 +1,64 @@
+spec: docs/specs/bigquery/functions/time_series/gap_fill.md
+dialect: bigquery
+cases:
+  - desc: LOCF carries the previous non-null value across a gap
+    setup:
+      - CREATE TABLE device_data (device_id INT64, time TIMESTAMP, signal INT64)
+      - |-
+        INSERT INTO device_data VALUES
+          (1, TIMESTAMP '2023-11-01 09:34:00+00', 74),
+          (2, TIMESTAMP '2023-11-01 09:36:00+00', 77),
+          (3, TIMESTAMP '2023-11-01 09:37:00+00', 78),
+          (4, TIMESTAMP '2023-11-01 09:38:00+00', 80)
+    sql: |-
+      SELECT signal FROM GAP_FILL(
+        TABLE device_data,
+        ts_column => 'time',
+        bucket_width => INTERVAL 1 MINUTE,
+        value_columns => [('signal', 'locf')]
+      ) ORDER BY time
+    expected:
+      rows:
+        - [74]
+        - [74]
+        - [77]
+        - [78]
+        - [80]
+  - desc: null fill leaves the gap as NULL
+    setup:
+      - CREATE TABLE dd2 (time TIMESTAMP, signal INT64)
+      - |-
+        INSERT INTO dd2 VALUES
+          (TIMESTAMP '2023-11-01 09:34:00+00', 74),
+          (TIMESTAMP '2023-11-01 09:36:00+00', 77)
+    sql: |-
+      SELECT signal FROM GAP_FILL(
+        TABLE dd2,
+        ts_column => 'time',
+        bucket_width => INTERVAL 1 MINUTE,
+        value_columns => [('signal', 'null')]
+      ) ORDER BY time
+    expected:
+      rows:
+        - [74]
+        - [null]
+        - [77]
+  - desc: linear interpolation fills the gap with the midpoint
+    setup:
+      - CREATE TABLE dd3 (time TIMESTAMP, signal INT64)
+      - |-
+        INSERT INTO dd3 VALUES
+          (TIMESTAMP '2023-11-01 09:34:00+00', 74),
+          (TIMESTAMP '2023-11-01 09:36:00+00', 77)
+    sql: |-
+      SELECT signal FROM GAP_FILL(
+        TABLE dd3,
+        ts_column => 'time',
+        bucket_width => INTERVAL 1 MINUTE,
+        value_columns => [('signal', 'linear')]
+      ) ORDER BY time
+    expected:
+      rows:
+        - [74.0]
+        - [75.5]
+        - [77.0]

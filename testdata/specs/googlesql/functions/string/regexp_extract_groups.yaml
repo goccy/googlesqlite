@@ -1,0 +1,98 @@
+spec: docs/specs/googlesql/functions/string/regexp_extract_groups.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/string_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('abc123xyz', r'([a-z]+)([0-9]+)([a-z]+)') AS result
+    expected:
+      rows:
+        - ['{abc, 123, xyz}']
+  - desc: upstream example 2
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('2025-09-10', r'(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})') AS result
+    expected:
+      rows:
+        - ['{2025, 09, 10}']
+  - desc: upstream example 3
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('PROD-WIDGET-1234', r'(?<env>\w+)-(?<product>\w+)-(?<id>\d+)').*
+    expected:
+      rows:
+        - ['PROD', 'WIDGET', '1234']
+  - desc: upstream example 4
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('id:123', r'(?<key>[a-z]+):([0-9]+)') AS result
+    expected:
+      rows:
+        - ['{id, 123}']
+  - desc: upstream example 5
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('abc', r'(\d+)') AS result
+    expected:
+      rows:
+        - [null]
+  - desc: upstream example 6
+    sql: |-
+      WITH inputs AS (
+        SELECT 'id:123:extra' AS t UNION ALL
+        SELECT 'id:123:' AS t UNION ALL
+        SELECT 'id:123' AS t
+      )
+      SELECT
+        t,
+        REGEXP_EXTRACT_GROUPS(t, r'(?<key>\w+):(?<val>\w+)(?::(?<opt>\w*))?') AS result
+      FROM inputs
+    expected:
+      rows:
+        - ['id:123:extra', '{id, 123, extra}']
+        - ['id:123:', '{id, 123, }']
+        - ['id:123', '{id, 123, NULL}']
+  - desc: upstream example 7
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('a=b=c', r'(\w+)=((\w+)=\w+)') AS result
+    expected:
+      rows:
+        - ['{a, b=c, b}']
+  - desc: upstream example 8
+    sql: |-
+      WITH inputs AS (
+        SELECT 'config_id=123' AS t UNION ALL
+        SELECT 'option_name=ABC' AS t
+      )
+      SELECT
+        t,
+        REGEXP_EXTRACT_GROUPS(t, r'config_id=(?<id>\d+)|option_name=(?<name>\w+)') AS result
+      FROM inputs
+    expected:
+      rows:
+        - ['config_id=123', '{123, NULL}']
+        - ['option_name=ABC', '{NULL, ABC}']
+  - desc: upstream example 9
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('val=0x1a', r'val=(?<val__INT64>0x[0-9a-fA-F]+)') AS result
+    expected:
+      rows:
+        - ['{26}']
+  - desc: upstream example 10
+    sql: |-
+      FROM UNNEST(['02:30:10', '01:02:03']) AS time_str
+      |> EXTEND REGEXP_EXTRACT_GROUPS(time_str, r'(?<h__INT64>\d{2}):(?<m__INT64>\d{2}):(?<s__INT64>\d{2})').*
+      |> SELECT time_str, h * 3600 + m * 60 + s AS total_seconds
+    expected:
+      rows:
+        - ['02:30:10', 9010]
+        - ['01:02:03', 3723]
+  - desc: upstream example 11
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('2025-09-10', r'(?<year__INT64>\d{4})-(?<month__INT64>\d{2})-(?<day__INT64>\d{2})').*
+    expected:
+      rows:
+        - [2025, 9, 10]
+  - desc: upstream example 12
+    sql: |-
+      SELECT REGEXP_EXTRACT_GROUPS('ID: ', r'ID: (?<item_id__INT64>\d+)?') AS result
+    expected:
+      rows:
+        - ['{NULL}']

@@ -1,0 +1,26 @@
+spec: docs/specs/googlesql/functions/proto/proto_default_if_null.md
+dialect: googlesql
+# Original upstream Examples reference fictional proto types
+# (item.purchased.<field>) that have no Cloud BigQuery / Spanner
+# counterpart. The cases below substitute the auto-registered
+# well-known type `google.type.Date`; the function semantics
+# (return the field value when set, the proto3 default when unset)
+# transfer to any proto with optional primitive fields. See task
+# #130 for the bundle path that would let us cover the upstream
+# Examples verbatim.
+cases:
+  - desc: PROTO_DEFAULT_IF_NULL returns the set field value
+    sql: |-
+      SELECT PROTO_DEFAULT_IF_NULL((new google.type.Date(2019 as year, 10 as month, 30 as day)).year) AS year_value
+    expected:
+      rows:
+        - [2019]
+  - desc: PROTO_DEFAULT_IF_NULL with explicit field access for each component
+    sql: |-
+      SELECT
+        PROTO_DEFAULT_IF_NULL((new google.type.Date(2019 as year, 10 as month, 30 as day)).year)  AS y,
+        PROTO_DEFAULT_IF_NULL((new google.type.Date(2019 as year, 10 as month, 30 as day)).month) AS m,
+        PROTO_DEFAULT_IF_NULL((new google.type.Date(2019 as year, 10 as month, 30 as day)).day)   AS d
+    expected:
+      rows:
+        - [2019, 10, 30]

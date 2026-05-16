@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_includes_all.md
+dialect: googlesql
+cases:
+  - desc: array_includes_all basic input
+    sql: SELECT ARRAY_INCLUDES_ALL([1, 2, 3], [1, 3])
+    expected:
+      rows:
+        - [true]

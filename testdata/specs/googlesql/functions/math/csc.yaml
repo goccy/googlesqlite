@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/csc.md
+dialect: googlesql
+cases:
+  - desc: csc of typical input is finite
+    sql: SELECT IS_NAN(CSC(1.0))
+    expected:
+      rows:
+        - [false]

@@ -1,0 +1,24 @@
+spec: docs/specs/googlesql/functions/geography/s2_coveringcellids.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+#
+# An earlier auto-extraction split row 3's wide array cell across two
+# YAML rows. The cell is a single array of 8 cell ids.
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH data AS (
+        SELECT 1 AS id, ST_GEOGPOINT(-122, 47) AS geo
+        UNION ALL
+        SELECT 2 AS id, ST_GEOGFROMTEXT('POINT EMPTY') AS geo
+        UNION ALL
+        SELECT 3 AS id, ST_GEOGFROMTEXT('LINESTRING(-122.12 47.67, -122.19 47.69)') AS geo
+      )
+      SELECT id, S2_COVERINGCELLIDS(geo, min_level => 12) cells
+      FROM data
+    expected:
+      unordered: true
+      rows:
+        - ['1', '[6093613931972369317]']
+        - ['2', '[]']
+        - ['3', '[6093384954555662336, 6093390709811838976, 6093390735581642752, 6093390740145045504, 6093390791416217600, 6093390812891054080, 6093390817187069952, 6093496378892222464]']

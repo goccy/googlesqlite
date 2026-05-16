@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/character_length.md
+dialect: googlesql
+cases:
+  - desc: ascii char length synonym
+    sql: SELECT CHARACTER_LENGTH('hello')
+    expected:
+      rows:
+        - [5]

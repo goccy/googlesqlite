@@ -1,0 +1,38 @@
+spec: docs/specs/bigquery/functions/time_series/date_bucket.md
+dialect: bigquery
+cases:
+  - desc: default origin 1950-01-01, 2-day buckets — before origin
+    sql: SELECT DATE_BUCKET(DATE '1949-12-29', INTERVAL 2 DAY)
+    expected:
+      rows:
+        - ['1949-12-28']
+  - desc: default origin 1950-01-01, 2-day buckets — aligned just below
+    sql: SELECT DATE_BUCKET(DATE '1949-12-31', INTERVAL 2 DAY)
+    expected:
+      rows:
+        - ['1949-12-30']
+  - desc: default origin 1950-01-01, 2-day buckets — at origin
+    sql: SELECT DATE_BUCKET(DATE '1950-01-01', INTERVAL 2 DAY)
+    expected:
+      rows:
+        - ['1950-01-01']
+  - desc: default origin 1950-01-01, 2-day buckets — third bucket
+    sql: SELECT DATE_BUCKET(DATE '1950-01-03', INTERVAL 2 DAY)
+    expected:
+      rows:
+        - ['1950-01-03']
+  - desc: custom origin, 7-day buckets — before origin
+    sql: SELECT DATE_BUCKET(DATE '2000-12-20', INTERVAL 7 DAY, DATE '2000-12-24')
+    expected:
+      rows:
+        - ['2000-12-17']
+  - desc: custom origin, 7-day buckets — at origin
+    sql: SELECT DATE_BUCKET(DATE '2000-12-24', INTERVAL 7 DAY, DATE '2000-12-24')
+    expected:
+      rows:
+        - ['2000-12-24']
+  - desc: NULL input propagates
+    sql: SELECT DATE_BUCKET(CAST(NULL AS DATE), INTERVAL 2 DAY)
+    expected:
+      rows:
+        - [null]

@@ -1,0 +1,31 @@
+spec: docs/specs/googlesql/types/array.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/data-types.md
+#
+# The upstream Examples render an ARRAY<INT64> / ARRAY<DATE> column as
+# `[11, 13, 15, ...]` inside a single ASCII-table cell. The
+# auto-extractor pulled that cell as a quoted string; the actual
+# upstream return value is an ARRAY, so the YAML expects a nested
+# list (not a string).
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT GENERATE_ARRAY(11, 33, 2) AS odds
+    expected:
+      rows:
+        - [[11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33]]
+  - desc: upstream example 2
+    sql: |-
+      SELECT GENERATE_ARRAY(21, 14, -1) AS countdown
+    expected:
+      rows:
+        - [[21, 20, 19, 18, 17, 16, 15, 14]]
+  - desc: upstream example 3
+    sql: |-
+      SELECT
+        GENERATE_DATE_ARRAY('2017-11-21', '2017-12-31', INTERVAL 1 WEEK)
+          AS date_array
+    expected:
+      rows:
+        - [['2017-11-21', '2017-11-28', '2017-12-05', '2017-12-12', '2017-12-19', '2017-12-26']]

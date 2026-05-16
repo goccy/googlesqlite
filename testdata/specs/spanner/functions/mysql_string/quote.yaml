@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/quote.md
+dialect: spanner
+cases:
+  - desc: escape quoted string
+    sql: |-
+      SELECT mysql.quote("it's")
+    expected:
+      rows:
+        - ['''it\''s''']

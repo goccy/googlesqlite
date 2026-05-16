@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/datetime/last_day.md
+dialect: googlesql
+cases:
+  - desc: last day of month from datetime
+    sql: SELECT LAST_DAY(DATETIME "2024-02-15T08:00:00")
+    expected:
+      rows:
+        - ["2024-02-29"]

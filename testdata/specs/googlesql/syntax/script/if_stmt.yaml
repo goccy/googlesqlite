@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/if_stmt.md
+dialect: googlesql
+cases:
+  - desc: IF without ELSE
+    setup:
+      - IF 1 = 1 THEN SELECT 1; END IF
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

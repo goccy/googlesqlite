@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/ord.md
+dialect: spanner
+cases:
+  - desc: ASCII code-point of first char
+    sql: |-
+      SELECT mysql.ord('A')
+    expected:
+      rows:
+        - [65]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/format_time.md
+dialect: googlesql
+cases:
+  - desc: HMS formatting
+    sql: SELECT FORMAT_TIME("%H:%M:%S", TIME "12:30:45")
+    expected:
+      rows:
+        - ["12:30:45"]

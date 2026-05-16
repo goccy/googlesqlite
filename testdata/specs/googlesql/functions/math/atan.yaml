@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/atan.md
+dialect: googlesql
+cases:
+  - desc: atan(0) is 0
+    sql: SELECT ATAN(0.0)
+    expected:
+      rows:
+        - [0.0]

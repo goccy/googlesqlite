@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_query_array.md
+dialect: googlesql
+cases:
+  - desc: extract array of objects
+    sql: SELECT TO_JSON_STRING(JSON_QUERY_ARRAY(JSON '[{"a":1}, {"a":2}]'))
+    expected:
+      rows:
+        - ['[{"a":1},{"a":2}]']

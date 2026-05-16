@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/statistical/stddev_pop.md
+dialect: googlesql
+cases:
+  - desc: stddev_pop of constant is 0
+    sql: SELECT STDDEV_POP(x) FROM UNNEST([5.0, 5.0, 5.0]) AS x
+    expected:
+      rows:
+        - [0.0]

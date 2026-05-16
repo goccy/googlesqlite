@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/instr.md
+dialect: googlesql
+cases:
+  - desc: instr basic behaviour
+    sql: SELECT INSTR("banana", "a")
+    expected:
+      rows:
+        - [2]

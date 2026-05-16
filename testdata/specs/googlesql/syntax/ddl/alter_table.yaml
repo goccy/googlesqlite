@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/syntax/ddl/alter_table.md
+dialect: googlesql
+cases:
+  - desc: ALTER TABLE ADD COLUMN is accepted by the analyzer
+    setup:
+      - CREATE TABLE alter_ds.t1 (a INT64)
+      - ALTER TABLE alter_ds.t1 ADD COLUMN c FLOAT64
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

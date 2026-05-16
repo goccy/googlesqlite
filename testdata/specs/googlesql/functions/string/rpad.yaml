@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/rpad.md
+dialect: googlesql
+cases:
+  - desc: pad to length 5
+    sql: SELECT RPAD('hi', 5, '*')
+    expected:
+      rows:
+        - ['hi***']

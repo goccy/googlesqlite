@@ -1,0 +1,11 @@
+spec: docs/specs/bigquery/functions/aead/keys_add_key_from_raw_bytes.md
+dialect: bigquery
+# KEYS.ADD_KEY_FROM_RAW_BYTES extends a keyset with a literal key
+# byte payload. The result is non-NULL. The accepted key-type names
+# are 'AES_CBC_PKCS' and 'AES_GCM' (per upstream analyzer signature).
+cases:
+  - desc: appending a raw 16-byte AES_GCM key produces non-NULL keyset
+    sql: SELECT KEYS.ADD_KEY_FROM_RAW_BYTES(KEYS.NEW_KEYSET('AEAD_AES_GCM_256'), 'AES_GCM', b'0123456789012345') IS NOT NULL AS r
+    expected:
+      rows:
+        - [true]

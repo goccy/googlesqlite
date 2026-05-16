@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_flatten.md
+dialect: googlesql
+cases:
+  - desc: flatten one level of nesting
+    sql: SELECT TO_JSON_STRING(JSON_FLATTEN(JSON '[[1],[2,3]]'))
+    expected:
+      rows:
+        - ['[1,2,3]']

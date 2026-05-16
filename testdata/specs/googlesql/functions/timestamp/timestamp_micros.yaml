@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/timestamp/timestamp_micros.md
+dialect: googlesql
+cases:
+  - desc: round-trip
+    sql: SELECT UNIX_MICROS(TIMESTAMP_MICROS(1710504000000000))
+    expected:
+      rows:
+        - [1710504000000000]

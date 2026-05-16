@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/bool.md
+dialect: googlesql
+cases:
+  - desc: bool basic behaviour
+    sql: SELECT BOOL(JSON 'true')
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,37 @@
+spec: docs/specs/googlesql/functions/range/range_contains.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/range-functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT RANGE_CONTAINS(
+        RANGE<DATE> '[2022-01-01, 2023-01-01)',
+        RANGE<DATE> '[2022-04-01, 2022-07-01)') AS results
+    expected:
+      rows:
+        - [true]
+  - desc: upstream example 2
+    sql: |-
+      SELECT RANGE_CONTAINS(
+        RANGE<DATE> '[2022-01-01, 2023-01-01)',
+        RANGE<DATE> '[2023-01-01, 2023-04-01)') AS results
+    expected:
+      rows:
+        - [false]
+  - desc: upstream example 3
+    sql: |-
+      SELECT RANGE_CONTAINS(
+        RANGE<DATE> '[2022-01-01, 2023-01-01)',
+        DATE '2022-04-01') AS results
+    expected:
+      rows:
+        - [true]
+  - desc: upstream example 4
+    sql: |-
+      SELECT RANGE_CONTAINS(
+        RANGE<DATE> '[2022-01-01, 2023-01-01)',
+        DATE '2023-04-01') AS results
+    expected:
+      rows:
+        - [false]

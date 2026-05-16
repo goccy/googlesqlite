@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_utility/is_ipv4_mapped.md
+dialect: spanner
+cases:
+  - desc: ffff-prefixed IPv6 is mapped
+    sql: |-
+      SELECT mysql.is_ipv4_mapped(FROM_HEX('00000000000000000000ffff7f000001'))
+    expected:
+      rows:
+        - [true]

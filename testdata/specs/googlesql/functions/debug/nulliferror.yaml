@@ -1,0 +1,35 @@
+spec: docs/specs/googlesql/functions/debug/nulliferror.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/debugging_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT NULLIFERROR('a') AS result
+    expected:
+      rows:
+        - ['a']
+  - desc: upstream example 2
+    sql: |-
+      SELECT NULLIFERROR((SELECT [1,2,3][OFFSET(0)])) AS result
+    expected:
+      rows:
+        - ['1']
+  - desc: upstream example 3
+    sql: |-
+      SELECT NULLIFERROR(ERROR('a')) AS result
+    expected:
+      rows:
+        - [null]
+  - desc: upstream example 4
+    sql: |-
+      SELECT NULLIFERROR((SELECT [1,2,3][OFFSET(9)])) AS result
+    expected:
+      rows:
+        - [null]
+  - desc: upstream example 5
+    sql: |-
+      SELECT NULLIFERROR((SELECT e FROM UNNEST([1, 2]) AS e)) AS result
+    expected:
+      rows:
+        - [null]

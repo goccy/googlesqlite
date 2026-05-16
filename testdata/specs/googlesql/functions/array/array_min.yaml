@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_min.md
+dialect: googlesql
+cases:
+  - desc: array_min basic input
+    sql: SELECT ARRAY_MIN([1, 2, 3])
+    expected:
+      rows:
+        - [1]

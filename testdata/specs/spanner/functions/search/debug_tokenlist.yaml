@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/debug_tokenlist.md
+dialect: spanner
+cases:
+  - desc: JSON shape visible
+    sql: |-
+      SELECT DEBUG_TOKENLIST(TOKENIZE_FULLTEXT('hi'))
+    expected:
+      rows:
+        - ['{"kind":"fulltext","tokens":["hi"],"raw":"hi"}']

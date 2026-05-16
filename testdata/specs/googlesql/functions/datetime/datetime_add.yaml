@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/datetime/datetime_add.md
+dialect: googlesql
+cases:
+  - desc: add interval
+    sql: SELECT CAST(DATETIME_ADD(DATETIME "2024-03-15T12:00:00", INTERVAL 1 DAY) AS STRING)
+    expected:
+      rows:
+        - ["2024-03-16T12:00:00"]

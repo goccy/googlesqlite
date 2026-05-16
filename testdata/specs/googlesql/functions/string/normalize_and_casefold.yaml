@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/normalize_and_casefold.md
+dialect: googlesql
+cases:
+  - desc: normalize_and_casefold basic behaviour
+    sql: SELECT NORMALIZE_AND_CASEFOLD("Café")
+    expected:
+      rows:
+        - ['café']

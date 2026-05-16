@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/generate_timestamp_array.md
+dialect: googlesql
+cases:
+  - desc: hourly bucket from 00:00 to 03:00 has 4 entries
+    sql: SELECT ARRAY_LENGTH(GENERATE_TIMESTAMP_ARRAY(TIMESTAMP '2024-01-01 00:00:00 UTC', TIMESTAMP '2024-01-01 03:00:00 UTC', INTERVAL 1 HOUR))
+    expected:
+      rows:
+        - [4]

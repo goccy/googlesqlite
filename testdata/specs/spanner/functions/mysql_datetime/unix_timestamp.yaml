@@ -1,0 +1,10 @@
+spec: docs/specs/spanner/functions/mysql_datetime/unix_timestamp.md
+dialect: spanner
+# UNIX_TIMESTAMP with zero args returns the current instant as Unix
+# seconds. Positive Unix time is the tz-independent property.
+cases:
+  - desc: UNIX_TIMESTAMP() returns a positive count
+    sql: SELECT mysql.unix_timestamp() > 0 AS r
+    expected:
+      rows:
+        - [true]

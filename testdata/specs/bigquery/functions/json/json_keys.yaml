@@ -1,0 +1,23 @@
+spec: docs/specs/bigquery/functions/json/json_keys.md
+dialect: bigquery
+cases:
+  - desc: top-level object keys
+    sql: SELECT TO_JSON_STRING(JSON_KEYS(JSON '{"a":1,"b":2}'))
+    expected:
+      rows:
+        - ['["a","b"]']
+  - desc: nested keys flattened via dot notation
+    sql: SELECT TO_JSON_STRING(JSON_KEYS(JSON '{"a":{"b":{"c":1}}}'))
+    expected:
+      rows:
+        - ['["a","a.b","a.b.c"]']
+  - desc: max_depth caps recursion
+    sql: SELECT TO_JSON_STRING(JSON_KEYS(JSON '{"a":{"b":{"c":1}}}', 2))
+    expected:
+      rows:
+        - ['["a","a.b"]']
+  - desc: strict mode skips array-nested keys
+    sql: SELECT TO_JSON_STRING(JSON_KEYS(JSON '{"a":[{"b":1}]}'))
+    expected:
+      rows:
+        - ['["a"]']

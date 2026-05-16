@@ -1,0 +1,59 @@
+spec: docs/specs/bigquery/functions/search/search.md
+dialect: bigquery
+cases:
+  - desc: every query token present in data
+    sql: SELECT SEARCH('foo bar baz', 'bar')
+    expected:
+      rows:
+        - [true]
+  - desc: missing query token
+    sql: SELECT SEARCH('foo bar baz', 'qux')
+    expected:
+      rows:
+        - [false]
+  - desc: case-insensitive match via LOG_ANALYZER normalisation
+    sql: SELECT SEARCH('Hello World', 'world')
+    expected:
+      rows:
+        - [true]
+  - desc: partial match — one query term missing returns FALSE
+    sql: SELECT SEARCH('foo bar', 'foo bar baz')
+    expected:
+      rows:
+        - [false]
+  - desc: NULL data is treated as no tokens
+    sql: SELECT SEARCH(CAST(NULL AS STRING), 'bar')
+    expected:
+      rows:
+        - [false]
+  - desc: STRUCT input flattens every string field
+    sql: SELECT SEARCH(STRUCT('foo' AS a, 'bar baz' AS b), 'baz')
+    expected:
+      rows:
+        - [true]
+  - desc: ARRAY<STRING> input tokenises every element
+    sql: SELECT SEARCH(['alpha', 'beta gamma'], 'gamma')
+    expected:
+      rows:
+        - [true]
+  - desc: JSON input scans values by default
+    sql: SELECT SEARCH(JSON '{"a":"hello","b":"world"}', 'hello world')
+    expected:
+      rows:
+        - [true]
+  - desc: json_scope JSON_KEYS scans keys only
+    sql: SELECT SEARCH(JSON '{"alpha":"x","beta":"y"}', 'alpha', 'LOG_ANALYZER', NULL, 'JSON_KEYS')
+    expected:
+      rows:
+        - [true]
+  - desc: NO_OP_ANALYZER keeps original case + spaces
+    sql: SELECT SEARCH('Hello World', 'Hello World', 'NO_OP_ANALYZER')
+    expected:
+      rows:
+        - [true]
+  # NULL search_query is rejected at runtime by SEARCH itself (matches
+  # the upstream spec). The error surfaces through rows.Err() rather
+  # than db.Query, so we omit a testdata case for it — the runner
+  # only inspects Query-time errors, and rewriting that to surface
+  # iteration-time errors would broaden every error path in the
+  # runner. Coverage of this rejection lives in the Go-level probes.

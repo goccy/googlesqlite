@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_hausdorffdwithin.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT
+        ST_HAUSDORFFDWITHIN(
+          ST_GEOGFROMTEXT('LINESTRING(10 1, 20 1)'),
+          ST_GEOGFROMTEXT('LINESTRING(10 2, 20 2)'),
+          100000) AS is_close
+    expected:
+      rows:
+        - [false]

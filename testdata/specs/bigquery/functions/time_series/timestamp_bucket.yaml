@@ -1,0 +1,29 @@
+spec: docs/specs/bigquery/functions/time_series/timestamp_bucket.md
+dialect: bigquery
+cases:
+  - desc: default origin 1950-01-01 00:00:00 UTC, 12-hour bucket — afternoon
+    sql: |
+      SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S',
+        TIMESTAMP_BUCKET(TIMESTAMP '1950-01-01 13:00:00.00 UTC', INTERVAL 12 HOUR), 'UTC')
+    expected:
+      rows:
+        - ['1950-01-01 12:00:00']
+  - desc: default origin 1950-01-01 00:00:00 UTC, 12-hour bucket — at origin
+    sql: |
+      SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S',
+        TIMESTAMP_BUCKET(TIMESTAMP '1950-01-01 00:00:00.00 UTC', INTERVAL 12 HOUR), 'UTC')
+    expected:
+      rows:
+        - ['1950-01-01 00:00:00']
+  - desc: default origin 1950-01-01 00:00:00 UTC, 12-hour bucket — before origin
+    sql: |
+      SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S',
+        TIMESTAMP_BUCKET(TIMESTAMP '1949-12-31 13:00:00.00 UTC', INTERVAL 12 HOUR), 'UTC')
+    expected:
+      rows:
+        - ['1949-12-31 12:00:00']
+  - desc: NULL input propagates
+    sql: SELECT TIMESTAMP_BUCKET(CAST(NULL AS TIMESTAMP), INTERVAL 12 HOUR)
+    expected:
+      rows:
+        - [null]

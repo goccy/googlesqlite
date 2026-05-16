@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/graph/edges.md
+dialect: spanner
+cases:
+  - desc: single-hop path produces an EDGES array of length 1
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS EP_P (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'CREATE TABLE IF NOT EXISTS EP_K (src_id INT64, dst_id INT64, PRIMARY KEY (src_id, dst_id) NOT ENFORCED)'
+      - "INSERT OR IGNORE INTO EP_P VALUES (1, 'Alice'), (2, 'Bob')"
+      - 'INSERT OR IGNORE INTO EP_K VALUES (1, 2)'
+      - 'CREATE OR REPLACE PROPERTY GRAPH EP_G NODE TABLES (EP_P AS P PROPERTIES (id, name)) EDGE TABLES (EP_K AS K SOURCE KEY (src_id) REFERENCES P (id) DESTINATION KEY (dst_id) REFERENCES P (id))'
+    sql: |-
+      GRAPH EP_G MATCH p = (a:P)-[k:K]->(b:P) RETURN ARRAY_LENGTH(EDGES(p)) AS e_count
+    expected:
+      rows:
+        - [1]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/octet_length.md
+dialect: googlesql
+cases:
+  - desc: octet_length basic behaviour
+    sql: SELECT OCTET_LENGTH("héllo")
+    expected:
+      rows:
+        - [6]

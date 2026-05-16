@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_ip_from_string.md
+dialect: googlesql
+cases:
+  - desc: IPv4 round-trip through bytes and back to string
+    sql: SELECT NET.IP_TO_STRING(NET.IP_FROM_STRING('192.168.1.1'))
+    expected:
+      rows:
+        - ['192.168.1.1']

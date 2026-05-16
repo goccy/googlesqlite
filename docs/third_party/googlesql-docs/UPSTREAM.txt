@@ -1,0 +1,13 @@
+upstream: https://github.com/google/googlesql
+path: docs/
+commit: 36dd14aa0657ea299725504bc0f938732f58f380
+commit_date: 2026-01-30T22:23:54Z
+synced_at: 2026-05-04
+license: Apache-2.0 (see LICENSE in this directory)
+
+This directory holds a snapshot of the GoogleSQL documentation. It is the
+canonical input to `cmd/specctl normalize`, which produces the
+per-function/per-type files under `docs/specs/googlesql/`.
+
+To refresh: run `make spec/upstream-sync`. Do not edit files here by
+hand — local edits will be overwritten on the next sync.

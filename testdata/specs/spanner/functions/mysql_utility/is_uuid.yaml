@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/mysql_utility/is_uuid.md
+dialect: spanner
+cases:
+  - desc: canonical UUID returns true
+    sql: |-
+      SELECT mysql.is_uuid('550e8400-e29b-41d4-a716-446655440000')
+    expected:
+      rows:
+        - [true]
+  - desc: malformed UUID returns false
+    sql: |-
+      SELECT mysql.is_uuid('not-a-uuid')
+    expected:
+      rows:
+        - [false]

@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/syntax/query/unpivot.md
+dialect: googlesql
+cases:
+  - desc: unpivot two columns into value/column-name rows
+    sql: |-
+      SELECT * FROM (SELECT 1 AS a, 2 AS b)
+      UNPIVOT (val FOR col IN (a, b))
+      ORDER BY col
+    expected:
+      rows:
+        - [1, 'a']
+        - [2, 'b']

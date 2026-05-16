@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_asgeojson.md
+dialect: googlesql
+cases:
+  - desc: Point GeoJSON
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_GEOGFROMTEXT('POINT(1 2)'))
+    expected:
+      rows:
+        - ['{"type":"Point","coordinates":[1,2]}']

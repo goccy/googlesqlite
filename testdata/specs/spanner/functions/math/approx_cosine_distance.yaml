@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/math/approx_cosine_distance.md
+dialect: spanner
+# Cosine distance D = 1 - dot(a,b) / (|a| |b|). For [1,2] and [3,4]:
+# dot = 1*3 + 2*4 = 11; |a| = sqrt(5); |b| = sqrt(25) = 5; D = 1 - 11/(sqrt(5)*5)
+# = 1 - 11/11.18033988749895 = 0.01613008990009257.
+# Source: Spanner mathematical_functions reference (cosine distance
+# definition for ARRAY<FLOAT64> inputs).
+cases:
+  - desc: cosine distance for short vectors
+    sql: SELECT APPROX_COSINE_DISTANCE([1.0, 2.0], [3.0, 4.0]) AS d
+    expected:
+      rows:
+        - [0.01613008990009257]

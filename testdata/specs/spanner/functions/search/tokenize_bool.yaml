@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/tokenize_bool.md
+dialect: spanner
+cases:
+  - desc: bool tokenises
+    sql: |-
+      SELECT LENGTH(CAST(TOKENIZE_BOOL(TRUE) AS STRING)) > 0
+    expected:
+      rows:
+        - [true]

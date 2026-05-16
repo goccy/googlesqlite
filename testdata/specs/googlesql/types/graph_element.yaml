@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/types/graph_element.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/data-types.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      GRAPH FinGraph
+      MATCH (n:Person)
+      RETURN TYPEOF(n) AS t
+      LIMIT 1
+    expected:
+      rows:
+        - ['GRAPH_NODE(FinGraph)<Id INT64, ..., DYNAMIC>']

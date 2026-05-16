@@ -1,0 +1,63 @@
+spec: docs/specs/googlesql/functions/aggregate/grouping.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/aggregate_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH
+        Products AS (
+          SELECT 'shirt' AS product_type, 't-shirt' AS product_name, 3 AS product_count UNION ALL
+          SELECT 'shirt', 't-shirt', 8 UNION ALL
+          SELECT 'shirt', 'polo', 25 UNION ALL
+          SELECT 'pants', 'jeans', 6
+        )
+      SELECT
+        product_type,
+        product_name,
+        SUM(product_count) AS product_sum,
+        GROUPING(product_type) AS product_type_agg,
+        GROUPING(product_name) AS product_name_agg,
+      FROM Products
+      GROUP BY GROUPING SETS(product_type, product_name, ())
+      ORDER BY product_name
+    expected:
+      # The upstream Example renders shirt before pants within the
+      # NULL product_name group, but the SQL's `ORDER BY product_name`
+      # does not break the tie — SQLite and BigQuery legitimately
+      # disagree on the within-group order. Compare as a multiset.
+      unordered: true
+      rows:
+        - [null, null, '42', '1', '1']
+        - ['shirt', null, '36', '0', '1']
+        - ['pants', null, '6', '0', '1']
+        - [null, 'jeans', '6', '1', '0']
+        - [null, 'polo', '25', '1', '0']
+        - [null, 't-shirt', '11', '1', '0']
+  - desc: upstream example 2
+    sql: |-
+      WITH
+        Products AS (
+          SELECT 'shirt' AS product_type, 't-shirt' AS product_name, 3 AS product_count UNION ALL
+          SELECT 'shirt', 't-shirt', 8 UNION ALL
+          SELECT NULL, 'polo', 25 UNION ALL
+          SELECT 'pants', 'jeans', 6
+        )
+      SELECT
+        product_type,
+        product_name,
+        SUM(product_count) AS product_sum,
+        GROUPING(product_type) AS product_type_is_aggregated
+      FROM Products
+      GROUP BY GROUPING SETS(product_type, product_name)
+      ORDER BY product_name
+    expected:
+      # Same ORDER BY tie-break caveat as Example 1.
+      unordered: true
+      rows:
+        - ['shirt', null, '11', '0']
+        - [null, null, '25', '0']
+        - ['pants', null, '6', '0']
+        - [null, 'jeans', '6', '1']
+        - [null, 'polo', '25', '1']
+        - [null, 't-shirt', '11', '1']

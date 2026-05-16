@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/time_diff.md
+dialect: googlesql
+cases:
+  - desc: minute diff
+    sql: SELECT TIME_DIFF(TIME "12:30:00", TIME "12:00:00", MINUTE)
+    expected:
+      rows:
+        - [30]

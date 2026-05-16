@@ -1,0 +1,10 @@
+spec: docs/specs/bigquery/functions/time_series/appends.md
+dialect: bigquery
+cases:
+  - desc: APPENDS lowers to an empty subquery
+    sql: |-
+      CREATE TABLE IF NOT EXISTS appends_t (id INT64);
+      SELECT COALESCE((SELECT id FROM APPENDS(TABLE appends_t, NULL, NULL) LIMIT 1), 999) AS placeholder
+    expected:
+      rows:
+        - [999]

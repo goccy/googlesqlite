@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_iscollection.md
+dialect: googlesql
+cases:
+  - desc: MULTIPOINT is a collection
+    sql: |-
+      SELECT ST_ISCOLLECTION(ST_GEOGFROMTEXT('MULTIPOINT(0 0, 1 0)'))
+    expected:
+      rows:
+        - [true]
+  - desc: POINT is not
+    sql: |-
+      SELECT ST_ISCOLLECTION(ST_GEOGFROMTEXT('POINT(0 0)'))
+    expected:
+      rows:
+        - [false]

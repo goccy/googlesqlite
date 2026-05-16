@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/datetime/datetime_sub.md
+dialect: googlesql
+cases:
+  - desc: subtract interval
+    sql: SELECT CAST(DATETIME_SUB(DATETIME "2024-03-15T12:00:00", INTERVAL 1 HOUR) AS STRING)
+    expected:
+      rows:
+        - ["2024-03-15T11:00:00"]

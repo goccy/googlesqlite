@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/graph/element_id.md
+dialect: spanner
+cases:
+  - desc: element id is non-empty
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS Persons_EID (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'INSERT INTO Persons_EID VALUES (1, ''Alice'')'
+      - 'CREATE OR REPLACE PROPERTY GRAPH G_EID NODE TABLES (Persons_EID AS P PROPERTIES (id, name))'
+    sql: |-
+      GRAPH G_EID MATCH (p:P) RETURN ELEMENT_ID(p) IS NOT NULL AS ok
+    expected:
+      rows:
+        - [true]

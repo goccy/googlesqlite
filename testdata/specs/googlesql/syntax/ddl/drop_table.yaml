@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/syntax/ddl/drop_table.md
+dialect: googlesql
+cases:
+  - desc: DROP TABLE removes the dropped table from INFORMATION_SCHEMA
+    setup:
+      - CREATE TABLE drop_ds.keep_tbl (k INT64)
+      - CREATE TABLE drop_ds.drop_tbl (a INT64)
+      - DROP TABLE drop_ds.drop_tbl
+    sql: |-
+      SELECT table_name
+      FROM drop_ds.INFORMATION_SCHEMA.TABLES
+      ORDER BY table_name
+    expected:
+      rows:
+        - ['keep_tbl']

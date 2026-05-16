@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/net/net_ip_in_net.md
+dialect: googlesql
+cases:
+  - desc: IP inside the network
+    sql: SELECT NET.IP_IN_NET('10.0.0.5', '10.0.0.0/8')
+    expected:
+      rows:
+        - [true]
+  - desc: IP outside the network
+    sql: SELECT NET.IP_IN_NET('192.168.0.1', '10.0.0.0/8')
+    expected:
+      rows:
+        - [false]

@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/json/safe_to_json.md
+dialect: googlesql
+cases:
+  - desc: string passes through
+    sql: SELECT SAFE_TO_JSON('hello')
+    expected:
+      rows:
+        - ['"hello"']
+  - desc: int passes through
+    sql: SELECT SAFE_TO_JSON(42)
+    expected:
+      rows:
+        - ['42']
+  - desc: null input returns SQL NULL
+    sql: SELECT SAFE_TO_JSON(CAST(NULL AS STRING))
+    expected:
+      rows:
+        - [null]

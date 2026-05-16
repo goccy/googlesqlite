@@ -1,0 +1,28 @@
+spec: docs/specs/googlesql/syntax/pipe/select.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/pipe-syntax.md (the
+# `SELECT pipe operator` section). Each case rewrites an upstream
+# Example to use an inline `FROM (SELECT ...)` so the spec can run
+# without a pre-existing `Produce` table.
+cases:
+  - desc: rename single column via pipe SELECT
+    sql: |-
+      FROM (SELECT 'apples' AS item, 2 AS sales)
+      |> SELECT item AS fruit_name
+    expected:
+      rows:
+        - ['apples']
+  - desc: project two columns in declared order
+    sql: |-
+      FROM (SELECT 1 AS x, 2 AS y, 3 AS z)
+      |> SELECT z, x
+    expected:
+      rows:
+        - [3, 1]
+  - desc: arithmetic expression in pipe SELECT
+    sql: |-
+      FROM (SELECT 5 AS a)
+      |> SELECT a + 10 AS sum
+    expected:
+      rows:
+        - [15]

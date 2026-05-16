@@ -1,0 +1,36 @@
+spec: docs/specs/googlesql/syntax/query/predicates.md
+dialect: googlesql
+cases:
+  - desc: BETWEEN inclusive range
+    sql: SELECT 5 BETWEEN 1 AND 10 AS in_range, 11 BETWEEN 1 AND 10 AS out_of_range
+    expected:
+      rows:
+        - [true, false]
+  - desc: IN list literal
+    sql: SELECT 5 IN (1, 5, 10) AS hit, 6 IN (1, 5, 10) AS miss
+    expected:
+      rows:
+        - [true, false]
+  - desc: NOT IN
+    sql: SELECT 5 NOT IN (1, 2, 3) AS r
+    expected:
+      rows:
+        - [true]
+  - desc: IS NULL / IS NOT NULL
+    sql: SELECT NULL IS NULL AS is_null_yes, 1 IS NULL AS is_null_no, 1 IS NOT NULL AS not_null
+    expected:
+      rows:
+        - [true, false, true]
+  - desc: LIKE wildcard
+    sql: SELECT 'abc' LIKE 'a%' AS prefix_hit, 'abc' LIKE 'b%' AS prefix_miss
+    expected:
+      rows:
+        - [true, false]
+  - desc: EXISTS subquery
+    sql: |-
+      SELECT
+        EXISTS(SELECT 1) AS has_rows,
+        EXISTS(SELECT * FROM UNNEST([]) WHERE TRUE) AS no_rows
+    expected:
+      rows:
+        - [true, false]

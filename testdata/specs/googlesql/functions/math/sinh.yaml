@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/sinh.md
+dialect: googlesql
+cases:
+  - desc: sinh(0) is 0
+    sql: SELECT SINH(0.0)
+    expected:
+      rows:
+        - [0.0]

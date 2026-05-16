@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/to_hex.md
+dialect: googlesql
+cases:
+  - desc: hex-encode bytes
+    sql: SELECT TO_HEX(b'abc')
+    expected:
+      rows:
+        - ['616263']

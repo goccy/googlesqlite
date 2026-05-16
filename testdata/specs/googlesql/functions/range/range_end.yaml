@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/functions/range/range_end.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/range-functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT RANGE_END(RANGE<DATE> '[2022-12-01, 2022-12-31)') AS results
+    expected:
+      rows:
+        - ['2022-12-31']
+  - desc: upstream example 2
+    sql: |-
+      SELECT RANGE_END(RANGE<DATE> '[2022-12-01, UNBOUNDED)') AS results
+    expected:
+      rows:
+        - [null]

@@ -1,0 +1,8 @@
+spec: docs/specs/bigquery/functions/aead/keys_new_keyset.md
+dialect: bigquery
+cases:
+  - desc: returns a non-empty keyset BYTES payload
+    sql: SELECT BYTE_LENGTH(KEYS.NEW_KEYSET('AEAD_AES_GCM_256')) > 0
+    expected:
+      rows:
+        - [true]

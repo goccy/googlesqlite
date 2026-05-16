@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/types/timestamp.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata
+# (Apache-2.0 derivative). Round-trip tests via STRING cast.
+cases:
+  - desc: FORMAT_TIMESTAMP UTC
+    sql: SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S+00', TIMESTAMP '2020-12-25 15:30:00 UTC', 'UTC') AS s
+    expected:
+      rows:
+        - ['2020-12-25 15:30:00+00']

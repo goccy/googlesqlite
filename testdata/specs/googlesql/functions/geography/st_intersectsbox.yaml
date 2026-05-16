@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_intersectsbox.md
+dialect: googlesql
+cases:
+  - desc: point inside box
+    sql: |-
+      SELECT ST_INTERSECTSBOX(ST_GEOGFROMTEXT('POINT(0.5 0.5)'), 0.0, 0.0, 1.0, 1.0)
+    expected:
+      rows:
+        - [true]
+  - desc: point outside box
+    sql: |-
+      SELECT ST_INTERSECTSBOX(ST_GEOGFROMTEXT('POINT(2 2)'), 0.0, 0.0, 1.0, 1.0)
+    expected:
+      rows:
+        - [false]

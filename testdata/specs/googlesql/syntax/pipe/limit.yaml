@@ -1,0 +1,22 @@
+spec: docs/specs/googlesql/syntax/pipe/limit.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/pipe-syntax.md.
+cases:
+  - desc: limit caps the row count
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4)
+      |> ORDER BY x
+      |> LIMIT 2
+    expected:
+      rows:
+        - [1]
+        - [2]
+  - desc: limit with offset skips initial rows
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4)
+      |> ORDER BY x
+      |> LIMIT 2 OFFSET 1
+    expected:
+      rows:
+        - [2]
+        - [3]

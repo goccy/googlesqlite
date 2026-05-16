@@ -1,0 +1,62 @@
+spec: docs/specs/googlesql/functions/aggregate/differential_privacy/anon_avg.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/aggregate-dp-functions.md
+cases:
+  - desc: upstream example 1 — ANON_AVG with noise (eps=10)
+    setup:
+      - >-
+        CREATE TABLE professors (id INT64, item STRING, quantity INT64)
+        OPTIONS(anonymization_userid_column='id')
+      - >-
+        INSERT INTO professors VALUES
+        (101, "pencil", 24),
+        (123, "pen", 16),
+        (123, "pencil", 10),
+        (123, "pencil", 38),
+        (101, "pen", 19),
+        (101, "pen", 23),
+        (130, "scissors", 8),
+        (150, "pencil", 72)
+    sql: |-
+      SELECT
+        WITH ANONYMIZATION
+          OPTIONS(epsilon=10, delta=.01, max_groups_contributed=1)
+          item,
+          ANON_AVG(quantity CLAMPED BETWEEN 0 AND 100) AS average_quantity
+      FROM professors
+      GROUP BY item
+    nondeterministic: true
+    expected:
+      rows:
+        - ['pencil', '38.5038356810269']
+        - ['pen', '13.4725028762032']
+
+  - desc: upstream example 2 — ANON_AVG without noise
+    setup:
+      - >-
+        CREATE TABLE professors (id INT64, item STRING, quantity INT64)
+        OPTIONS(anonymization_userid_column='id')
+      - >-
+        INSERT INTO professors VALUES
+        (101, "pencil", 24),
+        (123, "pen", 16),
+        (123, "pencil", 10),
+        (123, "pencil", 38),
+        (101, "pen", 19),
+        (101, "pen", 23),
+        (130, "scissors", 8),
+        (150, "pencil", 72)
+    sql: |-
+      SELECT
+        WITH ANONYMIZATION
+          OPTIONS(epsilon=1e20, delta=.01, max_groups_contributed=1)
+          item,
+          ANON_AVG(quantity) AS average_quantity
+      FROM professors
+      GROUP BY item
+    expected:
+      unordered: true
+      rows:
+        - ['scissors', '8']
+        - ['pencil', '40']
+        - ['pen', '18.5']

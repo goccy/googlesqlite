@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/syntax/pipe/distinct.md
+dialect: googlesql
+cases:
+  - desc: distinct collapses duplicate rows
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 1)
+      |> DISTINCT
+      |> ORDER BY x
+    expected:
+      rows:
+        - [1]
+        - [2]

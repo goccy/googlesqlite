@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/token.md
+dialect: spanner
+cases:
+  - desc: literal token
+    sql: |-
+      SELECT SEARCH(TOKEN('x'), 'x')
+    expected:
+      rows:
+        - [true]

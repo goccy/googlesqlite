@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/oct.md
+dialect: spanner
+cases:
+  - desc: integer to octal
+    sql: |-
+      SELECT mysql.oct(8)
+    expected:
+      rows:
+        - ['10']

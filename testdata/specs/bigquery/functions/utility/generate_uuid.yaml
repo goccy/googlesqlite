@@ -1,0 +1,16 @@
+spec: docs/specs/bigquery/functions/utility/generate_uuid.md
+dialect: bigquery
+cases:
+  - desc: returns a UUID in canonical 8-4-4-4-12 form
+    sql: SELECT REGEXP_CONTAINS(GENERATE_UUID(), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    expected:
+      rows:
+        - [true]
+  - desc: distinct rows get distinct UUIDs
+    sql: |
+      SELECT COUNT(DISTINCT u) = 5 FROM (
+        SELECT GENERATE_UUID() AS u FROM UNNEST(GENERATE_ARRAY(1, 5)) AS n
+      )
+    expected:
+      rows:
+        - [true]

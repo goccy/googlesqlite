@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_datetime/dayname.md
+dialect: spanner
+cases:
+  - desc: Sunday weekday name
+    sql: |-
+      SELECT mysql.dayname(DATE '2024-03-10')
+    expected:
+      rows:
+        - ['Sunday']

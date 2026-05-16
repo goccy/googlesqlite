@@ -1,0 +1,43 @@
+spec: docs/specs/googlesql/functions/geography/st_dump.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+#
+# The upstream Examples table renders the GEOMETRYCOLLECTION cell
+# across two display lines for column-width reasons. The cells of
+# Example 1's three result rows are:
+#   POINT(0 0)                                           | [POINT(0 0)]
+#   MULTIPOINT(0 0, 1 1)                                 | [POINT(0 0), POINT(1 1)]
+#   GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(1 2, 2 1)) | [POINT(0 0), LINESTRING(1 2, 2 1)]
+# An earlier auto-extraction captured the third row as two separate
+# rows because the ASCII table broke at a column-width boundary.
+# The expected values below reflect upstream's actual three rows.
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH example AS (
+        SELECT ST_GEOGFROMTEXT('POINT(0 0)') AS geography
+        UNION ALL
+        SELECT ST_GEOGFROMTEXT('MULTIPOINT(0 0, 1 1)') AS geography
+        UNION ALL
+        SELECT ST_GEOGFROMTEXT('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(1 2, 2 1))'))
+      SELECT
+        geography AS original_geography,
+        ST_DUMP(geography) AS dumped_geographies
+      FROM example
+    expected:
+      unordered: true
+      rows:
+        - ['POINT(0 0)', '[POINT(0 0)]']
+        - ['MULTIPOINT(0 0, 1 1)', '[POINT(0 0), POINT(1 1)]']
+        - ['GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(1 2, 2 1))', '[POINT(0 0), LINESTRING(1 2, 2 1)]']
+  - desc: upstream example 2
+    sql: |-
+      WITH example AS (
+        SELECT ST_GEOGFROMTEXT('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(1 2, 2 1))') AS geography)
+      SELECT
+        geography AS original_geography,
+        ST_DUMP(geography, 1) AS dumped_geographies
+      FROM example
+    expected:
+      rows:
+        - ['GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(1 2, 2 1))', '[LINESTRING(1 2, 2 1)]']

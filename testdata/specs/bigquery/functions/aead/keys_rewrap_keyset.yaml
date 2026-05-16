@@ -1,0 +1,14 @@
+spec: docs/specs/bigquery/functions/aead/keys_rewrap_keyset.md
+dialect: bigquery
+# KEYS.REWRAP_KEYSET re-wraps a wrapped keyset under a new KMS key
+# reference. The result is non-empty BYTES.
+cases:
+  - desc: rewrapped keyset is non-empty
+    sql: |-
+      SELECT OCTET_LENGTH(KEYS.REWRAP_KEYSET(
+        'projects/p/locations/l/keyRings/r/cryptoKeys/k1',
+        'projects/p/locations/l/keyRings/r/cryptoKeys/k2',
+        KEYS.NEW_WRAPPED_KEYSET('projects/p/locations/l/keyRings/r/cryptoKeys/k1', 'AEAD_AES_GCM_256'))) > 0 AS r
+    expected:
+      rows:
+        - [true]

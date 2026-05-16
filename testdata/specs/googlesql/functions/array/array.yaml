@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array.md
+dialect: googlesql
+cases:
+  - desc: ARRAY() constructs a single-element array
+    sql: SELECT TO_JSON_STRING(ARRAY(SELECT 1))
+    expected:
+      rows:
+        - ['[1]']

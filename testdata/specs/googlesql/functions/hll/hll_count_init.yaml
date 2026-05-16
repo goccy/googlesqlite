@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/hll/hll_count_init.md
+dialect: googlesql
+cases:
+  - desc: HLL_COUNT.INIT produces a non-empty sketch
+    sql: SELECT BYTE_LENGTH(HLL_COUNT.INIT(x)) > 0 FROM UNNEST([1, 2, 3]) AS x
+    expected:
+      rows:
+        - [true]

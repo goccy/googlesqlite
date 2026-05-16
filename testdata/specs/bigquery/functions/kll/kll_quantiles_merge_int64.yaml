@@ -1,0 +1,8 @@
+spec: docs/specs/bigquery/functions/kll/kll_quantiles_merge_int64.md
+dialect: bigquery
+cases:
+  - desc: merge_int64 returns ARRAY of quantiles
+    sql: SELECT ARRAY_LENGTH(KLL_QUANTILES.MERGE_INT64(s, 4)) FROM (SELECT KLL_QUANTILES.INIT_INT64(x) AS s FROM UNNEST([1,2,3]) AS x)
+    expected:
+      rows:
+        - [5]

@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/syntax/query/grouping_sets.md
+dialect: googlesql
+cases:
+  - desc: per-key total plus grand total via GROUPING SETS
+    sql: |-
+      SELECT k, SUM(v) AS total
+      FROM UNNEST([STRUCT('a' AS k, 1 AS v), ('a', 2), ('b', 3)])
+      GROUP BY GROUPING SETS (k, ())
+      ORDER BY k NULLS LAST
+    expected:
+      rows:
+        - ['a', 3]
+        - ['b', 3]
+        - [null, 6]

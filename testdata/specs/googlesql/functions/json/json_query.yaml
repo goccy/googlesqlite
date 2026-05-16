@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/json/json_query.md
+dialect: googlesql
+cases:
+  - desc: extract scalar value
+    sql: |
+      SELECT JSON_QUERY('{"x": 7}', "$.x")
+    expected:
+      rows:
+        - ["7"]

@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/information_schema/schemata.md
+dialect: googlesql
+cases:
+  - desc: SCHEMATA lists every dataset with at least one table
+    setup:
+      - CREATE TABLE schemata_demo_ds.schemata_demo_tbl (col_a INT64)
+    sql: |-
+      SELECT schema_name
+      FROM schemata_demo_ds.INFORMATION_SCHEMA.SCHEMATA
+      WHERE schema_name='schemata_demo_ds'
+    expected:
+      rows:
+        - ['schemata_demo_ds']
