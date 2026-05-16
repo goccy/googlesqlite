@@ -16,7 +16,11 @@ func LOG(x, y value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return value.FloatValue(math.Ldexp(xf, int(yi))), nil
+	yiInt, err := helper.SafeInt(yi)
+	if err != nil {
+		return nil, err
+	}
+	return value.FloatValue(math.Ldexp(xf, yiInt)), nil
 }
 
 var BindLog = helper.ScalarN(func(args ...value.Value) (value.Value, error) {

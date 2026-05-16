@@ -36,6 +36,10 @@ func shiftDate(name string, args []value.Value, sign int) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	shifted := gotime.Time(dv).AddDate(0, 0, sign*int(n))
+	days, err := helper.SafeInt(n)
+	if err != nil {
+		return nil, err
+	}
+	shifted := gotime.Time(dv).AddDate(0, 0, sign*days)
 	return value.DateValue(shifted), nil
 }

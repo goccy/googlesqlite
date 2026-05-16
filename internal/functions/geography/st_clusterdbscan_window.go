@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/functions/window"
 	"github.com/goccy/googlesqlite/internal/value"
 )
@@ -45,7 +46,11 @@ func (f *WINDOW_ST_CLUSTERDBSCAN) Step(geo, epsv, minPtsv value.Value, opt *wind
 			if n < 0 {
 				return fmt.Errorf("ST_CLUSTERDBSCAN: minimum_geographies must be non-negative, got %d", n)
 			}
-			f.minPts = int(n)
+			minPts, err := helper.SafeInt(n)
+			if err != nil {
+				return err
+			}
+			f.minPts = minPts
 		}
 		f.captured = true
 	}
@@ -65,7 +70,10 @@ func (f *WINDOW_ST_CLUSTERDBSCAN) Done(agg *window.WindowFuncAggregatedStatus) (
 			geos[i] = geographyArg(v)
 		}
 		clusters := dbscanClusters(geos, f.eps, f.minPts)
-		idx := int(agg.RowID - 1)
+		idx, err := helper.SafeInt(agg.RowID - 1)
+		if err != nil {
+			return err
+		}
 		if idx < 0 || idx >= len(clusters) {
 			return nil
 		}

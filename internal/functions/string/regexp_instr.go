@@ -15,7 +15,19 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 	if occurrence <= 0 {
 		return nil, fmt.Errorf("REGEXP_INSTR: unexpected occurrence number. occurrence must be positive number")
 	}
-	pos := int(position) - 1
+	posInt, err := helper.SafeInt(position)
+	if err != nil {
+		return nil, err
+	}
+	pos := posInt - 1
+	occ, err := helper.SafeInt(occurrence)
+	if err != nil {
+		return nil, err
+	}
+	occPos, err := helper.SafeInt(occurrencePos)
+	if err != nil {
+		return nil, err
+	}
 	switch sourceValue.(type) {
 	case value.StringValue:
 		source, err := sourceValue.ToString()
@@ -33,15 +45,15 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 		if pos >= len([]rune(source)) {
 			return value.IntValue(0), nil
 		}
-		matches := re.FindAllStringSubmatchIndex(source[pos:], int(occurrence))
-		if len(matches) < int(occurrence) {
+		matches := re.FindAllStringSubmatchIndex(source[pos:], occ)
+		if len(matches) < occ {
 			return value.IntValue(0), nil
 		}
-		match := matches[occurrence-1]
-		if len(match) <= int(occurrencePos) {
+		match := matches[occ-1]
+		if len(match) <= occPos {
 			return value.IntValue(0), nil
 		}
-		return value.IntValue(pos + match[occurrencePos] + 1), nil
+		return value.IntValue(pos + match[occPos] + 1), nil
 	case value.BytesValue:
 		source, err := sourceValue.ToBytes()
 		if err != nil {
@@ -58,15 +70,15 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 		if pos >= len(source) {
 			return value.IntValue(0), nil
 		}
-		matches := re.FindAllSubmatchIndex(source[pos:], int(occurrence))
-		if len(matches) < int(occurrence) {
+		matches := re.FindAllSubmatchIndex(source[pos:], occ)
+		if len(matches) < occ {
 			return value.IntValue(0), nil
 		}
-		match := matches[occurrence-1]
-		if len(match) <= int(occurrencePos) {
+		match := matches[occ-1]
+		if len(match) <= occPos {
 			return value.IntValue(0), nil
 		}
-		return value.IntValue(pos + match[occurrencePos] + 1), nil
+		return value.IntValue(pos + match[occPos] + 1), nil
 	}
 	return nil, fmt.Errorf("REGEXP_INSTR: source value must be STRING or BYTES")
 }

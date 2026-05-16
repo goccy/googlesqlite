@@ -3,6 +3,7 @@ package date
 import (
 	"fmt"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -32,7 +33,11 @@ func GENERATE_DATE_ARRAY(start, end value.Value, step ...value.Value) (value.Val
 		}
 		stepValue = stepV
 	}
-	return generateDateArray(start, end, int(stepValue), interval)
+	step32, err := helper.SafeInt(stepValue)
+	if err != nil {
+		return nil, err
+	}
+	return generateDateArray(start, end, step32, interval)
 }
 
 func BindGenerateDateArray(args ...value.Value) (value.Value, error) {

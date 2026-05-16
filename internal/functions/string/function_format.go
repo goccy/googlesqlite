@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -177,8 +178,10 @@ func parseInteger(param *FormatParam, args []value.Value) ([]rune, error) {
 	if param.flag == FormatFlagZero {
 		format += "0"
 	}
-	var width int
-	width, args = param.width.format(args)
+	width, args, err := param.width.format(args)
+	if err != nil {
+		return nil, err
+	}
 	if width > 0 {
 		format += fmt.Sprint(width)
 	}
@@ -232,11 +235,14 @@ func parseInteger(param *FormatParam, args []value.Value) ([]rune, error) {
 }
 
 func parseFloat(param *FormatParam, args []value.Value) ([]rune, error) {
-	var (
-		width, precision int
-	)
-	width, args = param.width.format(args)
-	precision, args = param.precision.format(args)
+	width, args, err := param.width.format(args)
+	if err != nil {
+		return nil, err
+	}
+	precision, args, err := param.precision.format(args)
+	if err != nil {
+		return nil, err
+	}
 	v, err := args[0].ToFloat64()
 	if err != nil {
 		return nil, err
@@ -385,21 +391,25 @@ type FormatWidth struct {
 	fromArg bool
 }
 
-func (w *FormatWidth) format(args []value.Value) (int, []value.Value) {
+func (w *FormatWidth) format(args []value.Value) (int, []value.Value, error) {
 	if w == nil {
-		return 0, args
+		return 0, args, nil
 	}
 	if w.fromArg {
 		width, _ := args[0].ToInt64()
 		if width <= 0 {
-			return 0, args[1:]
+			return 0, args[1:], nil
 		}
-		return int(width), args[1:]
+		n, err := helper.SafeInt(width)
+		if err != nil {
+			return 0, args[1:], err
+		}
+		return n, args[1:], nil
 	}
 	if w.num <= 0 {
-		return 0, args
+		return 0, args, nil
 	}
-	return w.num, args
+	return w.num, args, nil
 }
 
 type FormatPrecision struct {
@@ -407,21 +417,25 @@ type FormatPrecision struct {
 	fromArg bool
 }
 
-func (p *FormatPrecision) format(args []value.Value) (int, []value.Value) {
+func (p *FormatPrecision) format(args []value.Value) (int, []value.Value, error) {
 	if p == nil {
-		return 6, args
+		return 6, args, nil
 	}
 	if p.fromArg {
 		precision, _ := args[0].ToInt64()
 		if precision <= 0 {
-			return -1, args[1:]
+			return -1, args[1:], nil
 		}
-		return int(precision), args[1:]
+		n, err := helper.SafeInt(precision)
+		if err != nil {
+			return -1, args[1:], err
+		}
+		return n, args[1:], nil
 	}
 	if p.num <= 0 {
-		return -1, args
+		return -1, args, nil
 	}
-	return p.num, args
+	return p.num, args, nil
 }
 
 func parseFormat(format string, args ...value.Value) (string, error) {
@@ -527,7 +541,11 @@ func parseFormatWidth(ctx *FormatContext) (*FormatWidth, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &FormatWidth{num: int(i64)}, nil
+		num, err := helper.SafeInt(i64)
+		if err != nil {
+			return nil, err
+		}
+		return &FormatWidth{num: num}, nil
 	}
 	return nil, nil
 }
@@ -556,7 +574,11 @@ func parseFormatPrecision(ctx *FormatContext) (*FormatPrecision, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &FormatPrecision{num: int(i64)}, nil
+		num, err := helper.SafeInt(i64)
+		if err != nil {
+			return nil, err
+		}
+		return &FormatPrecision{num: num}, nil
 	}
 	return nil, nil
 }

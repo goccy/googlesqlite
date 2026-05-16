@@ -10,6 +10,10 @@ import (
 )
 
 func LPAD(originalValue value.Value, returnLength int64, pattern value.Value) (value.Value, error) {
+	retLen, err := helper.SafeInt(returnLength)
+	if err != nil {
+		return nil, err
+	}
 	switch originalValue.(type) {
 	case value.StringValue:
 		s, err := originalValue.ToString()
@@ -17,10 +21,10 @@ func LPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 			return nil, err
 		}
 		runes := []rune(s)
-		if len(runes) >= int(returnLength) {
-			return value.StringValue(string(runes[:returnLength])), nil
+		if len(runes) >= retLen {
+			return value.StringValue(string(runes[:retLen])), nil
 		}
-		remainLen := int(returnLength) - len(runes)
+		remainLen := retLen - len(runes)
 		var pat []rune
 		if pattern == nil {
 			pat = []rune(strings.Repeat(" ", remainLen))
@@ -42,10 +46,10 @@ func LPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 		if err != nil {
 			return nil, err
 		}
-		if len(b) >= int(returnLength) {
-			return value.BytesValue(b[:returnLength]), nil
+		if len(b) >= retLen {
+			return value.BytesValue(b[:retLen]), nil
 		}
-		remainLen := int(returnLength) - len(b)
+		remainLen := retLen - len(b)
 		var pat []byte
 		if pattern == nil {
 			pat = bytes.Repeat([]byte{' '}, remainLen)

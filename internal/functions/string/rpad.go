@@ -13,6 +13,10 @@ func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 	if returnLength < 0 {
 		return nil, fmt.Errorf("RPAD: unexpected returnLength value. returnLength must be positive number")
 	}
+	retLen, err := helper.SafeInt(returnLength)
+	if err != nil {
+		return nil, err
+	}
 	switch originalValue.(type) {
 	case value.StringValue:
 		v, err := originalValue.ToString()
@@ -20,10 +24,10 @@ func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 			return nil, err
 		}
 		runes := []rune(v)
-		if len(runes) >= int(returnLength) {
-			return value.StringValue(string(runes[:returnLength])), nil
+		if len(runes) >= retLen {
+			return value.StringValue(string(runes[:retLen])), nil
 		}
-		remainLen := int(returnLength) - len(runes)
+		remainLen := retLen - len(runes)
 		var pat []rune
 		if pattern == nil {
 			pat = []rune(strings.Repeat(" ", remainLen))
@@ -45,10 +49,10 @@ func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 		if err != nil {
 			return nil, err
 		}
-		if len(v) >= int(returnLength) {
-			return value.BytesValue(v[:returnLength]), nil
+		if len(v) >= retLen {
+			return value.BytesValue(v[:retLen]), nil
 		}
-		remainLen := int(returnLength) - len(v)
+		remainLen := retLen - len(v)
 		var pat []byte
 		if pattern == nil {
 			pat = bytes.Repeat([]byte{' '}, remainLen)

@@ -38,13 +38,37 @@ func DATETIME(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
+		yearInt, err := helper.SafeInt(year)
+		if err != nil {
+			return nil, err
+		}
+		monthInt, err := helper.SafeInt(month)
+		if err != nil {
+			return nil, err
+		}
+		dayInt, err := helper.SafeInt(day)
+		if err != nil {
+			return nil, err
+		}
+		hourInt, err := helper.SafeInt(hour)
+		if err != nil {
+			return nil, err
+		}
+		minuteInt, err := helper.SafeInt(minute)
+		if err != nil {
+			return nil, err
+		}
+		secondInt, err := helper.SafeInt(second)
+		if err != nil {
+			return nil, err
+		}
 		return value.DatetimeValue(time.Date(
-			int(year),
-			time.Month(month),
-			int(day),
-			int(hour),
-			int(minute),
-			int(second),
+			yearInt,
+			time.Month(monthInt),
+			dayInt,
+			hourInt,
+			minuteInt,
+			secondInt,
 			0,
 			location,
 		)), nil

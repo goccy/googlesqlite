@@ -21,7 +21,19 @@ func DATE(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		return value.DateValue(time.Time{}.AddDate(int(year)-1, int(month)-1, int(day)-1)), nil
+		yearInt, err := helper.SafeInt(year)
+		if err != nil {
+			return nil, err
+		}
+		monthInt, err := helper.SafeInt(month)
+		if err != nil {
+			return nil, err
+		}
+		dayInt, err := helper.SafeInt(day)
+		if err != nil {
+			return nil, err
+		}
+		return value.DateValue(time.Time{}.AddDate(yearInt-1, monthInt-1, dayInt-1)), nil
 	} else if len(args) == 2 {
 		t, err := args[0].ToTime()
 		if err != nil {

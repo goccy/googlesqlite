@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/geo/s2"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -139,7 +140,10 @@ func BindStBuffer(args ...value.Value) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		segPerQuarter = int(s)
+		segPerQuarter, err = helper.SafeInt(s)
+		if err != nil {
+			return nil, err
+		}
 		if segPerQuarter < 1 {
 			segPerQuarter = 1
 		}

@@ -3,6 +3,7 @@ package structs
 import (
 	"fmt"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -50,5 +51,9 @@ func BindStructWithFieldSet(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return STRUCT_WITH_FIELD_SET(args[0], int(idx), args[2])
+	idxInt, err := helper.SafeInt(idx)
+	if err != nil {
+		return nil, err
+	}
+	return STRUCT_WITH_FIELD_SET(args[0], idxInt, args[2])
 }

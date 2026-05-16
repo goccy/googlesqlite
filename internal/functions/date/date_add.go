@@ -11,13 +11,29 @@ import (
 func DATE_ADD(t time.Time, v int64, part string) (value.Value, error) {
 	switch part {
 	case "DAY":
-		return value.DateValue(t.AddDate(0, 0, int(v))), nil
+		n, err := helper.SafeInt(v)
+		if err != nil {
+			return nil, err
+		}
+		return value.DateValue(t.AddDate(0, 0, n)), nil
 	case "WEEK":
-		return value.DateValue(t.AddDate(0, 0, int(v*7))), nil
+		n, err := helper.SafeInt(v * 7)
+		if err != nil {
+			return nil, err
+		}
+		return value.DateValue(t.AddDate(0, 0, n)), nil
 	case "MONTH":
-		return value.DateValue(helper.AddMonth(t, int(v))), nil
+		n, err := helper.SafeInt(v)
+		if err != nil {
+			return nil, err
+		}
+		return value.DateValue(helper.AddMonth(t, n)), nil
 	case "YEAR":
-		return value.DateValue(helper.AddYear(t, int(v))), nil
+		n, err := helper.SafeInt(v)
+		if err != nil {
+			return nil, err
+		}
+		return value.DateValue(helper.AddYear(t, n)), nil
 	case "QUARTER":
 		return value.DateValue(helper.AddMonth(t, 3)), nil
 	}

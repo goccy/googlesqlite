@@ -12,7 +12,11 @@ func CODE_POINTS_TO_BYTES(v *value.ArrayValue) (value.Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		b = append(b, byte(i64))
+		bv, err := helper.SafeByte(i64)
+		if err != nil {
+			return nil, err
+		}
+		b = append(b, bv)
 	}
 	return value.BytesValue(b), nil
 }

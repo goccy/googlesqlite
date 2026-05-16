@@ -18,7 +18,11 @@ func CODE_POINTS_TO_STRING(v *value.ArrayValue) (value.Value, error) {
 		if i64 == 0 {
 			continue
 		}
-		runes = append(runes, rune(i64))
+		r, err := helper.SafeInt32(i64)
+		if err != nil {
+			return nil, err
+		}
+		runes = append(runes, rune(r))
 	}
 	return value.StringValue(string(runes)), nil
 }
