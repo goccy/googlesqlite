@@ -1126,7 +1126,10 @@ func jsonDecodeString(s string) (string, bool) {
 			if i+4 >= len(s) {
 				return "", false
 			}
-			n, err := strconv.ParseUint(s[i+1:i+5], 16, 32)
+			// A \uXXXX escape is exactly four hex digits — a 16-bit
+			// UTF-16 code unit — so parse with bitSize 16. That bounds
+			// n to 0xFFFF and makes the rune (int32) conversion safe.
+			n, err := strconv.ParseUint(s[i+1:i+5], 16, 16)
 			if err != nil {
 				return "", false
 			}
