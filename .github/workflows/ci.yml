@@ -25,10 +25,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # cache: false — setup-go's built-in cache keys solely on go.sum,
+      # so all three jobs (test/lint/validate) collide on one immutable
+      # key. The shortest job wins the post-step save and freezes a
+      # near-empty (~16 MB) snapshot for everyone. We manage the module
+      # and build caches explicitly below with per-job keys instead.
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: false
+
+      # The module cache only changes when go.sum does, so an
+      # immutable per-job key is fine.
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-test-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-mod-test-${{ runner.os }}-
+
+      # The build cache holds the -race-instrumented object files,
+      # which are expensive to recompile and live in a separate
+      # namespace from the non-race `make build` output. The key
+      # carries the commit SHA so every run misses the primary key and
+      # the post-step always re-saves a fresh cache (the GitHub Actions
+      # cache is immutable — a hit never updates). restore-keys then
+      # restores the most recent cache for the same go.sum.
+      - name: Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: go-build-test-${{ runner.os }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-build-test-${{ runner.os }}-${{ hashFiles('go.sum') }}-
+            go-build-test-${{ runner.os }}-
 
       # Persist the wazero compilation cache across runs. The cache is
       # keyed on go.sum (the embedded wasm only changes when the
@@ -57,6 +89,37 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: false
+
+      # tools/go.sum pins golangci-lint itself, so the module cache key
+      # tracks both module graphs.
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: go-mod-lint-${{ runner.os }}-${{ hashFiles('go.sum', 'tools/go.sum') }}
+          restore-keys: |
+            go-mod-lint-${{ runner.os }}-
+
+      - name: Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: go-build-lint-${{ runner.os }}-${{ hashFiles('go.sum', 'tools/go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-build-lint-${{ runner.os }}-${{ hashFiles('go.sum', 'tools/go.sum') }}-
+            go-build-lint-${{ runner.os }}-
+
+      # golangci-lint keeps its own analysis cache separate from the Go
+      # build cache; persisting it avoids re-running every linter from
+      # scratch on each push.
+      - name: Cache golangci-lint
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/golangci-lint
+          key: golangci-lint-${{ runner.os }}-${{ hashFiles('go.sum', 'tools/go.sum', '.golangci.yml', '.golangci.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            golangci-lint-${{ runner.os }}-
 
       - name: Lint
         run: make lint
@@ -71,6 +134,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: Validate
         run: make validate

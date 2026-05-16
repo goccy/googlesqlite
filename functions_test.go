@@ -21,6 +21,7 @@ import (
 // internal/function_javascript.go is the same either way (both go
 // through the bindEvalJavaScript SQL function call).
 func TestJavaScriptUDFPlusOne(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_plusone")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -49,6 +50,7 @@ func TestJavaScriptUDFPlusOne(t *testing.T) {
 
 // TestJavaScriptUDFString exercises STRING return type from a JS UDF.
 func TestJavaScriptUDFString(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_string")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -77,6 +79,7 @@ func TestJavaScriptUDFString(t *testing.T) {
 
 // TestJavaScriptUDFBool exercises BOOL return.
 func TestJavaScriptUDFBool(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_bool")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -119,6 +122,7 @@ func TestJavaScriptUDFBool(t *testing.T) {
 // declares CREATE FUNCTION ... RETURNS INT64 LANGUAGE js as a valid
 // shape; the expected result is the documented arithmetic outcome.
 func TestJavaScriptUDFInt64Return(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_int64")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -151,6 +155,7 @@ func TestJavaScriptUDFInt64Return(t *testing.T) {
 // (user-defined-functions.md "Supported JavaScript UDF data types").
 // The expected return is the literal bytes the JS code emits.
 func TestJavaScriptUDFBytesReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_bytes")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -186,6 +191,7 @@ func TestJavaScriptUDFBytesReturn(t *testing.T) {
 // (data-types.md "Date type") — "YYYY-MM-DD" parses cleanly to a
 // DateValue.
 func TestJavaScriptUDFDateReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_date")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -214,6 +220,7 @@ func TestJavaScriptUDFDateReturn(t *testing.T) {
 // TestJavaScriptUDFTimeReturn exercises the TIME branch of
 // castJavaScriptValue. GoogleSQL TIME literals are "HH:MM:SS".
 func TestJavaScriptUDFTimeReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_time")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -242,6 +249,7 @@ func TestJavaScriptUDFTimeReturn(t *testing.T) {
 // TestJavaScriptUDFDatetimeReturn exercises the DATETIME branch of
 // castJavaScriptValue. GoogleSQL DATETIME literal: "YYYY-MM-DD HH:MM:SS".
 func TestJavaScriptUDFDatetimeReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_datetime")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -271,6 +279,7 @@ func TestJavaScriptUDFDatetimeReturn(t *testing.T) {
 // castJavaScriptValue. GoogleSQL TIMESTAMP literal format with a UTC
 // offset is parsed through value.ParseTimestamp.
 func TestJavaScriptUDFTimestampReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_ts")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -299,6 +308,7 @@ func TestJavaScriptUDFTimestampReturn(t *testing.T) {
 // TestJavaScriptUDFNumericReturn exercises the NUMERIC branch of
 // castJavaScriptValue (sets value.NumericValue from v.ToNumber()).
 func TestJavaScriptUDFNumericReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_numeric")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -330,6 +340,7 @@ func TestJavaScriptUDFNumericReturn(t *testing.T) {
 // castJavaScriptValue, which routes identically to NUMERIC through
 // big.Rat.SetString.
 func TestJavaScriptUDFBignumericReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_bignumeric")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -358,6 +369,7 @@ func TestJavaScriptUDFBignumericReturn(t *testing.T) {
 // TestJavaScriptUDFJsonReturn exercises the JSON branch of
 // castJavaScriptValue (wraps v.ToString() in a JsonValue).
 func TestJavaScriptUDFJsonReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_json")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -392,6 +404,7 @@ func TestJavaScriptUDFJsonReturn(t *testing.T) {
 // castJavaScriptValue. Source: user-defined-functions.md JS UDF type
 // table — BOOL is supported and bridges through v.ToBoolean().
 func TestJavaScriptUDFBoolReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_bool")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -428,6 +441,7 @@ func TestJavaScriptUDFBoolReturn(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/data-types.md "Interval type"
 // — GoogleSQL accepts ISO-8601 interval strings.
 func TestJavaScriptUDFIntervalReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_interval")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -467,6 +481,7 @@ func TestJavaScriptUDFIntervalReturn(t *testing.T) {
 // "Supported JavaScript UDF data types" — ARRAY is supported with
 // JS arrays as the input/output representation.
 func TestJavaScriptUDFArrayReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_array")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -515,6 +530,7 @@ func TestJavaScriptUDFArrayReturn(t *testing.T) {
 // JS body returns a plain object {a: 1, b: "hi"}, mapped to the
 // declared field names.
 func TestJavaScriptUDFStructReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_struct")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -549,6 +565,7 @@ func TestJavaScriptUDFStructReturn(t *testing.T) {
 // tested in js_udf_test.go but the explicit RETURNS STRING path is
 // distinct from the value-from-go-value path.
 func TestJavaScriptUDFStringExplicit(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_string_explicit")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -576,6 +593,7 @@ func TestJavaScriptUDFStringExplicit(t *testing.T) {
 
 // TestJavaScriptUDFFloatReturn drives the FLOAT64/DOUBLE branch.
 func TestJavaScriptUDFFloatReturn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_float")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -604,6 +622,7 @@ func TestJavaScriptUDFFloatReturn(t *testing.T) {
 // TestJavaScriptUDFNullArg drives the NULL-handling fast path:
 // castJavaScriptValue with v==nil returns (nil, nil).
 func TestJavaScriptUDFNullArg(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=js_udf_null")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -644,6 +663,7 @@ func TestJavaScriptUDFNullArg(t *testing.T) {
 // Reference: docs/third_party/googlesql-docs/conditional_expressions.md
 // "IFERROR" — when the first arg raises, returns the second arg.
 func TestIferrorWithErrorAndInt(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=iferror_int")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -663,6 +683,7 @@ func TestIferrorWithErrorAndInt(t *testing.T) {
 // TestIferrorWithErrorAndString drives the IFERROR pattern for a
 // string second argument.
 func TestIferrorWithErrorAndString(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=iferror_string")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -682,6 +703,7 @@ func TestIferrorWithErrorAndString(t *testing.T) {
 // TestIferrorNoError drives the no-error branch — first arg evaluates
 // successfully, so the second arg is unused.
 func TestIferrorNoError(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=iferror_no_error")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -701,6 +723,7 @@ func TestIferrorNoError(t *testing.T) {
 // TestIserror drives ISERROR — returns TRUE if the inner expression
 // raises, FALSE otherwise.
 func TestIserror(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=iserror")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -725,6 +748,7 @@ func TestIserror(t *testing.T) {
 
 // TestNullIferror drives NULLIFERROR — returns NULL if the inner raises.
 func TestNullIferror(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=nulliferror")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -751,6 +775,7 @@ func TestNullIferror(t *testing.T) {
 // "IFERROR" — the rewriter infers the return type from the second arg
 // when the first arg is ERROR(...).
 func TestIferrorTypePropagationVariants(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=iferror_types")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -823,6 +848,7 @@ func TestIferrorTypePropagationVariants(t *testing.T) {
 // TestIferrorPropagationNested drives the multi-level iferror rewrite.
 // IFERROR nesting hits the recursive split / propagation path.
 func TestIferrorPropagationNested(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=iferror_nested")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -864,6 +890,7 @@ func TestIferrorPropagationNested(t *testing.T) {
 // that in an ErrorGroup, and reading .Error() triggers the previously
 // uncovered string-join path.
 func TestErrorGroupErrorPath(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=error_group")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)

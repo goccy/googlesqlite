@@ -32,6 +32,7 @@ import (
 // join condition, exercising newMergeStmtAction and the merged-table
 // emulation in analyzer.go.
 func TestMergeIntoInventory(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=merge_inventory")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -143,6 +144,7 @@ WHEN NOT MATCHED THEN
 // docs/third_party/googlesql-docs/data-manipulation-language.md "TRUNCATE
 // TABLE Inventory" — empties the table without removing it.
 func TestTruncateTable(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=truncate_table")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -184,6 +186,7 @@ func TestTruncateTable(t *testing.T) {
 // "CREATE TABLE AS SELECT" grammar; the expected behaviour is the
 // new table contains the SELECT's rows verbatim.
 func TestCreateTableAsSelect(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=ctas")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -244,6 +247,7 @@ func TestCreateTableAsSelect(t *testing.T) {
 // (lines 130-137 in that file). The expected rows are the subset
 // of customers with id in [min, max].
 func TestTableFunctionCallSimple(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=tvf_simple")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -301,6 +305,7 @@ func TestTableFunctionCallSimple(t *testing.T) {
 // up call must fail. Authoritative source: googlesql DROP FUNCTION
 // grammar (docs/third_party/googlesql-docs/data-definition-language.md).
 func TestDropFunction(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=drop_function")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -346,6 +351,7 @@ func TestDropFunction(t *testing.T) {
 //   - DECLARE x, y, z INT64 DEFAULT 0 → all three read as 0
 //   - SET (a, b, c) = (1+3, 'foo', false) → a=4, b='foo', c=false
 func TestDeclareAndSet(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=declare_set")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -415,6 +421,7 @@ func TestDeclareAndSet(t *testing.T) {
 // DECLARE grammar permits any expression DEFAULT clause, and
 // numeric float literals are the canonical example.
 func TestDeclareFloat(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=declare_float")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -443,6 +450,7 @@ func TestDeclareFloat(t *testing.T) {
 // evaluateScriptVariableExpr — quoted string literals get
 // re-quoted with double-quotes for the rewriter (DQS_DML is on).
 func TestDeclareString(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=declare_string")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -469,6 +477,7 @@ func TestDeclareString(t *testing.T) {
 
 // TestDeclareBool drives the bool branch of evaluateScriptVariableExpr.
 func TestDeclareBool(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=declare_bool")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
@@ -496,6 +505,7 @@ func TestDeclareBool(t *testing.T) {
 // ---- from tests/parity/exec_test.go ----
 
 func TestExec(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	ctx := context.Background()
 	ctx = googlesqlite.WithCurrentTime(ctx, now)
@@ -626,6 +636,7 @@ COMMIT TRANSACTION;
 }
 
 func TestNestedStructFieldAccess(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	ctx := context.Background()
 	ctx = googlesqlite.WithCurrentTime(ctx, now)
@@ -696,6 +707,7 @@ CREATE TABLE table (
 }
 
 func TestCreateTempTableParity(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	ctx := context.Background()
 	ctx = googlesqlite.WithCurrentTime(ctx, now)
@@ -719,6 +731,7 @@ func TestCreateTempTableParity(t *testing.T) {
 }
 
 func TestWildcardTable(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
@@ -826,6 +839,7 @@ func TestWildcardTable(t *testing.T) {
 }
 
 func TestTemplatedArgFunc(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
@@ -923,6 +937,7 @@ func TestTemplatedArgFunc(t *testing.T) {
 }
 
 func TestJavaScriptUDF(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {

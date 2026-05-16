@@ -16,6 +16,7 @@ import (
 // America/Los_Angeles, so EXTRACT(HOUR FROM TIMESTAMP '2024-01-01 12:00:00')
 // returned 20 instead of 12. This regression test pins the fix.
 func TestRegression_DefaultTimezoneIsUTC(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -37,6 +38,7 @@ func TestRegression_DefaultTimezoneIsUTC(t *testing.T) {
 //
 // Regression: BigQuery documents INTEGER and INT as aliases for INT64.
 func TestRegression_IntegerTypeAlias(t *testing.T) {
+	t.Parallel()
 	for _, alias := range []string{"INTEGER", "INT", "SMALLINT", "BIGINT", "TINYINT"} {
 		t.Run(alias, func(t *testing.T) {
 			db, err := sql.Open("googlesqlite", "file:alias_"+alias+"?mode=memory&cache=private")
@@ -63,6 +65,7 @@ func TestRegression_IntegerTypeAlias(t *testing.T) {
 
 // TestA1_ContainsSubstr
 func TestA1_ContainsSubstr(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	for _, tc := range []struct {
@@ -97,6 +100,7 @@ func TestA1_ContainsSubstr(t *testing.T) {
 
 // TestA2_EditDistance — zlite#212
 func TestA2_EditDistance(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	for _, tc := range []struct {
@@ -122,6 +126,7 @@ func TestA2_EditDistance(t *testing.T) {
 
 // TestA3_MaxByMinBy — bqe#388 / bqe#356
 func TestA3_MaxByMinBy(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	row := db.QueryRowContext(context.Background(), `
@@ -146,6 +151,7 @@ FROM UNNEST([
 
 // TestA4_Lax — bqe#243
 func TestA4_Lax(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	for _, tc := range []struct {
@@ -222,6 +228,7 @@ func TestA4_Lax(t *testing.T) {
 
 // TestA5_LogicalOrAndWindow — zlite#200
 func TestA5_LogicalOrAndWindow(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	rows, err := db.QueryContext(context.Background(), `
@@ -273,6 +280,7 @@ ORDER BY i
 // `EXPORT DATA OPTIONS(...) AS SELECT ...` as a query and returns the
 // inner SELECT's rows, leaving the actual export to consumer code.
 func TestW_ExportData(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -302,6 +310,7 @@ UNION ALL SELECT 2, 'bob'`)
 
 // TestW_GeographyExtra covers the G1 ST_* additions.
 func TestW_GeographyExtra(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -396,6 +405,7 @@ func TestW_GeographyExtra(t *testing.T) {
 // CREATE TABLE FUNCTION statement is accepted as a DDL no-op. The
 // call site (ResolvedTvfscan) is the follow-up — see TestW_TVF_Call.
 func TestW_TVF_DDL(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -412,6 +422,7 @@ func TestW_TVF_DDL(t *testing.T) {
 // inlines the body with arg substitution. Covers single-arg, multi-
 // arg, and multi-column-output variations.
 func TestW_TVF_Call(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -456,6 +467,7 @@ func TestW_TVF_Call(t *testing.T) {
 //
 // Origin: bqe#344.
 func TestW_DeclareSetScript(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -510,6 +522,7 @@ func TestW_DeclareSetScript(t *testing.T) {
 //
 // Origin: bqe#317.
 func TestW_PartitionTimePseudoColumn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -547,6 +560,7 @@ func TestW_PartitionTimePseudoColumn(t *testing.T) {
 //
 // Origin: bqe#299, bqe#128.
 func TestW_UpdateStructFieldRewrite(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -609,6 +623,7 @@ func TestW_UpdateStructFieldRewrite(t *testing.T) {
 //
 // Origin: bqe#211, bqe#73.
 func TestW_DefaultClauseSubstitution(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -673,6 +688,7 @@ func TestW_DefaultClauseSubstitution(t *testing.T) {
 //
 // Origin: B1 driver-side partial in upstream-asks.md.
 func TestW_GeographyNonPoint(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -729,6 +745,7 @@ func TestW_GeographyNonPoint(t *testing.T) {
 // equality through the value-aware collation that already
 // understands StructValue positionally.
 func TestW_StructInSubqueryAnonymousFields(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -783,6 +800,7 @@ func TestW_StructInSubqueryAnonymousFields(t *testing.T) {
 //
 // Origin: bqe#48.
 func TestW_InformationSchema(t *testing.T) {
+	t.Parallel()
 	tmp, err := os.CreateTemp("", "info-*.db")
 	if err != nil {
 		t.Fatal(err)
@@ -905,6 +923,7 @@ func TestW_InformationSchema(t *testing.T) {
 // toggle (no observable behavioural difference; the toggle gates
 // the hint emission).
 func TestW_CteMaterializeMultiRef(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -970,6 +989,7 @@ SELECT SUM(n) FROM seq`)
 // of the predecessor's correlated-subquery emulation. F11 hardens
 // this so all built-in window aggregators dispatch natively.
 func TestW_NativeWindowAggregators(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1089,6 +1109,7 @@ func TestW_NativeWindowAggregators(t *testing.T) {
 // rewritten to `INT64`, producing duplicate-name SQL and downstream
 // "no such column" errors.
 func TestW_TypeAliasNotInColumnName(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1127,6 +1148,7 @@ func TestW_TypeAliasNotInColumnName(t *testing.T) {
 //
 // Origin: bqe#318.
 func TestW_BqutilNamepathAlias(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1160,6 +1182,7 @@ func TestW_BqutilNamepathAlias(t *testing.T) {
 //
 // Origin: bqe#147.
 func TestW_SystemVariableAssignAndRead(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1204,6 +1227,7 @@ func TestW_SystemVariableAssignAndRead(t *testing.T) {
 //
 // Origin: upstream feature.
 func TestW_JsonMutators(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1262,6 +1286,7 @@ func TestW_JsonMutators(t *testing.T) {
 //
 // Origin: bqe#357.
 func TestW_JsonValueNonLiteralPath(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1290,6 +1315,7 @@ func TestW_JsonValueNonLiteralPath(t *testing.T) {
 //
 // Origin: upstream regression.
 func TestW_RangeConstructor(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1351,6 +1377,7 @@ SELECT
 //
 // Origin: predecessor regression.
 func TestW_WithRecursive(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1388,6 +1415,7 @@ SELECT n FROM t ORDER BY n`)
 
 // TestRegression_DDLPartitionByAccepted: bqe#152
 func TestRegression_DDLPartitionByAccepted(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f5_152?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1398,6 +1426,7 @@ func TestRegression_DDLPartitionByAccepted(t *testing.T) {
 
 // TestRegression_DDLClusterByAccepted: bqe#373
 func TestRegression_DDLClusterByAccepted(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f5_373?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1408,6 +1437,7 @@ func TestRegression_DDLClusterByAccepted(t *testing.T) {
 
 // TestRegression_DDLColumnOptionsAccepted: bqe#212
 func TestRegression_DDLColumnOptionsAccepted(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f5_212?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1422,11 +1452,13 @@ func TestRegression_DDLColumnOptionsAccepted(t *testing.T) {
 // catalog-side metadata + an INSERT-time expression evaluator.
 // Tracked as a design question for the user, not a one-shot bug fix.
 func TestRegression_DDLDefaultClauseInsertOmitted(t *testing.T) {
+	t.Parallel()
 	t.Skip("DEFAULT clause persistence is a design change; deferred for user discussion")
 }
 
 // TestRegression_DDLNotNull: bqe#210
 func TestRegression_DDLNotNull(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f5_210?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1442,6 +1474,7 @@ func TestRegression_DDLNotNull(t *testing.T) {
 
 // TestRegression_CTASWithColumnList: bqe#306
 func TestRegression_CTASWithColumnList(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f5_306?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1454,6 +1487,7 @@ func TestRegression_CTASWithColumnList(t *testing.T) {
 
 // TestRegression_UpdateFromSelect: bqe#310
 func TestRegression_UpdateFromSelect(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f6_310?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1478,6 +1512,7 @@ func TestRegression_UpdateFromSelect(t *testing.T) {
 
 // TestRegression_ReservedFieldName_End: bqe#402
 func TestRegression_ReservedFieldName_End(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f7_402?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1488,6 +1523,7 @@ func TestRegression_ReservedFieldName_End(t *testing.T) {
 
 // TestRegression_TruncateTable: bqe#378
 func TestRegression_TruncateTable(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f7_378?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1502,6 +1538,7 @@ func TestRegression_TruncateTable(t *testing.T) {
 
 // TestRegression_LikeNullLHS: zlite#185
 func TestRegression_LikeNullLHS(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	row := db.QueryRowContext(context.Background(),
@@ -1520,6 +1557,7 @@ func TestRegression_LikeNullLHS(t *testing.T) {
 
 // TestRegression_TableSuffixLongestPrefix: bqe#272
 func TestRegression_TableSuffixLongestPrefix(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", "file:f9_272?mode=memory&cache=private")
 	db.SetMaxOpenConns(1)
 	defer db.Close()
@@ -1559,6 +1597,7 @@ func TestRegression_TableSuffixLongestPrefix(t *testing.T) {
 
 // TestRegression_TimestampFloatToInt: bqe#390
 func TestRegression_TimestampFloatToInt(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	row := db.QueryRowContext(context.Background(),
@@ -1574,6 +1613,7 @@ func TestRegression_TimestampFloatToInt(t *testing.T) {
 
 // TestRegression_DatetimeAsStringSpaceSeparator: bqe#175
 func TestRegression_DatetimeAsStringSpaceSeparator(t *testing.T) {
+	t.Parallel()
 	db, _ := sql.Open("googlesqlite", ":memory:")
 	defer db.Close()
 	row := db.QueryRowContext(context.Background(),
@@ -1591,6 +1631,7 @@ func TestRegression_DatetimeAsStringSpaceSeparator(t *testing.T) {
 // JSON_EXTRACT_SCALAR extract the field at the path, not the entire
 // JSON document.
 func TestRegression_JsonQueryExtractsField(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1614,6 +1655,7 @@ func TestRegression_JsonQueryExtractsField(t *testing.T) {
 // TestRegression_JsonExtractQuotedSegment asserts that JSON_EXTRACT
 // accepts a double-quoted path segment containing dots.
 func TestRegression_JsonExtractQuotedSegment(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1634,6 +1676,7 @@ func TestRegression_JsonExtractQuotedSegment(t *testing.T) {
 // TestRegression_JsonValueOnTypedJsonColumn asserts that JSON_VALUE
 // works against a column of type JSON populated via PARSE_JSON.
 func TestRegression_JsonValueOnTypedJsonColumn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", "file:json_typed?mode=memory&cache=private")
 	if err != nil {
 		t.Fatal(err)
@@ -1661,6 +1704,7 @@ func TestRegression_JsonValueOnTypedJsonColumn(t *testing.T) {
 // TestRegression_PercentileContValues asserts that PERCENTILE_CONT
 // over [20, 30, 40] returns the documented BigQuery values.
 func TestRegression_PercentileContValues(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1695,6 +1739,7 @@ FROM cte LIMIT 1`)
 // TestRegression_ArrayLengthCompareInJoin asserts ARRAY_LENGTH on a
 // nullable JOIN result does not panic.
 func TestRegression_ArrayLengthCompareInJoin(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1737,6 +1782,7 @@ ORDER BY t1.idx`)
 // Regression: the predecessor panicked in WINDOW_DENSE_RANK.Done with a
 // nil pointer dereference.
 func TestRegression_RankOverNullColumn(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1773,6 +1819,7 @@ FROM t`)
 //
 // Origin: predecessor regression.
 func TestRegression_WindowNullPartition(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1813,6 +1860,7 @@ ORDER BY finish_time
 // Origin: the previous driver returned
 // "mismatch rowid 1 != 2" because the rewriter assumed an ORDER BY.
 func TestRegression_CountStarOverEmpty(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1854,6 +1902,7 @@ ORDER BY item
 // TestRegression_DateTruncIsoweek asserts that DATE_TRUNC(... ISOWEEK)
 // returns the Monday of the ISO week containing the given date.
 func TestRegression_DateTruncIsoweek(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		desc, query, want string
 	}{
@@ -1891,6 +1940,7 @@ func TestRegression_DateTruncIsoweek(t *testing.T) {
 // Regression: SQLite was constant-folding the call because the function
 // was registered with the deterministic flag.
 func TestRegression_GenerateUuidPerRow(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1921,6 +1971,7 @@ SELECT GENERATE_UUID() FROM UNNEST([1, 2, 3, 4, 5]) AS x`)
 // Origin: `PARSE_DATE("%D", "99/01/24")`
 // returned "2032-03-01" by overflowing the month into the year part.
 func TestRegression_ParseDateOverflow(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -1941,6 +1992,7 @@ func TestRegression_ParseDateOverflow(t *testing.T) {
 //
 // Origin: predecessor regression.
 func TestRegression_TrimUnicodeWhitespace(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		desc, query, want string
 	}{
@@ -1972,6 +2024,7 @@ func TestRegression_TrimUnicodeWhitespace(t *testing.T) {
 //
 // Origin: predecessor regression.
 func TestRegression_WindowOrderByNulls(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -2029,6 +2082,7 @@ ORDER BY 3
 //
 // Origin: predecessor regression.
 func TestRegression_FormatDate_PercentU(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		desc string
 		date string
@@ -2065,6 +2119,7 @@ func TestRegression_FormatDate_PercentU(t *testing.T) {
 // Origin: implementation called gonum's
 // `stat.Covariance` which returns sample covariance.
 func TestRegression_CovarPop(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -2102,6 +2157,7 @@ SELECT COVAR_POP(y, x) FROM UNNEST([
 // sub-day fractional difference up to 1, returning 1 for a 30-minute
 // gap on the same day.
 func TestRegression_DatetimeDiffSameDay(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		desc  string
 		query string
@@ -2144,6 +2200,7 @@ func TestRegression_DatetimeDiffSameDay(t *testing.T) {
 // TestRegression_InUnnestArrayParam asserts that an array passed via a
 // named parameter survives `SELECT * FROM UNNEST(@arr)` analysis.
 func TestRegression_InUnnestArrayParam(t *testing.T) {
+	t.Parallel()
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
