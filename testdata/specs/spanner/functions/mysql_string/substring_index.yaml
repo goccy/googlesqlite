@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/substring_index.md
+dialect: spanner
+cases:
+  - desc: split at second comma
+    sql: |-
+      SELECT mysql.substring_index('a,b,c,d', ',', 2)
+    expected:
+      rows:
+        - ['a,b']

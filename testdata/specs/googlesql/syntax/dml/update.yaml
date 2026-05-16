@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/syntax/dml/update.md
+dialect: googlesql
+cases:
+  - desc: UPDATE the row matching a WHERE predicate
+    setup:
+      - CREATE TABLE upd_ds.t (a INT64, b STRING)
+      - "INSERT INTO upd_ds.t (a, b) VALUES (1, 'x'), (2, 'y')"
+      - UPDATE upd_ds.t SET b = 'updated' WHERE a = 1
+    sql: SELECT a, b FROM upd_ds.t ORDER BY a
+    expected:
+      rows:
+        - [1, 'updated']
+        - [2, 'y']
+  - desc: UPDATE WHERE TRUE updates every row
+    setup:
+      - CREATE TABLE upd_ds.all (a INT64, n INT64)
+      - "INSERT INTO upd_ds.all (a, n) VALUES (1, 10), (2, 20)"
+      - UPDATE upd_ds.all SET n = n + 1 WHERE TRUE
+    sql: SELECT a, n FROM upd_ds.all ORDER BY a
+    expected:
+      rows:
+        - [1, 11]
+        - [2, 21]

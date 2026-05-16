@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_coveredby.md
+dialect: googlesql
+cases:
+  - desc: Point is covered by polygon
+    sql: |-
+      SELECT ST_COVEREDBY(ST_GEOGFROMTEXT('POINT(0.5 0.5)'), ST_GEOGFROMTEXT('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))'))
+    expected:
+      rows:
+        - [true]

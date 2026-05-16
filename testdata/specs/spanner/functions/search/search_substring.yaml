@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/search_substring.md
+dialect: spanner
+cases:
+  - desc: substring present
+    sql: |-
+      SELECT SEARCH_SUBSTRING(TOKENIZE_SUBSTRING('hello world'), 'lo wo')
+    expected:
+      rows:
+        - [true]

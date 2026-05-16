@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/date.md
+dialect: googlesql
+cases:
+  - desc: date from y/m/d
+    sql: SELECT DATE(2024, 3, 15)
+    expected:
+      rows:
+        - ["2024-03-15"]

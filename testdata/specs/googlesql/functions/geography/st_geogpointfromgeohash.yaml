@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_geogpointfromgeohash.md
+dialect: googlesql
+cases:
+  - desc: roundtrip via geohash
+    sql: |-
+      SELECT ST_GEOHASH(ST_GEOGPOINTFROMGEOHASH('s00000'), 6)
+    expected:
+      rows:
+        - ['s00000']

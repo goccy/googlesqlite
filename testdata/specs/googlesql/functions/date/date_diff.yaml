@@ -1,0 +1,55 @@
+spec: docs/specs/googlesql/functions/date/date_diff.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/date_functions.md (DATE_DIFF
+# section). Includes the upstream Examples and additional boundary
+# cases (month-end, year-end, QUARTER, negative direction, multi-
+# decade DAY) that exercise calendar-boundary arithmetic.
+cases:
+  - desc: upstream example — days between two arbitrary dates
+    sql: SELECT DATE_DIFF(DATE '2010-07-07', DATE '2008-12-25', DAY)
+    expected:
+      rows:
+        - [559]
+  - desc: upstream example — successive-day WEEK boundary (Sat→Sun)
+    sql: SELECT DATE_DIFF(DATE '2017-10-15', DATE '2017-10-14', WEEK)
+    expected:
+      rows:
+        - [1]
+  - desc: upstream example — YEAR vs ISOYEAR
+    sql: |-
+      SELECT
+        DATE_DIFF('2017-12-30', '2014-12-30', YEAR) AS year_diff,
+        DATE_DIFF('2017-12-30', '2014-12-30', ISOYEAR) AS isoyear_diff
+    expected:
+      rows:
+        - [3, 2]
+  - desc: month-end-of-month boundary (1/31 → 2/28)
+    sql: SELECT DATE_DIFF(DATE '2020-02-28', DATE '2020-01-31', MONTH)
+    expected:
+      rows:
+        - [1]
+  - desc: year-end boundary (12/31 → 1/1)
+    sql: SELECT DATE_DIFF(DATE '2021-01-01', DATE '2020-12-31', YEAR)
+    expected:
+      rows:
+        - [1]
+  - desc: QUARTER boundary
+    sql: SELECT DATE_DIFF(DATE '2024-04-01', DATE '2024-01-01', QUARTER)
+    expected:
+      rows:
+        - [1]
+  - desc: negative direction
+    sql: SELECT DATE_DIFF(DATE '2020-01-01', DATE '2020-03-01', MONTH)
+    expected:
+      rows:
+        - [-2]
+  - desc: multi-decade DAY count (8 leap years in 2000–2030)
+    sql: SELECT DATE_DIFF(DATE '2030-01-01', DATE '2000-01-01', DAY)
+    expected:
+      rows:
+        - [10958]
+  - desc: NULL input propagates
+    sql: SELECT DATE_DIFF(CAST(NULL AS DATE), DATE '2024-01-01', DAY)
+    expected:
+      rows:
+        - [null]

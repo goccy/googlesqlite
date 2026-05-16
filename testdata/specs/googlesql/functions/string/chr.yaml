@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/chr.md
+dialect: googlesql
+cases:
+  - desc: ascii uppercase
+    sql: SELECT CHR(65)
+    expected:
+      rows:
+        - ['A']
+  - desc: ascii lowercase
+    sql: SELECT CHR(97)
+    expected:
+      rows:
+        - ['a']

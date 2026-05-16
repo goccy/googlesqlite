@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/set.md
+dialect: googlesql
+cases:
+  - desc: SET @@system_variable to a literal succeeds
+    setup:
+      - "SET @@time_zone = 'UTC'"
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

@@ -1,0 +1,18 @@
+spec: docs/specs/bigquery/functions/json/lax_float64.md
+dialect: bigquery
+cases:
+  - desc: integer string coerces to FLOAT64
+    sql: SELECT LAX_FLOAT64(JSON '"42"')
+    expected:
+      rows:
+        - [42.0]
+  - desc: numeric value passes through
+    sql: SELECT LAX_FLOAT64(JSON '3.5')
+    expected:
+      rows:
+        - [3.5]
+  - desc: non-numeric input returns NULL (lax)
+    sql: SELECT LAX_FLOAT64(JSON '"abc"')
+    expected:
+      rows:
+        - [null]

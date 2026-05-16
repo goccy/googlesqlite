@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/parse_date.md
+dialect: googlesql
+cases:
+  - desc: ISO format
+    sql: SELECT PARSE_DATE("%Y-%m-%d", "2024-03-15")
+    expected:
+      rows:
+        - ["2024-03-15"]

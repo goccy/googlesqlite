@@ -1,0 +1,21 @@
+spec: docs/specs/googlesql/functions/geography/st_dimension.md
+dialect: googlesql
+cases:
+  - desc: Polygon -> 2
+    sql: |-
+      SELECT ST_DIMENSION(ST_GEOGFROMTEXT('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))'))
+    expected:
+      rows:
+        - [2]
+  - desc: LineString -> 1
+    sql: |-
+      SELECT ST_DIMENSION(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0)'))
+    expected:
+      rows:
+        - [1]
+  - desc: Point -> 0
+    sql: |-
+      SELECT ST_DIMENSION(ST_GEOGFROMTEXT('POINT(0 0)'))
+    expected:
+      rows:
+        - [0]

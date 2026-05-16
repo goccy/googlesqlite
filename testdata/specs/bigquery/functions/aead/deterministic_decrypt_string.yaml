@@ -1,0 +1,13 @@
+spec: docs/specs/bigquery/functions/aead/deterministic_decrypt_string.md
+dialect: bigquery
+# DETERMINISTIC_DECRYPT_STRING is the inverse of DETERMINISTIC_ENCRYPT
+# for STRING plaintexts.
+cases:
+  - desc: deterministic AEAD round-trip recovers plaintext STRING
+    sql: |-
+      WITH k AS (SELECT KEYS.NEW_KEYSET('DETERMINISTIC_AEAD_AES_SIV_CMAC_256') AS ks)
+      SELECT DETERMINISTIC_DECRYPT_STRING(ks, DETERMINISTIC_ENCRYPT(ks, 'pt', 'aad'), 'aad') AS s
+      FROM k
+    expected:
+      rows:
+        - ['pt']

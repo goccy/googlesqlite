@@ -1,0 +1,10 @@
+spec: docs/specs/spanner/functions/date/subdate.md
+dialect: spanner
+# SUBDATE under the Spanner MySQL-compat namespace subtracts N days
+# from a DATE. mysql.subdate(DATE '2020-12-25', 1) = 2020-12-24.
+cases:
+  - desc: subtract 1 day from DATE literal
+    sql: SELECT CAST(mysql.subdate(DATE '2020-12-25', 1) AS DATE) AS d
+    expected:
+      rows:
+        - ['2020-12-24']

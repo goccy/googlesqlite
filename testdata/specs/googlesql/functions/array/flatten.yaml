@@ -1,0 +1,47 @@
+spec: docs/specs/googlesql/functions/array/flatten.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/array_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH t AS (
+        SELECT
+        [
+          STRUCT([STRUCT([1,2,3] AS quantity), STRUCT([4,5,6] AS quantity)] AS sales),
+          STRUCT([STRUCT([7,8] AS quantity), STRUCT([] AS quantity)] AS sales)
+        ] AS v
+      )
+      SELECT FLATTEN(v.sales.quantity) AS all_values
+      FROM t
+    expected:
+      rows:
+        - ['[1, 2, 3, 4, 5, 6, 7, 8]']
+  - desc: upstream example 2
+    sql: |-
+      WITH t AS (
+        SELECT
+        [
+          STRUCT([STRUCT([1,2,3] AS quantity), STRUCT([4,5,6] AS quantity)] AS sales),
+          STRUCT([STRUCT([7,8,9] AS quantity), STRUCT([10,11,12] AS quantity)] AS sales)
+        ] AS v
+      )
+      SELECT FLATTEN(v.sales.quantity[OFFSET(1)]) AS second_values
+      FROM t
+    expected:
+      rows:
+        - ['[2, 5, 8, 11]']
+  - desc: upstream example 3
+    sql: |-
+      WITH t AS (
+        SELECT
+        [
+          STRUCT(1 AS price, 2 AS quantity),
+          STRUCT(10 AS price, 20 AS quantity)
+        ] AS v
+      )
+      SELECT FLATTEN(v.price) AS all_prices
+      FROM t
+    expected:
+      rows:
+        - ['[1, 10]']

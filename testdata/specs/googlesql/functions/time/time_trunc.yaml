@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/time_trunc.md
+dialect: googlesql
+cases:
+  - desc: trunc to hour
+    sql: SELECT CAST(TIME_TRUNC(TIME "12:30:45", HOUR) AS STRING)
+    expected:
+      rows:
+        - ["12:00:00"]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_int64.md
+dialect: googlesql
+cases:
+  - desc: lax_int64 basic behaviour
+    sql: SELECT LAX_INT64(JSON '42')
+    expected:
+      rows:
+        - [42]

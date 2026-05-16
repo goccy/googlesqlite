@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/safe_subtract.md
+dialect: googlesql
+cases:
+  - desc: regular subtract
+    sql: SELECT SAFE_SUBTRACT(10, 3)
+    expected:
+      rows:
+        - [7]

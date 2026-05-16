@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/date.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata
+# (Apache-2.0 derivative). Simple type-construction tests.
+cases:
+  - desc: cast string to DATE
+    sql: SELECT CAST('2020-12-25' AS DATE) AS d
+    expected:
+      rows:
+        - ['2020-12-25']
+  - desc: DATE literal
+    sql: SELECT DATE '2020-12-25' AS d
+    expected:
+      rows:
+        - ['2020-12-25']

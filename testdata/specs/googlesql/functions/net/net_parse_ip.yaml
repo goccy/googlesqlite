@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/net/net_parse_ip.md
+dialect: googlesql
+# Authoritative round-trip property from BigQuery / GoogleSQL docs:
+# NET.PARSE_IP and NET.IP_TO_STRING form an inverse pair for an IPv4
+# packed-int representation. We assert (a) NET.IP_TO_STRING * inverse
+# composed with NET.IP_FROM_STRING is identity for IPv4 inputs, and
+# (b) NULL input yields NULL.
+cases:
+  - desc: identity round-trip via IP_TO_STRING(IP_FROM_STRING(x))
+    sql: SELECT NET.IP_TO_STRING(NET.IP_FROM_STRING('192.168.1.0')) AS v
+    expected:
+      rows:
+        - ['192.168.1.0']
+  - desc: null propagates through PARSE_IP
+    sql: SELECT NET.PARSE_IP(CAST(NULL AS STRING)) AS v
+    expected:
+      rows:
+        - [null]

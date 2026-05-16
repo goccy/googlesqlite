@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/datetime/current_datetime.md
+dialect: googlesql
+cases:
+  - desc: current_datetime is non-null
+    sql: SELECT CURRENT_DATETIME() IS NOT NULL
+    expected:
+      rows:
+        - [true]

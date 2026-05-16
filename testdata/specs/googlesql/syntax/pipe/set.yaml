@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/syntax/pipe/set.md
+dialect: googlesql
+cases:
+  - desc: set updates an existing column
+    sql: |-
+      FROM (SELECT 1 AS x)
+      |> SET x = x * 10
+    expected:
+      rows:
+        - [10]
+  - desc: set two columns in one operator
+    sql: |-
+      FROM (SELECT 1 AS x, 2 AS y)
+      |> SET x = x + 5, y = y * 2
+    expected:
+      rows:
+        - [6, 4]

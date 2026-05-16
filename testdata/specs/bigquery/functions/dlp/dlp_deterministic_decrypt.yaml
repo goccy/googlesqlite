@@ -1,0 +1,15 @@
+spec: docs/specs/bigquery/functions/dlp/dlp_deterministic_decrypt.md
+dialect: bigquery
+# DLP_DETERMINISTIC_DECRYPT inverts DLP_DETERMINISTIC_ENCRYPT for
+# STRING plaintexts. Round-trip recovers the plaintext.
+cases:
+  - desc: round-trip recovers plaintext STRING
+    sql: |-
+      WITH k AS (
+        SELECT DLP_KEY_CHAIN('projects/p/locations/l/keyRings/r/cryptoKeys/k', b'\x00\x01') AS ks
+      )
+      SELECT DLP_DETERMINISTIC_DECRYPT(ks, DLP_DETERMINISTIC_ENCRYPT(ks, 'pt', 'aad'), 'aad') AS s
+      FROM k
+    expected:
+      rows:
+        - ['pt']

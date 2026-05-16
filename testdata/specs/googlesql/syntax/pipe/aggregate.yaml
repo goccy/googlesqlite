@@ -1,0 +1,26 @@
+spec: docs/specs/googlesql/syntax/pipe/aggregate.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/pipe-syntax.md (`AGGREGATE`
+# pipe operator section), rewritten to use inline `FROM (SELECT ...)`.
+cases:
+  - desc: count rows with no GROUP BY
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      |> AGGREGATE COUNT(*) AS n
+    expected:
+      rows:
+        - [3]
+  - desc: aggregate with GROUP BY
+    sql: |-
+      FROM (
+        SELECT 'fruit' AS category, 2 AS sales UNION ALL
+        SELECT 'fruit', 7 UNION ALL
+        SELECT 'fruit', 5 UNION ALL
+        SELECT 'vegetable', 8
+      )
+      |> AGGREGATE SUM(sales) AS total GROUP BY category
+      |> ORDER BY category
+    expected:
+      rows:
+        - ['fruit', 14]
+        - ['vegetable', 8]

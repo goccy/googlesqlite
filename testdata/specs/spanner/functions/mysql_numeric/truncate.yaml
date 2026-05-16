@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_numeric/truncate.md
+dialect: spanner
+cases:
+  - desc: truncate to two decimals
+    sql: SELECT mysql.truncate(1.2345, 2)
+    expected:
+      rows:
+        - [1.23]
+  - desc: truncate negative toward zero
+    sql: SELECT mysql.truncate(-1.789, 1)
+    expected:
+      rows:
+        - [-1.7]

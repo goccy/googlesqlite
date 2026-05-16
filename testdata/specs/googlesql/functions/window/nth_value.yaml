@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/window/nth_value.md
+dialect: googlesql
+cases:
+  - desc: NTH_VALUE retrieves the second ordered element
+    sql: SELECT NTH_VALUE(x, 2) OVER (ORDER BY x RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM UNNEST([10,20,30]) AS x LIMIT 1
+    expected:
+      rows:
+        - [20]

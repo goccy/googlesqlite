@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/functions/geography/st_closestpoint.md
+dialect: googlesql
+# ST_CLOSESTPOINT(a, b) returns the point on `a` closest to `b`.
+# Per BigQuery / Spanner reference: when `a` is a single point, the
+# result must be that point regardless of `b`.
+cases:
+  - desc: closest point of single-point geometry
+    sql: SELECT ST_ASTEXT(ST_CLOSESTPOINT(ST_GEOGFROMTEXT('POINT(0 0)'), ST_GEOGFROMTEXT('POINT(3 4)'))) AS s
+    expected:
+      rows:
+        - ['POINT (0 0)']

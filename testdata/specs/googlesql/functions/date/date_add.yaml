@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/date_add.md
+dialect: googlesql
+cases:
+  - desc: add 5 days
+    sql: SELECT FORMAT_DATE('%Y-%m-%d', DATE_ADD(DATE '2020-01-01', INTERVAL 5 DAY))
+    expected:
+      rows:
+        - ['2020-01-06']

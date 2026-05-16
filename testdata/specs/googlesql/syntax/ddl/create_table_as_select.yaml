@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/ddl/create_table_as_select.md
+dialect: googlesql
+cases:
+  - desc: CTAS materialises the query result
+    setup:
+      - CREATE TABLE ctas_ds.t AS SELECT 10 AS a, 'b' AS b
+    sql: SELECT a, b FROM ctas_ds.t
+    expected:
+      rows:
+        - [10, 'b']

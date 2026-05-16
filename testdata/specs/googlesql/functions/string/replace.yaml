@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/replace.md
+dialect: googlesql
+cases:
+  - desc: replace all occurrences
+    sql: SELECT REPLACE('hello', 'l', 'L')
+    expected:
+      rows:
+        - ['heLLo']
+  - desc: pattern not found returns original
+    sql: SELECT REPLACE('hello', 'z', 'Z')
+    expected:
+      rows:
+        - ['hello']

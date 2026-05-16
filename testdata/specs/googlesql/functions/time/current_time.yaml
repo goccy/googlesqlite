@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/current_time.md
+dialect: googlesql
+cases:
+  - desc: current_time is non-null
+    sql: SELECT CURRENT_TIME() IS NOT NULL
+    expected:
+      rows:
+        - [true]

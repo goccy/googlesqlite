@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/aggregate/differential_privacy/count.md
+dialect: googlesql
+cases:
+  - desc: high-epsilon DP COUNT lands within 5 of the true count
+    sql: |-
+      SELECT ABS((SELECT WITH DIFFERENTIAL_PRIVACY OPTIONS(epsilon=1000, delta=0.01, privacy_unit_column=x) COUNT(*, contribution_bounds_per_group=>(0, 5)) FROM UNNEST([1,2,3,4]) AS x) - 4) <= 5
+    expected:
+      rows:
+        - [true]

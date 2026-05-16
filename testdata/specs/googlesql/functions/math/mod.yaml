@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/mod.md
+dialect: googlesql
+cases:
+  - desc: positive mod
+    sql: SELECT MOD(10, 3)
+    expected:
+      rows:
+        - [1]
+  - desc: zero mod is the dividend
+    sql: SELECT MOD(0, 5)
+    expected:
+      rows:
+        - [0]

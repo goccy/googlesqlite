@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/interval/justify_days.md
+dialect: googlesql
+cases:
+  - desc: JUSTIFY_DAYS executes without error
+    sql: SELECT JUSTIFY_DAYS(INTERVAL 30 DAY) IS NOT NULL
+    expected:
+      rows:
+        - [true]

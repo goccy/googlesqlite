@@ -1,0 +1,12 @@
+spec: docs/specs/bigquery/functions/objectref/obj_fetch_metadata.md
+dialect: bigquery
+# OBJ.FETCH_METADATA returns a deterministic JSON stub keyed by the
+# uri argument; the result includes the documented content_type
+# field at minimum.
+cases:
+  - desc: metadata JSON exposes content_type
+    sql: |-
+      SELECT JSON_VALUE(obj.fetch_metadata('gs://bucket/file'), '$.content_type') AS s
+    expected:
+      rows:
+        - ['application/octet-stream']

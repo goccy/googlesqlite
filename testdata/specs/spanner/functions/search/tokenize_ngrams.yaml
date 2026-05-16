@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/tokenize_ngrams.md
+dialect: spanner
+cases:
+  - desc: ngrams TOKENLIST non-empty
+    sql: |-
+      SELECT LENGTH(CAST(TOKENIZE_NGRAMS('hello', 2) AS STRING)) > 0
+    expected:
+      rows:
+        - [true]

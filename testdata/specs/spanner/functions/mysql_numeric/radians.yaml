@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_numeric/radians.md
+dialect: spanner
+cases:
+  - desc: 180 degrees is pi radians
+    sql: SELECT mysql.radians(180.0)
+    expected:
+      rows:
+        - [3.141592653589793]

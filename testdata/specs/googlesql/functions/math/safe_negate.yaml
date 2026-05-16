@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/safe_negate.md
+dialect: googlesql
+cases:
+  - desc: negate integer
+    sql: SELECT SAFE_NEGATE(5)
+    expected:
+      rows:
+        - [-5]

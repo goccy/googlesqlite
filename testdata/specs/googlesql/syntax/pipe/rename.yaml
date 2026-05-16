@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/syntax/pipe/rename.md
+dialect: googlesql
+cases:
+  - desc: rename single column
+    sql: |-
+      FROM (SELECT 1 AS x)
+      |> RENAME x AS my_x
+    expected:
+      rows:
+        - [1]
+  - desc: rename multiple columns
+    sql: |-
+      FROM (SELECT 1 AS x, 2 AS y)
+      |> RENAME x AS a, y AS b
+    expected:
+      rows:
+        - [1, 2]

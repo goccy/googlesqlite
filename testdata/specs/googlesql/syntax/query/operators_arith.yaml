@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/syntax/query/operators_arith.md
+dialect: googlesql
+cases:
+  - desc: integer addition / subtraction / multiplication
+    sql: SELECT 1 + 2 AS s, 10 - 4 AS d, 3 * 5 AS m
+    expected:
+      rows:
+        - [3, 6, 15]
+  - desc: integer / float division and MOD
+    sql: SELECT 10 / 3 AS div, MOD(7, 3) AS rem
+    expected:
+      rows:
+        - [3.3333333333333335, 1]
+  - desc: unary minus
+    sql: SELECT -5 AS r
+    expected:
+      rows:
+        - [-5]

@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/timestamp/timestamp_from_unix_micros.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/timestamp_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT TIMESTAMP_FROM_UNIX_MICROS(1230219000000000) AS timestamp_value;
+      
+      -- Display of results may differ, depending upon the environment and time zone where this query was executed.
+    expected:
+      rows:
+        - ['2008-12-25 15:30:00+00']

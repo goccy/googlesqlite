@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/int32.md
+dialect: googlesql
+cases:
+  - desc: int32 basic conversion
+    sql: SELECT INT32(JSON '42')
+    expected:
+      rows:
+        - [42]

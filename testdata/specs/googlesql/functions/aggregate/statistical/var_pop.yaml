@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/statistical/var_pop.md
+dialect: googlesql
+cases:
+  - desc: var_pop of two values
+    sql: SELECT VAR_POP(x) FROM UNNEST([1.0, 3.0]) AS x
+    expected:
+      rows:
+        - [1.0]

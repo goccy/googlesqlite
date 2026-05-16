@@ -1,0 +1,47 @@
+spec: docs/specs/googlesql/syntax/cte/with_recursive.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/recursive-ctes.md.
+cases:
+  - desc: count 1..5 with recursive CTE
+    sql: |-
+      WITH RECURSIVE numbers AS (
+        SELECT 1 AS n
+        UNION ALL
+        SELECT n + 1 FROM numbers WHERE n < 5
+      )
+      SELECT n FROM numbers ORDER BY n
+    expected:
+      rows:
+        - [1]
+        - [2]
+        - [3]
+        - [4]
+        - [5]
+  - desc: count down with recursive CTE
+    sql: |-
+      WITH RECURSIVE down AS (
+        SELECT 3 AS n
+        UNION ALL
+        SELECT n - 1 FROM down WHERE n > 1
+      )
+      SELECT n FROM down ORDER BY n DESC
+    expected:
+      rows:
+        - [3]
+        - [2]
+        - [1]
+  - desc: factorial via recursive CTE
+    sql: |-
+      WITH RECURSIVE f AS (
+        SELECT 1 AS n, 1 AS fact
+        UNION ALL
+        SELECT n + 1, fact * (n + 1) FROM f WHERE n < 5
+      )
+      SELECT n, fact FROM f ORDER BY n
+    expected:
+      rows:
+        - [1, 1]
+        - [2, 2]
+        - [3, 6]
+        - [4, 24]
+        - [5, 120]

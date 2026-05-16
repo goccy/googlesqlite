@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/math/sign.md
+dialect: googlesql
+cases:
+  - desc: negative
+    sql: SELECT SIGN(-3)
+    expected:
+      rows:
+        - [-1]
+  - desc: zero
+    sql: SELECT SIGN(0)
+    expected:
+      rows:
+        - [0]
+  - desc: positive
+    sql: SELECT SIGN(7)
+    expected:
+      rows:
+        - [1]
+  - desc: null propagates
+    sql: SELECT SIGN(NULL)
+    expected:
+      rows:
+        - [null]

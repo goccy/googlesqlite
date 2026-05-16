@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/bit/bit_cast_to_uint32.md
+dialect: googlesql
+cases:
+  - desc: positive round-trip
+    sql: SELECT BIT_CAST_TO_UINT32(123)
+    expected:
+      rows:
+        - [123]

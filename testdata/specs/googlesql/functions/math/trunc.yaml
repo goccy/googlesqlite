@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/trunc.md
+dialect: googlesql
+cases:
+  - desc: truncate positive fraction
+    sql: SELECT TRUNC(1.7)
+    expected:
+      rows:
+        - [1.0]
+  - desc: truncate negative fraction
+    sql: SELECT TRUNC(-1.7)
+    expected:
+      rows:
+        - [-1.0]

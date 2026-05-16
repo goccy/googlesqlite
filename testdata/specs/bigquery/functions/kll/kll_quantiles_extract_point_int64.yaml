@@ -1,0 +1,8 @@
+spec: docs/specs/bigquery/functions/kll/kll_quantiles_extract_point_int64.md
+dialect: bigquery
+cases:
+  - desc: kll_quantiles_extract_point_int64 basic pipeline
+    sql: SELECT KLL_QUANTILES.EXTRACT_POINT_INT64(KLL_QUANTILES.INIT_INT64(x), 0.5) FROM UNNEST([1,2,3,4,5,6,7,8,9,10]) AS x
+    expected:
+      rows:
+        - [6]

@@ -1,0 +1,21 @@
+spec: docs/specs/googlesql/functions/json/json_type.md
+dialect: googlesql
+cases:
+  - desc: object type
+    sql: |
+      SELECT JSON_TYPE(JSON '{"a": 1}')
+    expected:
+      rows:
+        - ["object"]
+  - desc: array type
+    sql: |
+      SELECT JSON_TYPE(JSON '[1, 2, 3]')
+    expected:
+      rows:
+        - ["array"]
+  - desc: number type
+    sql: |
+      SELECT JSON_TYPE(JSON '42')
+    expected:
+      rows:
+        - ["number"]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/greatest.md
+dialect: googlesql
+cases:
+  - desc: greatest of three
+    sql: SELECT GREATEST(1, 5, 3)
+    expected:
+      rows:
+        - [5]

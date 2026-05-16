@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/datetime/datetime.md
+dialect: googlesql
+cases:
+  - desc: construct datetime
+    sql: SELECT CAST(DATETIME(2024, 3, 15, 12, 30, 45) AS STRING)
+    expected:
+      rows:
+        - ["2024-03-15T12:30:45"]

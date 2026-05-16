@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_json/json_quote.md
+dialect: spanner
+cases:
+  - desc: wrap plain string in JSON quotes
+    sql: SELECT mysql.json_quote('hello')
+    expected:
+      rows:
+        - ['"hello"']

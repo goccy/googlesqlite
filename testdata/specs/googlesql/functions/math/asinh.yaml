@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/asinh.md
+dialect: googlesql
+cases:
+  - desc: ASINH(0) is 0
+    sql: SELECT ASINH(0)
+    expected:
+      rows:
+        - [0.0]

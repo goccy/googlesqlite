@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/date/current_date.md
+dialect: googlesql
+cases:
+  - desc: current_date is non-null
+    sql: SELECT CURRENT_DATE() IS NOT NULL
+    expected:
+      rows:
+        - [true]

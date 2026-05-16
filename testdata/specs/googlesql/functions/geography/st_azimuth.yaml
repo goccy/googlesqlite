@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_azimuth.md
+dialect: googlesql
+cases:
+  - desc: northward bearing is 0 radians
+    sql: |-
+      SELECT ST_AZIMUTH(ST_GEOGFROMTEXT('POINT(0 0)'), ST_GEOGFROMTEXT('POINT(0 1)'))
+    expected:
+      rows:
+        - [0.0]

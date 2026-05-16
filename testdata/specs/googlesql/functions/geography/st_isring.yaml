@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_isring.md
+dialect: googlesql
+cases:
+  - desc: simple ring
+    sql: |-
+      SELECT ST_ISRING(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0, 1 1, 0 0)'))
+    expected:
+      rows:
+        - [true]

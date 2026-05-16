@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/soundex.md
+dialect: googlesql
+cases:
+  - desc: classic SOUNDEX of "Robert"
+    sql: SELECT SOUNDEX('Robert')
+    expected:
+      rows:
+        - ['R163']

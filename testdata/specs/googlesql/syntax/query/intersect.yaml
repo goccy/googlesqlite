@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/syntax/query/intersect.md
+dialect: googlesql
+cases:
+  - desc: INTERSECT DISTINCT keeps the shared values
+    sql: |-
+      (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      INTERSECT DISTINCT
+      (SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4)
+    expected:
+      rows:
+        - [2]
+        - [3]

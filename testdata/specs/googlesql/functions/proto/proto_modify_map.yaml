@@ -1,0 +1,21 @@
+spec: docs/specs/googlesql/functions/proto/proto_modify_map.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/protocol_buffer_functions.md
+#
+# The upstream Example uses a user-defined `Item` proto with a
+# `map<string,int64> purchased` field. The `register_protos: [item]`
+# field installs that descriptor (built programmatically in
+# internal/spectest/protos.go) via Conn.RegisterProto before the
+# query is analysed.
+cases:
+  - desc: upstream example 1
+    register_protos: [item]
+    sql: |-
+      SELECT
+        PROTO_MODIFY_MAP(m.purchased, 'A', NULL, 'B', 4, 'C', 6) AS result_map
+      FROM
+        (SELECT AS VALUE CAST("purchased { key: 'A' value: 2 } purchased { key: 'B' value: 3}" AS Item)) AS m
+    expected:
+      rows:
+        - ['{ key: ''B'' value: 4 } { key: ''C'' value: 6 }']

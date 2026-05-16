@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/regexp_substr.md
+dialect: googlesql
+cases:
+  - desc: extract the first match of a digit run
+    sql: SELECT REGEXP_SUBSTR('item 42', r'\d+')
+    expected:
+      rows:
+        - ['42']

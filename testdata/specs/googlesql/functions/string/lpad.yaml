@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/lpad.md
+dialect: googlesql
+cases:
+  - desc: pad to length 5
+    sql: SELECT LPAD('hi', 5, '*')
+    expected:
+      rows:
+        - ['***hi']
+  - desc: same length is unchanged
+    sql: SELECT LPAD('hi', 2, '*')
+    expected:
+      rows:
+        - ['hi']

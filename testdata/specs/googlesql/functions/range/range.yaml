@@ -1,0 +1,50 @@
+spec: docs/specs/googlesql/functions/range/range.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/range-functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT RANGE(DATE '2022-12-01', DATE '2022-12-31') AS results
+    expected:
+      rows:
+        - ['[2022-12-01, 2022-12-31)']
+  - desc: upstream example 2
+    sql: |-
+      SELECT RANGE(DATETIME '2022-10-01 14:53:27',
+                   DATETIME '2022-10-01 16:00:00') AS results
+    expected:
+      # The docs/third_party/googlesql-docs/range-functions.md Example 2
+      # renders this as `[2022-10-01 14:53:27, 2022-10-01T16:00:00)`
+      # with a mixed space / T separator across the two bounds, which
+      # is internally inconsistent (a single DATETIME type cannot have
+      # two display conventions in one range literal). The
+      # compliance/testdata/range_constructors.test
+      # `range_of_datetimes_literal_regular` fixture authoritatively
+      # renders DATETIME range bounds with the space separator on
+      # both sides (`[2016-01-01 12:00:00, 2017-01-01 12:00:00)`), so
+      # we follow the compliance suite here. Tracked as a probable
+      # upstream-docs typo.
+      rows:
+        - ['[2022-10-01 14:53:27, 2022-10-01 16:00:00)']
+  - desc: upstream example 3
+    sql: |-
+      SELECT RANGE(TIMESTAMP '2022-10-01 14:53:27 America/Los_Angeles',
+                   TIMESTAMP '2022-10-01 16:00:00 America/Los_Angeles') AS results;
+      
+      -- Results depend upon where this query was executed.
+    expected:
+      rows:
+        - ['[2022-10-01 21:53:27.000000+00, 2022-10-01 23:00:00.000000+00)']
+  - desc: upstream example 4
+    sql: |-
+      SELECT RANGE(NULL, DATE '2022-12-31') AS results
+    expected:
+      rows:
+        - ['[UNBOUNDED, 2022-12-31)']
+  - desc: upstream example 5
+    sql: |-
+      SELECT RANGE(DATE '2022-10-01', NULL) AS results
+    expected:
+      rows:
+        - ['[2022-10-01, UNBOUNDED)']

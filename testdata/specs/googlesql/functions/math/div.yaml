@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/div.md
+dialect: googlesql
+cases:
+  - desc: integer division
+    sql: SELECT DIV(10, 3)
+    expected:
+      rows:
+        - [3]

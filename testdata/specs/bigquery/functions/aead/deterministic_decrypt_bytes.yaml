@@ -1,0 +1,14 @@
+spec: docs/specs/bigquery/functions/aead/deterministic_decrypt_bytes.md
+dialect: bigquery
+# DETERMINISTIC_DECRYPT_BYTES is the inverse of DETERMINISTIC_ENCRYPT
+# for BYTES inputs. Both AEAD args here are BYTES (key, plaintext,
+# aad) to match the BYTES-form signature.
+cases:
+  - desc: deterministic AEAD round-trip recovers plaintext BYTES
+    sql: |-
+      WITH k AS (SELECT KEYS.NEW_KEYSET('DETERMINISTIC_AEAD_AES_SIV_CMAC_256') AS ks)
+      SELECT TO_HEX(DETERMINISTIC_DECRYPT_BYTES(ks, DETERMINISTIC_ENCRYPT(ks, b'hi', b'aad'), b'aad')) AS s
+      FROM k
+    expected:
+      rows:
+        - ['6869']

@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/hour.md
+dialect: spanner
+cases:
+  - desc: hour from a TIMESTAMP literal
+    sql: SELECT mysql.hour(TIMESTAMP "2024-03-15 12:34:56+00")
+    expected:
+      rows:
+        - [12]

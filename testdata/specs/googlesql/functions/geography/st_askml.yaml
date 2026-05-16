@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_askml.md
+dialect: googlesql
+cases:
+  - desc: Point KML
+    sql: |-
+      SELECT ST_ASKML(ST_GEOGFROMTEXT('POINT(1 2)'))
+    expected:
+      rows:
+        - ['<Point><coordinates>1,2</coordinates></Point>']

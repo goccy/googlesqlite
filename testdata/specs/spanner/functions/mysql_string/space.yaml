@@ -1,0 +1,18 @@
+spec: docs/specs/spanner/functions/mysql_string/space.md
+dialect: spanner
+cases:
+  - desc: three-space STRING
+    sql: SELECT mysql.space(3)
+    expected:
+      rows:
+        - ['   ']
+  - desc: zero-length string
+    sql: SELECT mysql.space(0)
+    expected:
+      rows:
+        - ['']
+  - desc: negative argument is clamped to zero
+    sql: SELECT mysql.space(-2)
+    expected:
+      rows:
+        - ['']

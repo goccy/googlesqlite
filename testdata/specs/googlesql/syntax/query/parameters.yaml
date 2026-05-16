@@ -1,0 +1,38 @@
+spec: docs/specs/googlesql/syntax/query/parameters.md
+dialect: googlesql
+cases:
+  - desc: positional placeholders bind in order
+    sql: SELECT ? + ?
+    args:
+      - 1
+      - 2
+    expected:
+      rows:
+        - [3]
+  - desc: named placeholders bind by name
+    sql: SELECT @a + @b
+    named_args:
+      a: 1
+      b: 2
+    expected:
+      rows:
+        - [3]
+  - desc: mixed positional and named in one statement
+    sql: SELECT @a + ?
+    named_args:
+      a: 1
+    args:
+      - 2
+    expected:
+      rows:
+        - [3]
+  - desc: mixed positional and named with two positional after the named
+    sql: SELECT @a + ? + ?
+    named_args:
+      a: 10
+    args:
+      - 2
+      - 3
+    expected:
+      rows:
+        - [15]

@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/syntax/query/cast.md
+dialect: googlesql
+cases:
+  - desc: cast string to int64
+    sql: SELECT CAST('123' AS INT64) AS r
+    expected:
+      rows:
+        - [123]
+  - desc: cast int64 to float64
+    sql: SELECT CAST(7 AS FLOAT64) AS r
+    expected:
+      rows:
+        - [7.0]
+  - desc: safe_cast returns NULL on a bad numeric input
+    sql: SELECT SAFE_CAST('abc' AS INT64) AS r
+    expected:
+      rows:
+        - [null]
+  - desc: cast bool to string emits "true"/"false"
+    sql: SELECT CAST(TRUE AS STRING) AS r
+    expected:
+      rows:
+        - ['true']

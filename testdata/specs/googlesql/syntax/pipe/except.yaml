@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/syntax/pipe/except.md
+dialect: googlesql
+cases:
+  - desc: except distinct
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      |> EXCEPT DISTINCT (SELECT 2)
+      |> ORDER BY x
+    expected:
+      rows:
+        - [1]
+        - [3]

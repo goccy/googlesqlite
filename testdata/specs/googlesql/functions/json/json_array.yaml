@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_array.md
+dialect: googlesql
+cases:
+  - desc: build a heterogeneous JSON array
+    sql: SELECT TO_JSON_STRING(JSON_ARRAY(1, 2, 'three'))
+    expected:
+      rows:
+        - ['[1,2,"three"]']

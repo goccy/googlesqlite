@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/format.md
+dialect: googlesql
+cases:
+  - desc: format basic behaviour
+    sql: SELECT FORMAT("%05d", 42)
+    expected:
+      rows:
+        - ['00042']

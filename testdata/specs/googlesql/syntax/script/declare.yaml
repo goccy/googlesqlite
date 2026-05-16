@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/declare.md
+dialect: googlesql
+cases:
+  - desc: DECLARE with default value is visible in a SELECT
+    setup:
+      - DECLARE script_v INT64 DEFAULT 42
+    sql: SELECT script_v AS v
+    expected:
+      rows:
+        - [42]

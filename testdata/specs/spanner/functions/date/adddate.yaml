@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/date/adddate.md
+dialect: spanner
+cases:
+  - desc: adddate is an alias for date_add with N days
+    sql: SELECT mysql.adddate(DATE '2025-01-01', 7)
+    expected:
+      rows:
+        - ['2025-01-08']

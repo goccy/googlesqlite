@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_filter.md
+dialect: googlesql
+cases:
+  - desc: ARRAY_FILTER keeps elements matching the lambda
+    sql: SELECT TO_JSON_STRING(ARRAY_FILTER([1, 2, 3], (e) -> e > 1))
+    expected:
+      rows:
+        - ['[2,3]']

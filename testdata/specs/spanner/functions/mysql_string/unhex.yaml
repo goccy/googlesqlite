@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_string/unhex.md
+dialect: spanner
+cases:
+  - desc: hex round-trip via TO_HEX
+    sql: SELECT TO_HEX(mysql.unhex('48656C6C6F'))
+    expected:
+      rows:
+        - ['48656c6c6f']

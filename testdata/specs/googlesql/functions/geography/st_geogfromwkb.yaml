@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/functions/geography/st_geogfromwkb.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH wkb_data AS (
+        SELECT '010200000002000000feffffffffffef3f000000000000f03f01000000000008400000000000000040' geo
+      )
+      SELECT
+        ST_GeogFromWkb(geo, planar=>TRUE) AS from_planar,
+        ST_GeogFromWkb(geo, planar=>FALSE) AS from_geodesic,
+      FROM wkb_data
+    expected:
+      rows:
+        - ['LINESTRING(1 1, 2 1.5, 2.5 1.75, 3 2)', 'LINESTRING(1 1, 3 2)']

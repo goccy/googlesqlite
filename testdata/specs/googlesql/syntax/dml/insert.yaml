@@ -1,0 +1,30 @@
+spec: docs/specs/googlesql/syntax/dml/insert.md
+dialect: googlesql
+cases:
+  - desc: INSERT a single row via VALUES
+    setup:
+      - CREATE TABLE ins_ds.t1 (a INT64, b STRING)
+      - INSERT INTO ins_ds.t1 (a, b) VALUES (1, 'x')
+    sql: SELECT a, b FROM ins_ds.t1
+    expected:
+      rows:
+        - [1, 'x']
+  - desc: INSERT multiple rows via VALUES
+    setup:
+      - CREATE TABLE ins_ds.t2 (a INT64, b STRING)
+      - "INSERT INTO ins_ds.t2 (a, b) VALUES (1, 'x'), (2, 'y'), (3, 'z')"
+    sql: SELECT a, b FROM ins_ds.t2 ORDER BY a
+    expected:
+      rows:
+        - [1, 'x']
+        - [2, 'y']
+        - [3, 'z']
+  - desc: INSERT ... SELECT copies rows from a query
+    setup:
+      - CREATE TABLE ins_ds.src AS SELECT 5 AS a, 'q' AS b
+      - CREATE TABLE ins_ds.dst (a INT64, b STRING)
+      - INSERT INTO ins_ds.dst (a, b) SELECT a, b FROM ins_ds.src
+    sql: SELECT a, b FROM ins_ds.dst
+    expected:
+      rows:
+        - [5, 'q']

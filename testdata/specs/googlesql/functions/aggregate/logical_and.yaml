@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/aggregate/logical_and.md
+dialect: googlesql
+cases:
+  - desc: all true
+    sql: SELECT LOGICAL_AND(x) FROM UNNEST([true, true, true]) AS x
+    expected:
+      rows:
+        - [true]
+  - desc: one false
+    sql: SELECT LOGICAL_AND(x) FROM UNNEST([true, false, true]) AS x
+    expected:
+      rows:
+        - [false]

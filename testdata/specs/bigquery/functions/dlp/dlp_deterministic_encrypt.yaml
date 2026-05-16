@@ -1,0 +1,18 @@
+spec: docs/specs/bigquery/functions/dlp/dlp_deterministic_encrypt.md
+dialect: bigquery
+cases:
+  - desc: DLP encrypt + decrypt round-trip
+    sql: |-
+      WITH key AS (
+        SELECT DLP_KEY_CHAIN('gcp-kms://example/key', CAST('test-wrapped' AS BYTES)) AS k
+      )
+      SELECT DLP_DETERMINISTIC_DECRYPT(
+        (SELECT k FROM key),
+        DLP_DETERMINISTIC_ENCRYPT(
+          (SELECT k FROM key),
+          'sensitive plaintext',
+          ''),
+        '')
+    expected:
+      rows:
+        - ['sensitive plaintext']

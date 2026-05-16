@@ -13,7 +13,9 @@
 
 # Code coverage profiles and other test artifacts
 *.out
-coverage.*
+coverage.out
+coverage.html
+coverage.txt
 *.coverprofile
 profile.cov
 
@@ -30,3 +32,23 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Build output
+/bin/
+
+# Stray top-level binaries from `go build ./cmd/...`
+/specctl
+/googlesqlite
+
+# Local Claude settings (user-specific permissions, not shared)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Working notes and ad-hoc agent definitions — not part of the
+# shipped source tree.
+.claude/plans/
+.claude/agents/
+
+# Internal working note tracking asks to the upstream go-googlesql
+# project — not part of the shipped source tree.
+docs/decisions/upstream-asks.md

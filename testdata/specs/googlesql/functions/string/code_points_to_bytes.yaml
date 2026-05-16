@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/code_points_to_bytes.md
+dialect: googlesql
+cases:
+  - desc: returns the bytes that the code points encode
+    sql: SELECT TO_JSON_STRING(CODE_POINTS_TO_BYTES([72, 101]))
+    expected:
+      rows:
+        - ['"SGU="']

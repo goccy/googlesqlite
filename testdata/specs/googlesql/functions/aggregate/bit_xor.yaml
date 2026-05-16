@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/bit_xor.md
+dialect: googlesql
+cases:
+  - desc: BIT_XOR of 0xF0, 0x0F, 0x55 is 0xAA
+    sql: SELECT BIT_XOR(x) FROM UNNEST([240, 15, 85]) AS x
+    expected:
+      rows:
+        - [170]

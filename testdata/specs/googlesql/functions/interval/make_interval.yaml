@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/interval/make_interval.md
+dialect: googlesql
+cases:
+  - desc: MAKE_INTERVAL executes without error
+    sql: SELECT MAKE_INTERVAL(1, 2, 3) IS NOT NULL
+    expected:
+      rows:
+        - [true]

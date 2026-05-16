@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/search/search.md
+dialect: spanner
+cases:
+  - desc: matching query returns true
+    sql: |-
+      SELECT SEARCH(TOKENIZE_FULLTEXT('hello world'), 'hello')
+    expected:
+      rows:
+        - [true]
+  - desc: non-matching returns false
+    sql: |-
+      SELECT SEARCH(TOKENIZE_FULLTEXT('hello world'), 'goodbye')
+    expected:
+      rows:
+        - [false]

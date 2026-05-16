@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/time.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata
+# (Apache-2.0 derivative). TIME-type basic construction.
+cases:
+  - desc: cast string to TIME
+    sql: SELECT CAST('15:30:00' AS TIME) AS t
+    expected:
+      rows:
+        - ['15:30:00']
+  - desc: TIME literal
+    sql: SELECT TIME '15:30:00' AS t
+    expected:
+      rows:
+        - ['15:30:00']

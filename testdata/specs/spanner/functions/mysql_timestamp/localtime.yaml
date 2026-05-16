@@ -1,0 +1,10 @@
+spec: docs/specs/spanner/functions/mysql_timestamp/localtime.md
+dialect: spanner
+# LOCALTIME returns the current TIMESTAMP at evaluation time in the
+# session's local time zone. Testable property: positive Unix time.
+cases:
+  - desc: LOCALTIME is after the Unix epoch
+    sql: SELECT mysql.localtime() > TIMESTAMP '1970-01-01 00:00:00 UTC' AS r
+    expected:
+      rows:
+        - [true]

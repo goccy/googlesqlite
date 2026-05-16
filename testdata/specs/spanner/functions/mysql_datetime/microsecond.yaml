@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/microsecond.md
+dialect: spanner
+cases:
+  - desc: microsecond from a TIMESTAMP literal
+    sql: SELECT mysql.microsecond(TIMESTAMP "2024-03-15 12:34:56.123456+00")
+    expected:
+      rows:
+        - [123456]

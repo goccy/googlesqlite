@@ -1,0 +1,44 @@
+spec: docs/specs/googlesql/functions/proto/replace_fields.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/protocol_buffer_functions.md
+#
+# Upstream Examples build the Book / BookDetails protos via the NEW
+# constructor syntax. We install both messages programmatically via
+# Conn.RegisterProto (see internal/spectest/protos.go) so the
+# analyzer can resolve them.
+cases:
+  - desc: upstream example 1 — replace title + nested details.chapters
+    register_protos: [book]
+    sql: |-
+      SELECT REPLACE_FIELDS(
+        NEW Book(
+          "The Hummingbird" AS title,
+          NEW BookDetails(10 AS chapters) AS details),
+        "The Hummingbird II" AS title,
+        11 AS details.chapters)
+      AS result
+    expected:
+      rows:
+        - ['{title: ''The Hummingbird II'' details {chapters: 11}}']
+  - desc: upstream example 2 — replace repeated reviews
+    register_protos: [book]
+    sql: |-
+      SELECT REPLACE_FIELDS(
+        NEW Book("The Hummingbird" AS title,
+          NEW BookDetails(10 AS chapters) AS details),
+        ["A good read!", "Highly recommended."] AS reviews)
+      AS result
+    expected:
+      rows:
+        - ['{title: ''The Hummingbird'' reviews: ''A good read!'' reviews: ''Highly recommended.'' details {chapters: 10}}']
+  - desc: upstream example 3 — clear details by setting NULL
+    register_protos: [book]
+    sql: |-
+      SELECT REPLACE_FIELDS(
+        NEW Book("The Hummingbird" AS title,
+          NEW BookDetails(10 AS chapters) AS details),
+        NULL AS details)
+      AS result
+    expected:
+      rows:
+        - ['{title: ''The Hummingbird''}']

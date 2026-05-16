@@ -1,0 +1,42 @@
+spec: docs/specs/googlesql/syntax/query/join.md
+dialect: googlesql
+cases:
+  - desc: INNER JOIN on equality
+    sql: |-
+      SELECT a, b
+      FROM UNNEST([1, 2, 3]) a INNER JOIN UNNEST([2, 3, 4]) b ON a = b
+      ORDER BY a
+    expected:
+      rows:
+        - [2, 2]
+        - [3, 3]
+  - desc: LEFT JOIN keeps unmatched left-side row
+    sql: |-
+      SELECT a, b
+      FROM UNNEST([1, 2]) a LEFT JOIN UNNEST([2]) b ON a = b
+      ORDER BY a
+    expected:
+      rows:
+        - [1, null]
+        - [2, 2]
+  - desc: CROSS JOIN produces the Cartesian product
+    sql: |-
+      SELECT a, b
+      FROM UNNEST([1, 2]) a CROSS JOIN UNNEST([3, 4]) b
+      ORDER BY a, b
+    expected:
+      rows:
+        - [1, 3]
+        - [1, 4]
+        - [2, 3]
+        - [2, 4]
+  - desc: FULL OUTER JOIN keeps unmatched rows from both sides
+    sql: |-
+      SELECT a, b
+      FROM UNNEST([1, 2]) a FULL OUTER JOIN UNNEST([2, 3]) b ON a = b
+      ORDER BY a NULLS LAST, b NULLS LAST
+    expected:
+      rows:
+        - [1, null]
+        - [2, 2]
+        - [null, 3]

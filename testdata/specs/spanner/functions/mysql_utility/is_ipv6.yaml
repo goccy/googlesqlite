@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/mysql_utility/is_ipv6.md
+dialect: spanner
+cases:
+  - desc: valid IPv6 returns true
+    sql: |-
+      SELECT mysql.is_ipv6('::1')
+    expected:
+      rows:
+        - [true]
+  - desc: IPv4 returns false
+    sql: |-
+      SELECT mysql.is_ipv6('192.168.1.1')
+    expected:
+      rows:
+        - [false]

@@ -1,0 +1,26 @@
+spec: docs/specs/spanner/functions/graph/path.md
+dialect: spanner
+# PATH() is the implicit path-construction primitive surfaced by `MATCH p =
+# ...`. Users do not call PATH(...) directly; the analyzer binds `p` to the
+# constructed path value, and the rest of the runtime (NODES / EDGES /
+# PATH_LENGTH / PATH_FIRST / PATH_LAST / ELEMENT_ID) reads it. This case
+# anchors that round-trip: bind a path, hand it to ELEMENT_ID via
+# PATH_FIRST, and confirm the source endpoint is recoverable.
+cases:
+  - desc: path binding from MATCH round-trips through the path-consuming builtins
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS PT_P (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'CREATE TABLE IF NOT EXISTS PT_K (src_id INT64, dst_id INT64, PRIMARY KEY (src_id, dst_id) NOT ENFORCED)'
+      - "INSERT OR IGNORE INTO PT_P VALUES (1, 'Alice'), (2, 'Bob')"
+      - 'INSERT OR IGNORE INTO PT_K VALUES (1, 2)'
+      - 'CREATE OR REPLACE PROPERTY GRAPH PT_G NODE TABLES (PT_P AS P PROPERTIES (id, name)) EDGE TABLES (PT_K AS K SOURCE KEY (src_id) REFERENCES P (id) DESTINATION KEY (dst_id) REFERENCES P (id))'
+    sql: |-
+      GRAPH PT_G MATCH p = (a:P)-[k:K]->(b:P)
+        RETURN PATH_LENGTH(p) AS hops,
+               ARRAY_LENGTH(NODES(p)) AS n_count,
+               ARRAY_LENGTH(EDGES(p)) AS e_count,
+               ELEMENT_ID(PATH_FIRST(p)) AS first_id,
+               ELEMENT_ID(PATH_LAST(p)) AS last_id
+    expected:
+      rows:
+        - [1, 2, 1, '1', '2']

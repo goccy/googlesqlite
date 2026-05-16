@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_uint64.md
+dialect: googlesql
+cases:
+  - desc: lax_uint64 basic conversion
+    sql: SELECT LAX_UINT64(JSON '42')
+    expected:
+      rows:
+        - [42]

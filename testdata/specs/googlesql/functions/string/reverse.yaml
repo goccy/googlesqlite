@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/reverse.md
+dialect: googlesql
+cases:
+  - desc: reverse ascii
+    sql: SELECT REVERSE('abc')
+    expected:
+      rows:
+        - ['cba']
+  - desc: empty string
+    sql: SELECT REVERSE('')
+    expected:
+      rows:
+        - ['']

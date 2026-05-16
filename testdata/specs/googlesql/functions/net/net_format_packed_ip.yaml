@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/net/net_format_packed_ip.md
+dialect: googlesql
+# NET.FORMAT_PACKED_IP inverse-pairs NET.IP_FROM_STRING; identity
+# property holds for IPv4 addresses.
+cases:
+  - desc: round-trip via IP_FROM_STRING
+    sql: SELECT NET.FORMAT_PACKED_IP(NET.IP_FROM_STRING('192.168.1.0')) AS v
+    expected:
+      rows:
+        - ['192.168.1.0']
+  - desc: ipv4 high-bit address
+    sql: SELECT NET.FORMAT_PACKED_IP(NET.IP_FROM_STRING('255.255.255.255')) AS v
+    expected:
+      rows:
+        - ['255.255.255.255']

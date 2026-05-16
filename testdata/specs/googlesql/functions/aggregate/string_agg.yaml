@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/string_agg.md
+dialect: googlesql
+cases:
+  - desc: comma-join strings
+    sql: SELECT STRING_AGG(x, "," ORDER BY x) FROM UNNEST(["c", "a", "b"]) AS x
+    expected:
+      rows:
+        - ["a,b,c"]

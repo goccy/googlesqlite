@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/geography/st_dwithin.md
+dialect: googlesql
+cases:
+  - desc: coincident points are within 1m
+    sql: SELECT ST_DWITHIN(ST_GEOGPOINT(0,0), ST_GEOGPOINT(0,0), 1.0)
+    expected:
+      rows:
+        - [true]

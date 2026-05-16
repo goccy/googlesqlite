@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/strpos.md
+dialect: googlesql
+cases:
+  - desc: 1-indexed position
+    sql: SELECT STRPOS('hello', 'l')
+    expected:
+      rows:
+        - [3]
+  - desc: not found is zero
+    sql: SELECT STRPOS('hello', 'z')
+    expected:
+      rows:
+        - [0]

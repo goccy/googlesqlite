@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_datetime/dayofweek.md
+dialect: spanner
+cases:
+  - desc: Sunday returns 1 (MySQL convention)
+    sql: SELECT mysql.dayofweek(DATE "2024-03-10")  # Sunday
+    expected:
+      rows:
+        - [1]
+  - desc: Monday returns 2 (MySQL convention)
+    sql: SELECT mysql.dayofweek(DATE "2024-03-11")
+    expected:
+      rows:
+        - [2]

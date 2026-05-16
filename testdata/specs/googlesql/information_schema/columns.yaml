@@ -1,0 +1,16 @@
+spec: docs/specs/googlesql/information_schema/columns.md
+dialect: googlesql
+cases:
+  - desc: COLUMNS lists every user-declared column of a table
+    setup:
+      - CREATE TABLE col_demo_ds.col_demo_tbl (col_a INT64, col_b STRING, col_c FLOAT64)
+    sql: |-
+      SELECT column_name
+      FROM col_demo_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name='col_demo_tbl'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['col_a']
+        - ['col_b']
+        - ['col_c']

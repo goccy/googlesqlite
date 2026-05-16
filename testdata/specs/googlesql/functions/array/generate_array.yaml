@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/array/generate_array.md
+dialect: googlesql
+cases:
+  - desc: 1 to 5 step 1
+    sql: SELECT GENERATE_ARRAY(1, 5)
+    expected:
+      rows:
+        - [[1, 2, 3, 4, 5]]
+  - desc: 1 to 10 step 3
+    sql: SELECT GENERATE_ARRAY(1, 10, 3)
+    expected:
+      rows:
+        - [[1, 4, 7, 10]]

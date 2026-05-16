@@ -1,0 +1,17 @@
+spec: docs/specs/googlesql/syntax/query/with_cte.md
+dialect: googlesql
+cases:
+  - desc: single CTE referenced in the outer SELECT
+    sql: |-
+      WITH t AS (SELECT 1 AS x, 'a' AS y)
+      SELECT x, y FROM t
+    expected:
+      rows:
+        - [1, 'a']
+  - desc: multiple CTEs referenced together
+    sql: |-
+      WITH t1 AS (SELECT 1 AS x), t2 AS (SELECT 2 AS y)
+      SELECT t1.x + t2.y AS r FROM t1, t2
+    expected:
+      rows:
+        - [3]

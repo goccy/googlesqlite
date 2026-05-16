@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_makepolygon.md
+dialect: googlesql
+cases:
+  - desc: Build polygon from outer ring
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_MAKEPOLYGON(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0, 1 1, 0 1, 0 0)')))
+    expected:
+      rows:
+        - ['{"type":"Polygon","coordinates":[[[0,0],[1,0],[1,1],[0,1],[0,0]]]}']

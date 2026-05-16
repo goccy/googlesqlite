@@ -1,0 +1,10 @@
+spec: docs/specs/bigquery/functions/objectref/obj_get_access_url.md
+dialect: bigquery
+# OBJ.GET_ACCESS_URL returns a deterministic stub URL prefix used
+# by the in-memory implementation; not the real signed GCS URL.
+cases:
+  - desc: stub access URL has expected prefix
+    sql: SELECT STARTS_WITH(obj.get_access_url('gs://bucket/file'), 'https://storage.googleapis.local/') AS r
+    expected:
+      rows:
+        - [true]

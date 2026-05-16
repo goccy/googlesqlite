@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_datetime/dayofyear.md
+dialect: spanner
+cases:
+  - desc: January 1 returns 1
+    sql: SELECT mysql.dayofyear(DATE "2024-01-01")
+    expected:
+      rows:
+        - [1]
+  - desc: leap-year December 31 returns 366
+    sql: SELECT mysql.dayofyear(DATE "2024-12-31")
+    expected:
+      rows:
+        - [366]

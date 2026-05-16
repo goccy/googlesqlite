@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/initcap.md
+dialect: googlesql
+cases:
+  - desc: initcap two words
+    sql: SELECT INITCAP('hello world')
+    expected:
+      rows:
+        - ['Hello World']

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_extract_string_array.md
+dialect: googlesql
+cases:
+  - desc: json_extract_string_array basic behaviour
+    sql: SELECT TO_JSON_STRING(JSON_EXTRACT_STRING_ARRAY(JSON '["a","b"]'))
+    expected:
+      rows:
+        - ['["a","b"]']

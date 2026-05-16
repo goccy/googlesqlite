@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_object.md
+dialect: googlesql
+cases:
+  - desc: build a single-key JSON object
+    sql: SELECT TO_JSON_STRING(JSON_OBJECT('k', 1))
+    expected:
+      rows:
+        - ['{"k":1}']

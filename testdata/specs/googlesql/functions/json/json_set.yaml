@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_set.md
+dialect: googlesql
+cases:
+  - desc: json_set basic behaviour
+    sql: SELECT JSON_TYPE(JSON_SET(JSON '{"a":1}', '$.b', 2))
+    expected:
+      rows:
+        - ['object']

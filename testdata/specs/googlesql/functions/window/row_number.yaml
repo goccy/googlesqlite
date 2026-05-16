@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/window/row_number.md
+dialect: googlesql
+cases:
+  - desc: row_number over ordered values
+    sql: |
+      SELECT x, ROW_NUMBER() OVER (ORDER BY x) AS rn
+      FROM UNNEST([10, 20, 30]) AS x
+      ORDER BY x
+    expected:
+      rows:
+        - [10, 1]
+        - [20, 2]
+        - [30, 3]

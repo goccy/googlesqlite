@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/regexp_contains.md
+dialect: googlesql
+cases:
+  - desc: simple pattern match
+    sql: SELECT REGEXP_CONTAINS("hello world", "o w")
+    expected:
+      rows:
+        - [true]
+  - desc: pattern not found
+    sql: SELECT REGEXP_CONTAINS("hello world", "^xyz$")
+    expected:
+      rows:
+        - [false]

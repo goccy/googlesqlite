@@ -1,0 +1,62 @@
+spec: docs/specs/googlesql/functions/aggregate/differential_privacy/percentile_cont.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/aggregate-dp-functions.md
+cases:
+  - desc: upstream example 1 — DP PERCENTILE_CONT (privacy_unit_column=id) with noise
+    setup:
+      - >-
+        CREATE TABLE professors (id INT64, item STRING, quantity INT64)
+      - >-
+        INSERT INTO professors VALUES
+        (101, "pencil", 24),
+        (123, "pen", 16),
+        (123, "pencil", 10),
+        (123, "pencil", 38),
+        (101, "pen", 19),
+        (101, "pen", 23),
+        (130, "scissors", 8),
+        (150, "pencil", 72)
+    sql: |-
+      SELECT
+        WITH DIFFERENTIAL_PRIVACY
+          OPTIONS(epsilon=10, delta=.01, max_groups_contributed=1, privacy_unit_column=id)
+          item,
+          PERCENTILE_CONT(quantity, 0.5, contribution_bounds_per_row => (0,100)) AS percentile_requested
+      FROM professors
+      GROUP BY item
+    nondeterministic: true
+    expected:
+      rows:
+        - ['pencil', '72.00011444091797']
+        - ['scissors', '8.000175476074219']
+        - ['pen', '23.001075744628906']
+
+  - desc: upstream example 2 — DP PERCENTILE_CONT (view-level privacy unit) with noise
+    setup:
+      - >-
+        CREATE TABLE professors (id INT64, item STRING, quantity INT64)
+        OPTIONS(anonymization_userid_column='id')
+      - >-
+        INSERT INTO professors VALUES
+        (101, "pencil", 24),
+        (123, "pen", 16),
+        (123, "pencil", 10),
+        (123, "pencil", 38),
+        (101, "pen", 19),
+        (101, "pen", 23),
+        (130, "scissors", 8),
+        (150, "pencil", 72)
+    sql: |-
+      SELECT
+        WITH DIFFERENTIAL_PRIVACY
+          OPTIONS(epsilon=10, delta=.01, max_groups_contributed=1)
+          item,
+          PERCENTILE_CONT(quantity, 0.5, contribution_bounds_per_row=>(0, 100)) AS percentile_requested
+      FROM professors
+      GROUP BY item
+    nondeterministic: true
+    expected:
+      rows:
+        - ['pencil', '72.00011444091797']
+        - ['scissors', '8.000175476074219']
+        - ['pen', '23.001075744628906']

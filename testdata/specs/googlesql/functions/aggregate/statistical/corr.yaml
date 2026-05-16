@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/statistical/corr.md
+dialect: googlesql
+cases:
+  - desc: corr of identical sequences is 1.0
+    sql: SELECT CORR(x, x) FROM UNNEST([1.0, 2.0, 3.0]) AS x
+    expected:
+      rows:
+        - [1.0]

@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/second.md
+dialect: spanner
+cases:
+  - desc: second from a TIMESTAMP literal
+    sql: SELECT mysql.second(TIMESTAMP "2024-03-15 12:34:56+00")
+    expected:
+      rows:
+        - [56]

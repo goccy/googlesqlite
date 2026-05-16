@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/snippet.md
+dialect: spanner
+cases:
+  - desc: window around match
+    sql: |-
+      SELECT SNIPPET('the quick brown fox jumps over the lazy dog', 'fox')
+    expected:
+      rows:
+        - ['the quick brown fox jumps over the lazy']

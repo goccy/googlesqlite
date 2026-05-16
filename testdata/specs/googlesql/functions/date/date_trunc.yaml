@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/date/date_trunc.md
+dialect: googlesql
+cases:
+  - desc: truncate to month
+    sql: SELECT DATE_TRUNC(DATE "2024-03-15", MONTH)
+    expected:
+      rows:
+        - ["2024-03-01"]
+  - desc: truncate to year
+    sql: SELECT DATE_TRUNC(DATE "2024-03-15", YEAR)
+    expected:
+      rows:
+        - ["2024-01-01"]

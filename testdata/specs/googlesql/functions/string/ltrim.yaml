@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/ltrim.md
+dialect: googlesql
+cases:
+  - desc: left-trim spaces
+    sql: SELECT LTRIM('  hi')
+    expected:
+      rows:
+        - ['hi']

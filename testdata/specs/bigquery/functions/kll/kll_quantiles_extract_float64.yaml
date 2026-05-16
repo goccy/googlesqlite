@@ -1,0 +1,8 @@
+spec: docs/specs/bigquery/functions/kll/kll_quantiles_extract_float64.md
+dialect: bigquery
+cases:
+  - desc: kll_quantiles_extract_float64 basic pipeline
+    sql: SELECT TO_JSON_STRING(KLL_QUANTILES.EXTRACT_FLOAT64(KLL_QUANTILES.INIT_FLOAT64(x), 2)) FROM UNNEST([1.0,2.0,3.0,4.0,5.0]) AS x
+    expected:
+      rows:
+        - ['[1,3,5]']

@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/minute.md
+dialect: spanner
+cases:
+  - desc: minute from a TIMESTAMP literal
+    sql: SELECT mysql.minute(TIMESTAMP "2024-03-15 12:34:56+00")
+    expected:
+      rows:
+        - [34]

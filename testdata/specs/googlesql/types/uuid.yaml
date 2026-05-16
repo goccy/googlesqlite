@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/types/uuid.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/data-types.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT NEW_UUID() >= "00000000-0000-0000-0000-000000000000" AS Is_GE
+    expected:
+      rows:
+        - [true]

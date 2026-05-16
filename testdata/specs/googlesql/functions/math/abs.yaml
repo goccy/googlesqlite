@@ -1,0 +1,28 @@
+spec: docs/specs/googlesql/functions/math/abs.md
+dialect: googlesql
+cases:
+  - desc: negative integer
+    sql: SELECT ABS(-5)
+    expected:
+      rows:
+        - [5]
+  - desc: positive integer is unchanged
+    sql: SELECT ABS(5)
+    expected:
+      rows:
+        - [5]
+  - desc: zero
+    sql: SELECT ABS(0)
+    expected:
+      rows:
+        - [0]
+  - desc: negative float
+    sql: SELECT ABS(-2.5)
+    expected:
+      rows:
+        - [2.5]
+  - desc: null propagates
+    sql: SELECT ABS(NULL)
+    expected:
+      rows:
+        - [null]

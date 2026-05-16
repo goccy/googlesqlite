@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/tanh.md
+dialect: googlesql
+cases:
+  - desc: tanh(0) is 0
+    sql: SELECT TANH(0.0)
+    expected:
+      rows:
+        - [0.0]

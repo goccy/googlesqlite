@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_ip_net_mask.md
+dialect: googlesql
+cases:
+  - desc: NET.IP_NET_MASK returns a non-null bytes mask
+    sql: SELECT NET.IP_NET_MASK(4, 24) IS NOT NULL
+    expected:
+      rows:
+        - [true]

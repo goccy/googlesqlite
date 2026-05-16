@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/types/geography.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata
+# (Apache-2.0 derivative) -- ST_GEOGFROMTEXT round-trip via ST_ASTEXT.
+cases:
+  - desc: round-trip point through WKT
+    sql: SELECT ST_ASTEXT(ST_GEOGFROMTEXT('POINT(1 2)')) AS wkt
+    expected:
+      rows:
+        - ['POINT (1 2)']

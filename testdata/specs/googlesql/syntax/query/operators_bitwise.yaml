@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/syntax/query/operators_bitwise.md
+dialect: googlesql
+cases:
+  - desc: AND / OR / XOR / NOT
+    sql: SELECT 5 & 3 AS a, 5 | 3 AS o, 5 ^ 3 AS x, ~5 AS n
+    expected:
+      rows:
+        - [1, 7, 6, -6]
+  - desc: shift left / right
+    sql: SELECT 1 << 4 AS l, 256 >> 2 AS r
+    expected:
+      rows:
+        - [16, 64]

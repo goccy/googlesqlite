@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/timestamp/format_timestamp.md
+dialect: googlesql
+cases:
+  - desc: ISO format with explicit UTC
+    sql: |
+      SELECT FORMAT_TIMESTAMP("%Y-%m-%dT%H:%M:%S", TIMESTAMP "2024-03-15 12:30:45+00", "UTC")
+    expected:
+      rows:
+        - ["2024-03-15T12:30:45"]

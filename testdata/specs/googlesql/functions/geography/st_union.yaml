@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_union.md
+dialect: googlesql
+cases:
+  - desc: union of two distinct points
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_UNION(ST_GEOGFROMTEXT('POINT(0 0)'), ST_GEOGFROMTEXT('POINT(1 1)')))
+    expected:
+      rows:
+        - ['{"type":"MultiPoint","coordinates":[[0,0],[1,1]]}']

@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/interval.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata/interval.test
+# (Apache-2.0 derivative).
+cases:
+  - desc: INTERVAL literal year-month
+    sql: SELECT INTERVAL '1' YEAR AS i
+    expected:
+      rows:
+        - ['1-0 0 0:0:0']
+  - desc: INTERVAL literal day
+    sql: SELECT INTERVAL '5' DAY AS i
+    expected:
+      rows:
+        - ['0-0 5 0:0:0']

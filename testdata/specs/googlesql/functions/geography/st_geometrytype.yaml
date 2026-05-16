@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_geometrytype.md
+dialect: googlesql
+cases:
+  - desc: Polygon type string
+    sql: |-
+      SELECT ST_GEOMETRYTYPE(ST_GEOGFROMTEXT('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))'))
+    expected:
+      rows:
+        - ['ST_Polygon']

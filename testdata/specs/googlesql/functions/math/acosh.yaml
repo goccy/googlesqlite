@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/acosh.md
+dialect: googlesql
+cases:
+  - desc: ACOSH(1) is 0
+    sql: SELECT ACOSH(1)
+    expected:
+      rows:
+        - [0.0]

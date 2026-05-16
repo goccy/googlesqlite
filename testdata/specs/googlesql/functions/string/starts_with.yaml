@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/starts_with.md
+dialect: googlesql
+cases:
+  - desc: matches prefix
+    sql: SELECT STARTS_WITH('hello', 'he')
+    expected:
+      rows:
+        - [true]
+  - desc: does not match
+    sql: SELECT STARTS_WITH('hello', 'lo')
+    expected:
+      rows:
+        - [false]

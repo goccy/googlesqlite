@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/bit/bit_reverse.md
+dialect: spanner
+cases:
+  - desc: 0 reverses to 0
+    sql: SELECT BIT_REVERSE(0, FALSE)
+    expected:
+      rows:
+        - [0]
+  - desc: double reverse is identity
+    sql: SELECT BIT_REVERSE(BIT_REVERSE(12345, FALSE), FALSE)
+    expected:
+      rows:
+        - [12345]

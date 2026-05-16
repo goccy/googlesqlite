@@ -1,0 +1,143 @@
+spec: docs/specs/googlesql/functions/proto/filter_fields.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/protocol_buffer_functions.md
+#
+# The upstream Examples share a `MusicAwards` CTE that builds two
+# `googlesql.examples.music.Award` rows. We inline that CTE into each
+# case to keep the test self-contained, and rely on
+# `register_protos: [award]` to install the Award proto via
+# Conn.RegisterProto before the analyzer runs.
+cases:
+  - desc: upstream example 1 — read back two rows
+    register_protos: [award]
+    sql: |-
+      WITH
+        MusicAwards AS (
+          SELECT
+            CAST(
+              "year: 2001 month: 9 type { award_name: 'Best Artist' category: 'Artist' } type { award_name: 'Best Album' category: 'Album' }"
+              AS googlesql.examples.music.Award) AS award_col
+          UNION ALL
+          SELECT
+            CAST(
+              "year: 2001 month: 12 type { award_name: 'Best Song' category: 'Song' }"
+              AS googlesql.examples.music.Award) AS award_col
+        )
+      SELECT * FROM MusicAwards
+    expected:
+      rows:
+        - ['{year: 2001 month: 9 type {award_name: ''Best Artist'' category: ''Artist''} type {award_name: ''Best Album'' category: ''Album''}}']
+        - ['{year: 2001 month: 12 type {award_name: ''Best Song'' category: ''Song''}}']
+  - desc: upstream example 2 — keep year only
+    register_protos: [award]
+    sql: |-
+      WITH
+        MusicAwards AS (
+          SELECT
+            CAST(
+              "year: 2001 month: 9 type { award_name: 'Best Artist' category: 'Artist' } type { award_name: 'Best Album' category: 'Album' }"
+              AS googlesql.examples.music.Award) AS award_col
+          UNION ALL
+          SELECT
+            CAST(
+              "year: 2001 month: 12 type { award_name: 'Best Song' category: 'Song' }"
+              AS googlesql.examples.music.Award) AS award_col
+        )
+      SELECT FILTER_FIELDS(award_col, +year) AS filtered_fields
+      FROM MusicAwards
+      
+    expected:
+      rows:
+        - ['{year: 2001}']
+        - ['{year: 2001}']
+  - desc: upstream example 3 — drop type
+    register_protos: [award]
+    sql: |-
+      WITH
+        MusicAwards AS (
+          SELECT
+            CAST(
+              "year: 2001 month: 9 type { award_name: 'Best Artist' category: 'Artist' } type { award_name: 'Best Album' category: 'Album' }"
+              AS googlesql.examples.music.Award) AS award_col
+          UNION ALL
+          SELECT
+            CAST(
+              "year: 2001 month: 12 type { award_name: 'Best Song' category: 'Song' }"
+              AS googlesql.examples.music.Award) AS award_col
+        )
+      SELECT FILTER_FIELDS(award_col, -type) AS filtered_fields
+      FROM MusicAwards
+      
+    expected:
+      rows:
+        - ['{year: 2001 month: 9}']
+        - ['{year: 2001 month: 12}']
+  - desc: upstream example 4 — keep year + type.award_name
+    register_protos: [award]
+    sql: |-
+      WITH
+        MusicAwards AS (
+          SELECT
+            CAST(
+              "year: 2001 month: 9 type { award_name: 'Best Artist' category: 'Artist' } type { award_name: 'Best Album' category: 'Album' }"
+              AS googlesql.examples.music.Award) AS award_col
+          UNION ALL
+          SELECT
+            CAST(
+              "year: 2001 month: 12 type { award_name: 'Best Song' category: 'Song' }"
+              AS googlesql.examples.music.Award) AS award_col
+        )
+      SELECT FILTER_FIELDS(award_col, +year, +type.award_name) AS filtered_fields
+      FROM MusicAwards
+      
+    expected:
+      rows:
+        - ['{year: 2001 type {award_name: ''Best Artist''} type {award_name: ''Best Album''}}']
+        - ['{year: 2001 type {award_name: ''Best Song''}}']
+  - desc: upstream example 5 — keep year + type but drop type.award_name
+    register_protos: [award]
+    sql: |-
+      WITH
+        MusicAwards AS (
+          SELECT
+            CAST(
+              "year: 2001 month: 9 type { award_name: 'Best Artist' category: 'Artist' } type { award_name: 'Best Album' category: 'Album' }"
+              AS googlesql.examples.music.Award) AS award_col
+          UNION ALL
+          SELECT
+            CAST(
+              "year: 2001 month: 12 type { award_name: 'Best Song' category: 'Song' }"
+              AS googlesql.examples.music.Award) AS award_col
+        )
+      SELECT FILTER_FIELDS(award_col, +year, +type, -type.award_name) AS filtered_fields
+      FROM MusicAwards
+      
+    expected:
+      rows:
+        - ['{year: 2001 type {category: ''Artist''} type {category: ''Album''}}']
+        - ['{year: 2001 type {category: ''Song''}}']
+  - desc: upstream example 6 — RESET_CLEARED_REQUIRED_FIELDS keeps month only
+    register_protos: [award]
+    sql: |-
+      WITH
+        MusicAwards AS (
+          SELECT
+            CAST(
+              "year: 2001 month: 9 type { award_name: 'Best Artist' category: 'Artist' } type { award_name: 'Best Album' category: 'Album' }"
+              AS googlesql.examples.music.Award) AS award_col
+          UNION ALL
+          SELECT
+            CAST(
+              "year: 2001 month: 12 type { award_name: 'Best Song' category: 'Song' }"
+              AS googlesql.examples.music.Award) AS award_col
+        )
+      SELECT FILTER_FIELDS(
+        award_col,
+        +month,
+        RESET_CLEARED_REQUIRED_FIELDS => TRUE) AS filtered_fields
+      FROM MusicAwards
+      
+    expected:
+      rows:
+        - ['{year: 0 month: 9}']
+        - ['{year: 0 month: 12}']

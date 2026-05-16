@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_float.md
+dialect: googlesql
+cases:
+  - desc: lax_float basic conversion
+    sql: SELECT LAX_FLOAT(JSON '3.14')
+    expected:
+      rows:
+        - [3.14]

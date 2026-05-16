@@ -1,0 +1,10 @@
+spec: docs/specs/spanner/functions/ml/ai_classify.md
+dialect: spanner
+# AI.CLASSIFY is a stub that returns the first candidate category.
+# Deterministic surface: index 0 of the category array.
+cases:
+  - desc: returns first candidate category
+    sql: SELECT ai.classify('hello', ['greeting', 'farewell']) AS r
+    expected:
+      rows:
+        - ['greeting']

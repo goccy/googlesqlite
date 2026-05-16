@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_utility/uuid_to_bin.md
+dialect: spanner
+cases:
+  - desc: canonical UUID to 16 BYTES
+    sql: |-
+      SELECT TO_HEX(mysql.uuid_to_bin('550e8400-e29b-41d4-a716-446655440000'))
+    expected:
+      rows:
+        - ['550e8400e29b41d4a716446655440000']

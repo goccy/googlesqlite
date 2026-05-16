@@ -1,0 +1,76 @@
+spec: docs/specs/googlesql/functions/aggregate/any_value.md
+dialect: googlesql
+cases:
+  - desc: returns the only value
+    sql: SELECT ANY_VALUE(x) FROM UNNEST([42]) AS x
+    expected:
+      rows:
+        - [42]
+  - desc: upstream Example — ANY_VALUE returns one row from the group
+    sql: |
+      SELECT ANY_VALUE(fruit) IS NOT NULL AS picked
+      FROM UNNEST(["apple", "banana", "pear"]) AS fruit
+    expected:
+      rows:
+        - [true]
+  - desc: HAVING MAX picks the value associated with the largest sold count
+    sql: |
+      WITH Store AS (
+        SELECT 20 AS sold, "apples" AS fruit
+        UNION ALL SELECT 30, "pears"
+        UNION ALL SELECT 30, "bananas"
+        UNION ALL SELECT 10, "oranges"
+      )
+      SELECT ANY_VALUE(fruit HAVING MAX sold) IN ("pears", "bananas") AS ok
+      FROM Store
+    expected:
+      rows:
+        - [true]
+  - desc: HAVING MIN picks the value associated with the smallest sold count
+    sql: |
+      WITH Store AS (
+        SELECT 20 AS sold, "apples" AS fruit
+        UNION ALL SELECT 30, "pears"
+        UNION ALL SELECT 30, "bananas"
+        UNION ALL SELECT 10, "oranges"
+      )
+      SELECT ANY_VALUE(fruit HAVING MIN sold) AS a_lowest_selling_fruit
+      FROM Store
+    expected:
+      rows:
+        - ["oranges"]
+  - desc: empty input returns NULL
+    sql: |
+      SELECT ANY_VALUE(x)
+      FROM UNNEST(CAST([] AS ARRAY<INT64>)) AS x
+    expected:
+      rows:
+        - [null]
+  - desc: all-NULL input returns NULL
+    sql: |
+      SELECT ANY_VALUE(x)
+      FROM UNNEST([CAST(NULL AS INT64), NULL, NULL]) AS x
+    expected:
+      rows:
+        - [null]
+  - desc: NULLs are skipped when at least one non-NULL value exists
+    sql: |
+      SELECT ANY_VALUE(x) IS NOT NULL AS picked_non_null
+      FROM UNNEST([CAST(NULL AS INT64), 7, NULL]) AS x
+    expected:
+      rows:
+        - [true]
+  - desc: ANY_VALUE inside a GROUP BY query
+    sql: |
+      SELECT cat, ANY_VALUE(name) IS NOT NULL AS picked
+      FROM UNNEST([
+        STRUCT('alice' AS name, 'cat1' AS cat),
+        STRUCT('bob' AS name, 'cat1' AS cat),
+        STRUCT('carol' AS name, 'cat2' AS cat)
+      ])
+      GROUP BY cat
+      ORDER BY cat
+    expected:
+      rows:
+        - ['cat1', true]
+        - ['cat2', true]

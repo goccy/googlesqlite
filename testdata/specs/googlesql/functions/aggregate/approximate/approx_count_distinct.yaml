@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/approximate/approx_count_distinct.md
+dialect: googlesql
+cases:
+  - desc: approx_count_distinct returns positive value
+    sql: SELECT APPROX_COUNT_DISTINCT(x) > 0 FROM UNNEST([1, 2, 3, 4]) AS x
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/string/lcase.md
+dialect: spanner
+cases:
+  - desc: lcase is the lower-case alias
+    sql: SELECT mysql.lcase('HELLO')
+    expected:
+      rows:
+        - ['hello']

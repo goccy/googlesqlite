@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/math/floor.md
+dialect: googlesql
+cases:
+  - desc: rounds down positive fraction
+    sql: SELECT FLOOR(1.8)
+    expected:
+      rows:
+        - [1.0]
+  - desc: rounds away from zero on negative fraction
+    sql: SELECT FLOOR(-1.2)
+    expected:
+      rows:
+        - [-2.0]
+  - desc: integer value is unchanged
+    sql: SELECT FLOOR(3.0)
+    expected:
+      rows:
+        - [3.0]
+  - desc: null propagates
+    sql: SELECT FLOOR(NULL)
+    expected:
+      rows:
+        - [null]

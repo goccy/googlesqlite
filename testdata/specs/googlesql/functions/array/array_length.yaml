@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/array/array_length.md
+dialect: googlesql
+cases:
+  - desc: length of three-element array
+    sql: SELECT ARRAY_LENGTH([1, 2, 3])
+    expected:
+      rows:
+        - [3]
+  - desc: empty array
+    sql: SELECT ARRAY_LENGTH(CAST([] AS ARRAY<INT64>))
+    expected:
+      rows:
+        - [0]

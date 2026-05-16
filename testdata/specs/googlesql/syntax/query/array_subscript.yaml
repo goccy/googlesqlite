@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/syntax/query/array_subscript.md
+dialect: googlesql
+cases:
+  - desc: OFFSET is zero-based
+    sql: SELECT [10, 20, 30][OFFSET(1)] AS v
+    expected:
+      rows:
+        - [20]
+  - desc: ORDINAL is one-based
+    sql: SELECT [10, 20, 30][ORDINAL(1)] AS v
+    expected:
+      rows:
+        - [10]
+  - desc: SAFE_OFFSET returns NULL out of range
+    sql: SELECT [10, 20, 30][SAFE_OFFSET(5)] AS v
+    expected:
+      rows:
+        - [null]
+  - desc: SAFE_ORDINAL returns NULL out of range
+    sql: SELECT [10, 20, 30][SAFE_ORDINAL(5)] AS v
+    expected:
+      rows:
+        - [null]

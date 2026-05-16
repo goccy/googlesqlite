@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_lineinterpolatepoint.md
+dialect: googlesql
+cases:
+  - desc: midpoint of equator segment
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_LINEINTERPOLATEPOINT(ST_GEOGFROMTEXT('LINESTRING(0 0, 2 0)'), 0.5))
+    expected:
+      rows:
+        - ['{"type":"Point","coordinates":[1,0]}']

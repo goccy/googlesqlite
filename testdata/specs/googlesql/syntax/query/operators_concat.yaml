@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/syntax/query/operators_concat.md
+dialect: googlesql
+cases:
+  - desc: STRING concatenation with ||
+    sql: SELECT 'a' || 'b' || 'c' AS r
+    expected:
+      rows:
+        - ['abc']
+  - desc: NULL propagates in concat
+    sql: SELECT 'a' || CAST(NULL AS STRING) AS r
+    expected:
+      rows:
+        - [null]

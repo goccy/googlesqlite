@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_ip_to_string.md
+dialect: googlesql
+cases:
+  - desc: dotted-decimal preserved through byte form
+    sql: SELECT NET.IP_TO_STRING(NET.IP_FROM_STRING('10.0.0.1'))
+    expected:
+      rows:
+        - ['10.0.0.1']

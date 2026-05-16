@@ -1,0 +1,10 @@
+spec: docs/specs/bigquery/functions/aead/keys_keyset_to_json.md
+dialect: bigquery
+# KEYS.KEYSET_TO_JSON serialises a keyset to a JSON STRING. Asserted
+# property: the output includes the documented `algorithm` field.
+cases:
+  - desc: JSON form mentions algorithm field
+    sql: SELECT KEYS.KEYSET_TO_JSON(KEYS.NEW_KEYSET('AEAD_AES_GCM_256')) LIKE '%algorithm%' AS r
+    expected:
+      rows:
+        - [true]

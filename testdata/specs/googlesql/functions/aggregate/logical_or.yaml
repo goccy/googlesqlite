@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/aggregate/logical_or.md
+dialect: googlesql
+cases:
+  - desc: one true
+    sql: SELECT LOGICAL_OR(x) FROM UNNEST([false, true, false]) AS x
+    expected:
+      rows:
+        - [true]
+  - desc: all false
+    sql: SELECT LOGICAL_OR(x) FROM UNNEST([false, false]) AS x
+    expected:
+      rows:
+        - [false]

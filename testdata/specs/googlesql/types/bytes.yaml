@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/bytes.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata/bytes.test
+# (Apache-2.0 derivative) -- trivial bytes-literal cases.
+cases:
+  - desc: cast empty bytes literal
+    sql: SELECT BYTE_LENGTH(b'') AS l
+    expected:
+      rows:
+        - [0]
+  - desc: bytes hex literal length
+    sql: SELECT BYTE_LENGTH(b'\x00\x01\x02') AS l
+    expected:
+      rows:
+        - [3]

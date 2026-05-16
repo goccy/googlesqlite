@@ -1,0 +1,102 @@
+spec: docs/specs/googlesql/functions/debug/error.md
+dialect: googlesql
+# Sourced from googlesql-wasm/compliance/testdata/pipe_if.test which
+# pre-creates the KeyValue table fixture as
+#   ARRAY<STRUCT<key INT64, value STRING>>[{1, "value1"}, {2, "value2"}]
+# in a `[prepare_database]` block. Our spec runner does not have a
+# prepare_database concept, so each case seeds the same fixture via the
+# YAML `setup:` list before running the upstream pipe-IF / ASSERT body.
+cases:
+  - desc: assertion_succeeded_with_multiple_payloads
+    setup:
+      - 'CREATE TABLE KeyValue AS SELECT 1 AS key, "value1" AS value UNION ALL SELECT 2 AS key, "value2" AS value'
+    sql: |-
+      FROM KeyValue
+      |> ASSERT key > 0, value, ERROR("This should not trigger")
+      |> ORDER BY key
+    expected:
+      rows:
+        - [1, 'value1']
+        - [2, 'value2']
+  - desc: default_error_no_rows
+    sql: |-
+      SELECT ERROR("message") FROM UNNEST([])
+    expected:
+      rows:
+  - desc: if_no_error
+    sql: |-
+      SELECT IF(FALSE, ERROR("message"), "foo")
+    expected:
+      rows:
+        - ['foo']
+  - desc: run_else
+    setup:
+      - 'CREATE TABLE KeyValue AS SELECT 1 AS key, "value1" AS value UNION ALL SELECT 2 AS key, "value2" AS value'
+    sql: |-
+      FROM KeyValue
+      |> IF false THEN ( |> SELECT error("1") )
+         ELSEIF false THEN ( |> SELECT error("2"), 'xxx' )
+         ELSEIF false THEN ( |> SELECT key, key, key, error("3") )
+         ELSEIF false THEN ( |> SELECT error("4") )
+         ELSE ( |> SELECT key, "selected" )
+    expected:
+      rows:
+        - [1, 'selected']
+        - [2, 'selected']
+  - desc: run_elseif
+    setup:
+      - 'CREATE TABLE KeyValue AS SELECT 1 AS key, "value1" AS value UNION ALL SELECT 2 AS key, "value2" AS value'
+    sql: |-
+      FROM KeyValue
+      |> IF false THEN ( |> SELECT error("1") )
+         ELSEIF false THEN ( |> SELECT error("2"), 'xxx' )
+         ELSEIF true THEN ( |> SELECT key, key, key )
+         ELSEIF false THEN ( |> SELECT error("4") )
+         ELSE ( |> SELECT error("5") )
+    expected:
+      rows:
+        - [1, 1, 1]
+        - [2, 2, 2]
+  - desc: run_if_with_elses
+    setup:
+      - 'CREATE TABLE KeyValue AS SELECT 1 AS key, "value1" AS value UNION ALL SELECT 2 AS key, "value2" AS value'
+    sql: |-
+      FROM KeyValue
+      |> IF true THEN ( |> SELECT key+10 )
+         ELSEIF false THEN ( |> SELECT key/0 )
+         ELSEIF false THEN ( |> SELECT bad )
+         ELSE ( |> SELECT error('abc') )
+    expected:
+      rows:
+        - [11]
+        - [12]
+  - desc: run_no_case
+    setup:
+      - 'CREATE TABLE KeyValue AS SELECT 1 AS key, "value1" AS value UNION ALL SELECT 2 AS key, "value2" AS value'
+    sql: |-
+      FROM KeyValue
+      |> IF false THEN ( |> SELECT error("1") )
+         ELSEIF false THEN ( |> SELECT error("2"), 'xxx' )
+         ELSEIF false THEN ( |> SELECT key, key, key, error("3") )
+         ELSEIF false THEN ( |> SELECT error("4") )
+    expected:
+      rows:
+        - [1, 'value1']
+        - [2, 'value2']
+  - desc: typeof_error_function
+    sql: |-
+      SELECT TYPEOF(ERROR('abc'))
+    expected:
+      rows:
+        - ['INT64']
+  - desc: unselected_cases_dont_run
+    setup:
+      - 'CREATE TABLE KeyValue AS SELECT 1 AS key, "value1" AS value UNION ALL SELECT 2 AS key, "value2" AS value'
+    sql: |-
+      FROM KeyValue
+      |> IF false THEN ( |> EXTEND ERROR("oops") )
+         ELSEIF false THEN ( |> EXTEND bad_column )
+    expected:
+      rows:
+        - [1, 'value1']
+        - [2, 'value2']

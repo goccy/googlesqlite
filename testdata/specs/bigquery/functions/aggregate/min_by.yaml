@@ -1,0 +1,59 @@
+spec: docs/specs/bigquery/functions/aggregate/min_by.md
+dialect: bigquery
+cases:
+  - desc: returns value at the minimum key
+    sql: |
+      SELECT MIN_BY(name, score) FROM UNNEST([
+        STRUCT('alice' AS name, 10 AS score),
+        STRUCT('bob' AS name, 30 AS score),
+        STRUCT('carol' AS name, 20 AS score)
+      ])
+    expected:
+      rows:
+        - ['alice']
+  - desc: tie on the by-value — first-encountered row wins
+    sql: |
+      SELECT MIN_BY(name, score) FROM UNNEST([
+        STRUCT('alice' AS name, 10 AS score),
+        STRUCT('bob' AS name, 10 AS score),
+        STRUCT('carol' AS name, 20 AS score)
+      ])
+    expected:
+      rows:
+        - ['alice']
+  - desc: NULL by-value is skipped — picks the smallest non-NULL key
+    sql: |
+      SELECT MIN_BY(name, score) FROM UNNEST([
+        STRUCT('alice' AS name, CAST(NULL AS INT64) AS score),
+        STRUCT('bob' AS name, 10 AS score),
+        STRUCT('carol' AS name, 20 AS score)
+      ])
+    expected:
+      rows:
+        - ['bob']
+  - desc: MIN_BY inside a GROUP BY query
+    sql: |
+      SELECT cat, MIN_BY(name, score) AS mn
+      FROM UNNEST([
+        STRUCT('alice' AS name, 5 AS score, 'cat1' AS cat),
+        STRUCT('bob' AS name, 10 AS score, 'cat1' AS cat),
+        STRUCT('carol' AS name, 1 AS score, 'cat2' AS cat)
+      ])
+      GROUP BY cat
+      ORDER BY cat
+    expected:
+      rows:
+        - ['cat1', 'alice']
+        - ['cat2', 'carol']
+  - desc: MIN_BY with a WHERE filter (precondition for HAVING-style usage)
+    sql: |
+      SELECT MIN_BY(name, score)
+      FROM UNNEST([
+        STRUCT('alice' AS name, 5 AS score, 'cat1' AS cat),
+        STRUCT('bob' AS name, 10 AS score, 'cat1' AS cat),
+        STRUCT('carol' AS name, 1 AS score, 'cat2' AS cat)
+      ])
+      WHERE cat = 'cat1'
+    expected:
+      rows:
+        - ['alice']

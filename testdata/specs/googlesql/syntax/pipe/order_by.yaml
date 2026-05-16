@@ -1,0 +1,22 @@
+spec: docs/specs/googlesql/syntax/pipe/order_by.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/pipe-syntax.md.
+cases:
+  - desc: order ASC by default
+    sql: |-
+      FROM (SELECT 3 AS x UNION ALL SELECT 1 UNION ALL SELECT 2)
+      |> ORDER BY x
+    expected:
+      rows:
+        - [1]
+        - [2]
+        - [3]
+  - desc: order DESC
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      |> ORDER BY x DESC
+    expected:
+      rows:
+        - [3]
+        - [2]
+        - [1]

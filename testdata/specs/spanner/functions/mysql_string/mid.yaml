@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/mid.md
+dialect: spanner
+cases:
+  - desc: MID 2-arg form
+    sql: |-
+      SELECT mysql.mid('foobar', 2, 3)
+    expected:
+      rows:
+        - ['oob']

@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/functions/geography/st_boundary.md
+dialect: googlesql
+# Boundary of a LINESTRING is the MULTIPOINT of its endpoints (OGC SF
+# spec). For LINESTRING(0 0, 1 1) that is MULTIPOINT(0 0, 1 1).
+cases:
+  - desc: boundary of two-point linestring
+    sql: SELECT ST_ASTEXT(ST_BOUNDARY(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 1)'))) AS s
+    expected:
+      rows:
+        - ['MULTIPOINT (0 0, 1 1)']

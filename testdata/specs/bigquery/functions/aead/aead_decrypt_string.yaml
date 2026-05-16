@@ -1,0 +1,13 @@
+spec: docs/specs/bigquery/functions/aead/aead_decrypt_string.md
+dialect: bigquery
+# AEAD.DECRYPT_STRING is the inverse of AEAD.ENCRYPT for STRING
+# plaintexts. Documented round-trip property: decrypt(encrypt(p)) = p.
+cases:
+  - desc: AEAD round-trip recovers plaintext STRING
+    sql: |-
+      WITH k AS (SELECT KEYS.NEW_KEYSET('AEAD_AES_GCM_256') AS ks)
+      SELECT AEAD.DECRYPT_STRING(ks, AEAD.ENCRYPT(ks, 'plaintext', 'aad'), 'aad') AS s
+      FROM k
+    expected:
+      rows:
+        - ['plaintext']

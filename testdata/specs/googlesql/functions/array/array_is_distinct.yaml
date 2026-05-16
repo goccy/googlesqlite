@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/array/array_is_distinct.md
+dialect: googlesql
+cases:
+  - desc: distinct array returns true
+    sql: SELECT ARRAY_IS_DISTINCT([1, 2, 3])
+    expected:
+      rows:
+        - [true]
+  - desc: duplicate elements return false
+    sql: SELECT ARRAY_IS_DISTINCT([1, 2, 2])
+    expected:
+      rows:
+        - [false]

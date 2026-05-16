@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/json/int64.md
+dialect: googlesql
+cases:
+  - desc: int from json
+    sql: |
+      SELECT INT64(JSON '42')
+    expected:
+      rows:
+        - [42]

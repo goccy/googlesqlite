@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/string/split_substr.md
+dialect: googlesql
+cases:
+  - desc: take first part
+    sql: SELECT SPLIT_SUBSTR('a,b,c,d', ',', 1)
+    expected:
+      rows:
+        - ['a']
+  - desc: take second part
+    sql: SELECT SPLIT_SUBSTR('a,b,c,d', ',', 2)
+    expected:
+      rows:
+        - ['b']
+  - desc: take last part with negative index
+    sql: SELECT SPLIT_SUBSTR('a,b,c,d', ',', -1)
+    expected:
+      rows:
+        - ['d']

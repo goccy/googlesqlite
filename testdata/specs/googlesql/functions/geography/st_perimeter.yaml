@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_perimeter.md
+dialect: googlesql
+cases:
+  - desc: 1x1 polygon perimeter is roughly 4*111km
+    sql: |-
+      SELECT ROUND(ST_PERIMETER(ST_GEOGFROMTEXT('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')) / 1000)
+    expected:
+      rows:
+        - [445]

@@ -1,0 +1,10 @@
+spec: docs/specs/bigquery/functions/dlp/dlp_key_chain.md
+dialect: bigquery
+# DLP_KEY_CHAIN combines a KMS resource path with a wrapped keyset
+# BYTES literal. The result is non-NULL when both inputs are present.
+cases:
+  - desc: chain with literal wrapped keyset is non-NULL
+    sql: SELECT DLP_KEY_CHAIN('projects/p/locations/l/keyRings/r/cryptoKeys/k', b'\x00\x01') IS NOT NULL AS r
+    expected:
+      rows:
+        - [true]

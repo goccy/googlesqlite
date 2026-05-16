@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_utility/inet_ntoa.md
+dialect: spanner
+cases:
+  - desc: INT64 back to IPv4
+    sql: |-
+      SELECT mysql.inet_ntoa(3232235777)
+    expected:
+      rows:
+        - ['192.168.1.1']

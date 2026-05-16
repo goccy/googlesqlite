@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/syntax/query/except.md
+dialect: googlesql
+cases:
+  - desc: EXCEPT DISTINCT removes shared rows
+    sql: |-
+      (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      EXCEPT DISTINCT
+      (SELECT 2)
+    expected:
+      rows:
+        - [1]
+        - [3]

@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/functions/geography/st_makepolygonoriented.md
+dialect: googlesql
+# ST_MAKEPOLYGONORIENTED constructs a polygon preserving the input
+# ring orientation. A unit square LineString returns a non-NULL
+# POLYGON.
+cases:
+  - desc: simple ring constructs a polygon
+    sql: SELECT ST_MAKEPOLYGONORIENTED([ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0, 1 1, 0 1, 0 0)')]) IS NOT NULL AS r
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,16 @@
+spec: docs/specs/googlesql/syntax/ddl/create_table.md
+dialect: googlesql
+cases:
+  - desc: create a base table and read columns via INFORMATION_SCHEMA
+    setup:
+      - CREATE TABLE ddl_ct_ds.ddl_ct_tbl (a INT64, b STRING, c FLOAT64)
+    sql: |-
+      SELECT column_name
+      FROM ddl_ct_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 'ddl_ct_tbl'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['a']
+        - ['b']
+        - ['c']

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/sech.md
+dialect: googlesql
+cases:
+  - desc: sech of typical input is finite
+    sql: SELECT IS_NAN(SECH(1.0))
+    expected:
+      rows:
+        - [false]

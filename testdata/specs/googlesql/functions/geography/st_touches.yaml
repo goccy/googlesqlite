@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/functions/geography/st_touches.md
+dialect: googlesql
+# ST_TOUCHES per OGC SF spec: returns TRUE if `a` and `b` have at
+# least one point in common AND their interiors are disjoint. For
+# the line segment LINESTRING(0 0, 1 1) and its endpoint POINT(1 1)
+# this holds: the boundaries intersect and the interiors do not.
+cases:
+  - desc: line touches its endpoint
+    sql: SELECT ST_TOUCHES(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 1)'), ST_GEOGFROMTEXT('POINT(1 1)')) AS r
+    expected:
+      rows:
+        - [true]

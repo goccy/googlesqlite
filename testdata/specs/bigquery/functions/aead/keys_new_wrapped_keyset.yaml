@@ -1,0 +1,11 @@
+spec: docs/specs/bigquery/functions/aead/keys_new_wrapped_keyset.md
+dialect: bigquery
+# KEYS.NEW_WRAPPED_KEYSET returns a BYTES blob wrapped by the
+# referenced Cloud KMS key. The stub returns a deterministic
+# base64-encoded sentinel; assert the BYTES form is non-empty.
+cases:
+  - desc: wrapped keyset is non-empty
+    sql: SELECT OCTET_LENGTH(KEYS.NEW_WRAPPED_KEYSET('projects/p/locations/l/keyRings/r/cryptoKeys/k', 'AEAD_AES_GCM_256')) > 0 AS r
+    expected:
+      rows:
+        - [true]

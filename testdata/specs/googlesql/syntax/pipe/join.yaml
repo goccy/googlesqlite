@@ -1,0 +1,20 @@
+spec: docs/specs/googlesql/syntax/pipe/join.md
+dialect: googlesql
+cases:
+  - desc: inner join on equality
+    sql: |-
+      FROM (SELECT 1 AS id, 'a' AS lhs UNION ALL SELECT 2, 'b')
+      |> JOIN (SELECT 1 AS id, 'X' AS rhs UNION ALL SELECT 3, 'Y') USING (id)
+      |> ORDER BY id
+    expected:
+      rows:
+        - [1, 'a', 'X']
+  - desc: left outer join keeps left-side row when no match
+    sql: |-
+      FROM (SELECT 1 AS id, 'a' AS lhs UNION ALL SELECT 2, 'b')
+      |> LEFT JOIN (SELECT 1 AS id, 'X' AS rhs) USING (id)
+      |> ORDER BY id
+    expected:
+      rows:
+        - [1, 'a', 'X']
+        - [2, 'b', null]

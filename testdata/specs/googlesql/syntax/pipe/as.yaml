@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/syntax/pipe/as.md
+dialect: googlesql
+cases:
+  - desc: AS names the table; columns are qualifiable
+    sql: |-
+      FROM (SELECT 1 AS x, 2 AS y)
+      |> AS my_table
+      |> SELECT my_table.x, my_table.y
+    expected:
+      rows:
+        - [1, 2]

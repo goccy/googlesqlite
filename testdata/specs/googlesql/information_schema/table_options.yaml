@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/information_schema/table_options.md
+dialect: googlesql
+cases:
+  - desc: TABLE_OPTIONS returns rows for OPTIONS-decorated tables
+    setup:
+      - "CREATE TABLE opts_demo_ds.opts_demo_tbl (col_a INT64) OPTIONS(description='demo table')"
+    sql: |-
+      SELECT option_name, option_value
+      FROM opts_demo_ds.INFORMATION_SCHEMA.TABLE_OPTIONS
+      WHERE table_name='opts_demo_tbl' AND option_name='description'
+    expected:
+      rows:
+        - ['description', "'demo table'"]

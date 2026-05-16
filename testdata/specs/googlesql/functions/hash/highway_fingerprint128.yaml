@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/hash/highway_fingerprint128.md
+dialect: googlesql
+cases:
+  - desc: returns 16-byte BYTES
+    sql: SELECT BYTE_LENGTH(HIGHWAY_FINGERPRINT128('hello'))
+    expected:
+      rows:
+        - [16]
+  - desc: deterministic for the same input
+    sql: SELECT HIGHWAY_FINGERPRINT128('hello') = HIGHWAY_FINGERPRINT128('hello')
+    expected:
+      rows:
+        - [true]
+  - desc: distinct outputs for distinct inputs
+    sql: SELECT HIGHWAY_FINGERPRINT128('hello') = HIGHWAY_FINGERPRINT128('world')
+    expected:
+      rows:
+        - [false]

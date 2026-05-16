@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/mysql_utility/is_ipv4.md
+dialect: spanner
+cases:
+  - desc: valid IPv4 returns true
+    sql: |-
+      SELECT mysql.is_ipv4('192.168.1.1')
+    expected:
+      rows:
+        - [true]
+  - desc: invalid IPv4 returns false
+    sql: |-
+      SELECT mysql.is_ipv4('not.an.ip')
+    expected:
+      rows:
+        - [false]

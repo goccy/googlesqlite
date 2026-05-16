@@ -1,0 +1,14 @@
+spec: docs/specs/googlesql/syntax/query/cube.md
+dialect: googlesql
+cases:
+  - desc: cube over a single column equals rollup
+    sql: |-
+      SELECT k, SUM(v) AS total
+      FROM UNNEST([STRUCT('a' AS k, 1 AS v), ('a', 2), ('b', 3)])
+      GROUP BY CUBE(k)
+      ORDER BY k NULLS LAST
+    expected:
+      rows:
+        - ['a', 3]
+        - ['b', 3]
+        - [null, 6]

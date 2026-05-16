@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/string/regexp_match.md
+dialect: googlesql
+cases:
+  - desc: simple match
+    sql: SELECT REGEXP_MATCH('hello world', 'hello')
+    expected:
+      rows:
+        - [true]
+  - desc: no match
+    sql: SELECT REGEXP_MATCH('hello world', '^bye')
+    expected:
+      rows:
+        - [false]
+  - desc: null propagation
+    sql: SELECT REGEXP_MATCH(CAST(NULL AS STRING), 'x')
+    expected:
+      rows:
+        - [null]

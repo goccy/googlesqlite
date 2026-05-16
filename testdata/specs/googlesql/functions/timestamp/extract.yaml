@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/timestamp/extract.md
+dialect: googlesql
+cases:
+  - desc: EXTRACT(YEAR FROM TIMESTAMP)
+    sql: SELECT EXTRACT(YEAR FROM TIMESTAMP '2024-06-15 13:45:00 UTC')
+    expected:
+      rows:
+        - [2024]

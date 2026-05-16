@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/safe_divide.md
+dialect: googlesql
+cases:
+  - desc: regular divide
+    sql: SELECT SAFE_DIVIDE(10.0, 2.0)
+    expected:
+      rows:
+        - [5.0]
+  - desc: divide by zero is NULL
+    sql: SELECT SAFE_DIVIDE(10.0, 0.0)
+    expected:
+      rows:
+        - [null]

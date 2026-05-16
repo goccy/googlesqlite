@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/left.md
+dialect: googlesql
+cases:
+  - desc: leftmost three chars
+    sql: SELECT LEFT('hello', 3)
+    expected:
+      rows:
+        - ['hel']
+  - desc: more than length
+    sql: SELECT LEFT('hi', 5)
+    expected:
+      rows:
+        - ['hi']

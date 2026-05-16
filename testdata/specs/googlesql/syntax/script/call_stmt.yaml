@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/syntax/script/call_stmt.md
+dialect: googlesql
+cases:
+  - desc: CALL invokes a registered procedure
+    setup:
+      - CREATE PROCEDURE call_ds.p1() BEGIN SELECT 1; END
+      - CALL call_ds.p1()
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

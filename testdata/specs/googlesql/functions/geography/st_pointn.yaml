@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_pointn.md
+dialect: googlesql
+cases:
+  - desc: Middle vertex
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_POINTN(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0, 2 0)'), 2))
+    expected:
+      rows:
+        - ['{"type":"Point","coordinates":[1,0]}']

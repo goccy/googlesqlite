@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/bit_or.md
+dialect: googlesql
+cases:
+  - desc: bit_or over integers
+    sql: SELECT BIT_OR(x) FROM UNNEST([1, 2, 4]) AS x
+    expected:
+      rows:
+        - [7]

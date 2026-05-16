@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_contains.md
+dialect: googlesql
+cases:
+  - desc: Polygon contains interior point
+    sql: |-
+      SELECT ST_CONTAINS(ST_GEOGFROMTEXT('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))'), ST_GEOGFROMTEXT('POINT(0.5 0.5)'))
+    expected:
+      rows:
+        - [true]

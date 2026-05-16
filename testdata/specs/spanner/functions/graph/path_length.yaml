@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/graph/path_length.md
+dialect: spanner
+cases:
+  - desc: single-hop path length is 1
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS PL_P (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'CREATE TABLE IF NOT EXISTS PL_K (src_id INT64, dst_id INT64, PRIMARY KEY (src_id, dst_id) NOT ENFORCED)'
+      - 'INSERT OR IGNORE INTO PL_P VALUES (1, ''Alice''), (2, ''Bob'')'
+      - 'INSERT OR IGNORE INTO PL_K VALUES (1, 2)'
+      - 'CREATE OR REPLACE PROPERTY GRAPH PL_G NODE TABLES (PL_P AS P PROPERTIES (id, name)) EDGE TABLES (PL_K AS K SOURCE KEY (src_id) REFERENCES P (id) DESTINATION KEY (dst_id) REFERENCES P (id))'
+    sql: |-
+      GRAPH PL_G MATCH p = (a:P)-[k:K]->(b:P) RETURN PATH_LENGTH(p) AS len
+    expected:
+      rows:
+        - [1]

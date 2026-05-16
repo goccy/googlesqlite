@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/avg.md
+dialect: googlesql
+cases:
+  - desc: avg of three
+    sql: SELECT AVG(x) FROM UNNEST([1.0, 2.0, 3.0]) AS x
+    expected:
+      rows:
+        - [2.0]

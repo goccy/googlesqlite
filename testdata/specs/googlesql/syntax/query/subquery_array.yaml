@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/syntax/query/subquery_array.md
+dialect: googlesql
+cases:
+  - desc: ARRAY subquery materialises a column
+    sql: SELECT ARRAY(SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) AS arr
+    expected:
+      rows:
+        - [[1, 2, 3]]

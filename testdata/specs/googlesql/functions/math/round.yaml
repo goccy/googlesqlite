@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/math/round.md
+dialect: googlesql
+cases:
+  - desc: half rounds away from zero
+    sql: SELECT ROUND(1.5)
+    expected:
+      rows:
+        - [2.0]
+  - desc: round negative
+    sql: SELECT ROUND(-1.5)
+    expected:
+      rows:
+        - [-2.0]

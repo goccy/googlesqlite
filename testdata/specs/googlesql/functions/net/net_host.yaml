@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/net/net_host.md
+dialect: googlesql
+cases:
+  - desc: net_host extracts the expected piece
+    sql: SELECT NET.HOST('https://www.example.com/path')
+    expected:
+      rows:
+        - ['www.example.com']

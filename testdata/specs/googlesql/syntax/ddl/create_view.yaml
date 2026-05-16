@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/ddl/create_view.md
+dialect: googlesql
+cases:
+  - desc: CREATE VIEW produces a queryable virtual table
+    setup:
+      - CREATE VIEW view_ds.v1 AS SELECT 100 AS x
+    sql: SELECT x FROM view_ds.v1
+    expected:
+      rows:
+        - [100]

@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/concat_ws.md
+dialect: spanner
+cases:
+  - desc: join with separator
+    sql: |-
+      SELECT mysql.concat_ws('-', 'a', 'b', 'c')
+    expected:
+      rows:
+        - ['a-b-c']

@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/tokenize_json.md
+dialect: spanner
+cases:
+  - desc: json tokenises
+    sql: |-
+      SELECT LENGTH(CAST(TOKENIZE_JSON('{"k":"v"}') AS STRING)) > 0
+    expected:
+      rows:
+        - [true]

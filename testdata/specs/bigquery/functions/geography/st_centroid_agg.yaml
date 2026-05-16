@@ -1,0 +1,30 @@
+spec: docs/specs/bigquery/functions/geography/st_centroid_agg.md
+dialect: bigquery
+cases:
+  - desc: centroid of two points
+    sql: SELECT ST_ASTEXT(ST_CENTROID_AGG(g)) FROM UNNEST([ST_GEOGPOINT(0,0), ST_GEOGPOINT(2,2)]) AS g
+    expected:
+      rows:
+        - ['POINT (1 1)']
+  - desc: centroid of three points
+    sql: SELECT ST_ASTEXT(ST_CENTROID_AGG(g)) FROM UNNEST([ST_GEOGPOINT(1,1), ST_GEOGPOINT(3,3), ST_GEOGPOINT(5,5)]) AS g
+    expected:
+      rows:
+        - ['POINT (3 3)']
+  - desc: NULLs in input are skipped
+    sql: |
+      SELECT ST_ASTEXT(ST_CENTROID_AGG(g))
+      FROM UNNEST([ST_GEOGPOINT(0,0), CAST(NULL AS GEOGRAPHY), ST_GEOGPOINT(4,4)]) AS g
+    expected:
+      rows:
+        - ['POINT (2 2)']
+  - desc: linestring centroid is the length-weighted midpoint
+    sql: SELECT ST_ASTEXT(ST_CENTROID_AGG(g)) FROM UNNEST([ST_GEOGFROMTEXT('LINESTRING(0 0, 4 0)')]) AS g
+    expected:
+      rows:
+        - ['POINT (2 0)']
+  - desc: square polygon centroid is the area-weighted centre
+    sql: SELECT ST_ASTEXT(ST_CENTROID_AGG(g)) FROM UNNEST([ST_GEOGFROMTEXT('POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))')]) AS g
+    expected:
+      rows:
+        - ['POINT (1 1)']

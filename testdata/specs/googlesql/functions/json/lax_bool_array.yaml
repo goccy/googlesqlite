@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_bool_array.md
+dialect: googlesql
+cases:
+  - desc: lax_bool_array extracts a typed array with NULLs on bad elements
+    sql: SELECT TO_JSON_STRING(LAX_BOOL_ARRAY(JSON '[true,"x",false]'))
+    expected:
+      rows:
+        - ['[true,null,false]']

@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/ml/ai_if.md
+dialect: spanner
+cases:
+  - desc: stub returns the else-branch
+    sql: SELECT AI.IF('predicate', 'then-value', 'else-value')
+    expected:
+      rows:
+        - ['else-value']

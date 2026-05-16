@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_json/json_unquote.md
+dialect: spanner
+cases:
+  - desc: unquote and unescape
+    sql: |-
+      SELECT mysql.json_unquote('"hi\\"there"')
+    expected:
+      rows:
+        - ['hi"there']

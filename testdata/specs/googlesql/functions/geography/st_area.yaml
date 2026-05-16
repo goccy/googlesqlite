@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_area.md
+dialect: googlesql
+cases:
+  - desc: 1x1 polygon area in km^2 around 12000
+    sql: |-
+      SELECT ROUND(ST_AREA(ST_GEOGFROMTEXT('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')) / 1000000)
+    expected:
+      rows:
+        - [12364]

@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/bit/bit_count.md
+dialect: googlesql
+cases:
+  - desc: count set bits
+    sql: SELECT BIT_COUNT(7)
+    expected:
+      rows:
+        - [3]
+  - desc: zero is zero bits
+    sql: SELECT BIT_COUNT(0)
+    expected:
+      rows:
+        - [0]

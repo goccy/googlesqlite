@@ -1,0 +1,14 @@
+spec: docs/specs/bigquery/functions/aead/keys_rotate_wrapped_keyset.md
+dialect: bigquery
+# KEYS.ROTATE_WRAPPED_KEYSET rotates a Cloud KMS-wrapped keyset.
+# The result is non-empty BYTES.
+cases:
+  - desc: rotated wrapped keyset is non-empty
+    sql: |-
+      SELECT OCTET_LENGTH(KEYS.ROTATE_WRAPPED_KEYSET(
+        'projects/p/locations/l/keyRings/r/cryptoKeys/k',
+        KEYS.NEW_WRAPPED_KEYSET('projects/p/locations/l/keyRings/r/cryptoKeys/k', 'AEAD_AES_GCM_256'),
+        'AEAD_AES_GCM_256')) > 0 AS r
+    expected:
+      rows:
+        - [true]

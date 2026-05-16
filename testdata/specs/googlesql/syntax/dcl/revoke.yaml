@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/syntax/dcl/revoke.md
+dialect: googlesql
+cases:
+  - desc: REVOKE SELECT removes a previously granted privilege
+    setup:
+      - CREATE TABLE revoke_ds.t1 (a INT64)
+      - "GRANT SELECT ON TABLE revoke_ds.t1 TO 'user:alice@example.com'"
+      - "REVOKE SELECT ON TABLE revoke_ds.t1 FROM 'user:alice@example.com'"
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

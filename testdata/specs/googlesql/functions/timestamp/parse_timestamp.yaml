@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/timestamp/parse_timestamp.md
+dialect: googlesql
+cases:
+  - desc: ISO timestamp with explicit UTC
+    sql: |
+      SELECT UNIX_SECONDS(PARSE_TIMESTAMP("%Y-%m-%d %H:%M:%S%Ez", "2024-03-15 12:30:45+00:00"))
+    expected:
+      rows:
+        - [1710505845]

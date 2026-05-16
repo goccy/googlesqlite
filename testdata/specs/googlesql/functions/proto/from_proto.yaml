@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/proto/from_proto.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/protocol_buffer_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT FROM_PROTO(
+        new google.type.Date(
+          2019 as year,
+          10 as month,
+          30 as day
+        )
+      )
+    expected:
+      rows:
+        - ['2019-10-30']
+  - desc: upstream example 2
+    sql: |-
+      SELECT FROM_PROTO(DATE '2019-10-30')
+    expected:
+      rows:
+        - ['2019-10-30']

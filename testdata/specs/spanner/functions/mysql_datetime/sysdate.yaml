@@ -1,0 +1,11 @@
+spec: docs/specs/spanner/functions/mysql_datetime/sysdate.md
+dialect: spanner
+# SYSDATE returns the current TIMESTAMP at evaluation time, exposed
+# under the Spanner mysql.* namespace. Documented to be > 0 once
+# evaluated; positive-unix-time-since-epoch is the testable property.
+cases:
+  - desc: SYSDATE is after the Unix epoch
+    sql: SELECT mysql.sysdate() > TIMESTAMP '1970-01-01 00:00:00 UTC' AS r
+    expected:
+      rows:
+        - [true]

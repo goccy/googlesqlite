@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/json/float32.md
+dialect: spanner
+cases:
+  - desc: float32 from json
+    sql: SELECT FLOAT32(JSON '3.14')
+    expected:
+      rows:
+        - [3.14]

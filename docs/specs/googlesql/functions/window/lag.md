@@ -1,0 +1,208 @@
+---
+name: LAG
+dialect: googlesql
+category: functions/window
+status: implemented
+source_url: docs/third_party/googlesql-docs/navigation_functions.md
+upstream_url: https://github.com/google/googlesql/blob/master/docs/navigation_functions.md#lag
+last_synced: 2026-05-04
+testdata: testdata/specs/googlesql/functions/window/lag.yaml
+---
+
+# LAG
+
+## Summary
+
+(TBD — refine from the upstream reference below.)
+
+## Signatures
+
+(TBD)
+
+## Behavior
+
+(TBD)
+
+## Examples
+
+(TBD)
+
+## Edge cases
+
+(TBD)
+
+## Reference (upstream)
+
+Verbatim copy from `docs/third_party/googlesql-docs/navigation_functions.md`. Auto-managed by
+`specctl normalize`; do not edit by hand.
+
+## `LAG`
+
+```googlesql
+LAG (value_expression[, offset [, default_expression]])
+OVER over_clause
+
+over_clause:
+  { named_window | ( [ window_specification ] ) }
+
+window_specification:
+  [ named_window ]
+  [ PARTITION BY partition_expression [, ...] ]
+  ORDER BY expression [ { ASC | DESC }  ] [, ...]
+
+```
+
+**Description**
+
+Returns the value of the `value_expression` on a preceding row. Changing the
+`offset` value changes which preceding row is returned; the default value is
+`1`, indicating the previous row in the window frame. An error occurs if
+`offset` is NULL or a negative value.
+
+The optional `default_expression` is used if there isn't a row in the window
+frame at the specified offset. This expression must be a constant expression and
+its type must be implicitly coercible to the type of `value_expression`. If left
+unspecified, `default_expression` defaults to NULL.
+
+To learn more about the `OVER` clause and how to use it, see
+[Window function calls][window-function-calls].
+
+<!-- mdlint off(WHITESPACE_LINE_LENGTH) -->
+
+[window-function-calls]: https://github.com/google/googlesql/blob/master/docs/window-function-calls.md
+
+<!-- mdlint on -->
+
+**Supported Argument Types**
+
++ `value_expression` can be any data type that can be returned from an
+  expression.
++ `offset` must be a non-negative integer literal or parameter.
++ `default_expression` must be compatible with the value expression type.
+
+**Return Data Type**
+
+Same type as `value_expression`.
+
+**Examples**
+
+The following example illustrates a basic use of the `LAG` function.
+
+```googlesql
+WITH finishers AS
+ (SELECT 'Sophia Liu' as name,
+  TIMESTAMP '2016-10-18 2:51:45' as finish_time,
+  'F30-34' as division
+  UNION ALL SELECT 'Lisa Stelzner', TIMESTAMP '2016-10-18 2:54:11', 'F35-39'
+  UNION ALL SELECT 'Nikki Leith', TIMESTAMP '2016-10-18 2:59:01', 'F30-34'
+  UNION ALL SELECT 'Lauren Matthews', TIMESTAMP '2016-10-18 3:01:17', 'F35-39'
+  UNION ALL SELECT 'Desiree Berry', TIMESTAMP '2016-10-18 3:05:42', 'F35-39'
+  UNION ALL SELECT 'Suzy Slane', TIMESTAMP '2016-10-18 3:06:24', 'F35-39'
+  UNION ALL SELECT 'Jen Edwards', TIMESTAMP '2016-10-18 3:06:36', 'F30-34'
+  UNION ALL SELECT 'Meghan Lederer', TIMESTAMP '2016-10-18 3:07:41', 'F30-34'
+  UNION ALL SELECT 'Carly Forte', TIMESTAMP '2016-10-18 3:08:58', 'F25-29'
+  UNION ALL SELECT 'Lauren Reasoner', TIMESTAMP '2016-10-18 3:10:14', 'F30-34')
+SELECT name,
+  finish_time,
+  division,
+  LAG(name)
+    OVER (PARTITION BY division ORDER BY finish_time ASC) AS preceding_runner
+FROM finishers;
+
+/*-----------------+-------------+----------+------------------+
+ | name            | finish_time | division | preceding_runner |
+ +-----------------+-------------+----------+------------------+
+ | Carly Forte     | 03:08:58    | F25-29   | NULL             |
+ | Sophia Liu      | 02:51:45    | F30-34   | NULL             |
+ | Nikki Leith     | 02:59:01    | F30-34   | Sophia Liu       |
+ | Jen Edwards     | 03:06:36    | F30-34   | Nikki Leith      |
+ | Meghan Lederer  | 03:07:41    | F30-34   | Jen Edwards      |
+ | Lauren Reasoner | 03:10:14    | F30-34   | Meghan Lederer   |
+ | Lisa Stelzner   | 02:54:11    | F35-39   | NULL             |
+ | Lauren Matthews | 03:01:17    | F35-39   | Lisa Stelzner    |
+ | Desiree Berry   | 03:05:42    | F35-39   | Lauren Matthews  |
+ | Suzy Slane      | 03:06:24    | F35-39   | Desiree Berry    |
+ +-----------------+-------------+----------+------------------*/
+```
+
+This next example uses the optional `offset` parameter.
+
+```googlesql
+WITH finishers AS
+ (SELECT 'Sophia Liu' as name,
+  TIMESTAMP '2016-10-18 2:51:45' as finish_time,
+  'F30-34' as division
+  UNION ALL SELECT 'Lisa Stelzner', TIMESTAMP '2016-10-18 2:54:11', 'F35-39'
+  UNION ALL SELECT 'Nikki Leith', TIMESTAMP '2016-10-18 2:59:01', 'F30-34'
+  UNION ALL SELECT 'Lauren Matthews', TIMESTAMP '2016-10-18 3:01:17', 'F35-39'
+  UNION ALL SELECT 'Desiree Berry', TIMESTAMP '2016-10-18 3:05:42', 'F35-39'
+  UNION ALL SELECT 'Suzy Slane', TIMESTAMP '2016-10-18 3:06:24', 'F35-39'
+  UNION ALL SELECT 'Jen Edwards', TIMESTAMP '2016-10-18 3:06:36', 'F30-34'
+  UNION ALL SELECT 'Meghan Lederer', TIMESTAMP '2016-10-18 3:07:41', 'F30-34'
+  UNION ALL SELECT 'Carly Forte', TIMESTAMP '2016-10-18 3:08:58', 'F25-29'
+  UNION ALL SELECT 'Lauren Reasoner', TIMESTAMP '2016-10-18 3:10:14', 'F30-34')
+SELECT name,
+  finish_time,
+  division,
+  LAG(name, 2)
+    OVER (PARTITION BY division ORDER BY finish_time ASC) AS two_runners_ahead
+FROM finishers;
+
+/*-----------------+-------------+----------+-------------------+
+ | name            | finish_time | division | two_runners_ahead |
+ +-----------------+-------------+----------+-------------------+
+ | Carly Forte     | 03:08:58    | F25-29   | NULL              |
+ | Sophia Liu      | 02:51:45    | F30-34   | NULL              |
+ | Nikki Leith     | 02:59:01    | F30-34   | NULL              |
+ | Jen Edwards     | 03:06:36    | F30-34   | Sophia Liu        |
+ | Meghan Lederer  | 03:07:41    | F30-34   | Nikki Leith       |
+ | Lauren Reasoner | 03:10:14    | F30-34   | Jen Edwards       |
+ | Lisa Stelzner   | 02:54:11    | F35-39   | NULL              |
+ | Lauren Matthews | 03:01:17    | F35-39   | NULL              |
+ | Desiree Berry   | 03:05:42    | F35-39   | Lisa Stelzner     |
+ | Suzy Slane      | 03:06:24    | F35-39   | Lauren Matthews   |
+ +-----------------+-------------+----------+-------------------*/
+```
+
+The following example replaces NULL values with a default value.
+
+```googlesql
+WITH finishers AS
+ (SELECT 'Sophia Liu' as name,
+  TIMESTAMP '2016-10-18 2:51:45' as finish_time,
+  'F30-34' as division
+  UNION ALL SELECT 'Lisa Stelzner', TIMESTAMP '2016-10-18 2:54:11', 'F35-39'
+  UNION ALL SELECT 'Nikki Leith', TIMESTAMP '2016-10-18 2:59:01', 'F30-34'
+  UNION ALL SELECT 'Lauren Matthews', TIMESTAMP '2016-10-18 3:01:17', 'F35-39'
+  UNION ALL SELECT 'Desiree Berry', TIMESTAMP '2016-10-18 3:05:42', 'F35-39'
+  UNION ALL SELECT 'Suzy Slane', TIMESTAMP '2016-10-18 3:06:24', 'F35-39'
+  UNION ALL SELECT 'Jen Edwards', TIMESTAMP '2016-10-18 3:06:36', 'F30-34'
+  UNION ALL SELECT 'Meghan Lederer', TIMESTAMP '2016-10-18 3:07:41', 'F30-34'
+  UNION ALL SELECT 'Carly Forte', TIMESTAMP '2016-10-18 3:08:58', 'F25-29'
+  UNION ALL SELECT 'Lauren Reasoner', TIMESTAMP '2016-10-18 3:10:14', 'F30-34')
+SELECT name,
+  finish_time,
+  division,
+  LAG(name, 2, 'Nobody')
+    OVER (PARTITION BY division ORDER BY finish_time ASC) AS two_runners_ahead
+FROM finishers;
+
+/*-----------------+-------------+----------+-------------------+
+ | name            | finish_time | division | two_runners_ahead |
+ +-----------------+-------------+----------+-------------------+
+ | Carly Forte     | 03:08:58    | F25-29   | Nobody            |
+ | Sophia Liu      | 02:51:45    | F30-34   | Nobody            |
+ | Nikki Leith     | 02:59:01    | F30-34   | Nobody            |
+ | Jen Edwards     | 03:06:36    | F30-34   | Sophia Liu        |
+ | Meghan Lederer  | 03:07:41    | F30-34   | Nikki Leith       |
+ | Lauren Reasoner | 03:10:14    | F30-34   | Jen Edwards       |
+ | Lisa Stelzner   | 02:54:11    | F35-39   | Nobody            |
+ | Lauren Matthews | 03:01:17    | F35-39   | Nobody            |
+ | Desiree Berry   | 03:05:42    | F35-39   | Lisa Stelzner     |
+ | Suzy Slane      | 03:06:24    | F35-39   | Lauren Matthews   |
+ +-----------------+-------------+----------+-------------------*/
+```
+
+## References
+
+- Apache 2.0 derivative of `docs/third_party/googlesql-docs/navigation_functions.md`.

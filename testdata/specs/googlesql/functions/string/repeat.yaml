@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/repeat.md
+dialect: googlesql
+cases:
+  - desc: repeat thrice
+    sql: SELECT REPEAT('ab', 3)
+    expected:
+      rows:
+        - ['ababab']
+  - desc: zero repetitions
+    sql: SELECT REPEAT('ab', 0)
+    expected:
+      rows:
+        - ['']

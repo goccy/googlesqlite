@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_convexhull.md
+dialect: googlesql
+cases:
+  - desc: triangle hull from 3 points
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_CONVEXHULL(ST_GEOGFROMTEXT('MULTIPOINT(0 0, 1 0, 0.5 1)')))
+    expected:
+      rows:
+        - ['{"type":"Polygon","coordinates":[[[0,0],[1,0],[0.5,1],[0,0]]]}']

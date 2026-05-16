@@ -1,0 +1,34 @@
+spec: docs/specs/googlesql/functions/geography/st_linelocatepoint.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH geos AS (
+          SELECT ST_GEOGPOINT(0, 0) AS point UNION ALL
+          SELECT ST_GEOGPOINT(1, 0) UNION ALL
+          SELECT ST_GEOGPOINT(1, 1) UNION ALL
+          SELECT ST_GEOGPOINT(2, 2) UNION ALL
+          SELECT ST_GEOGPOINT(3, 3) UNION ALL
+          SELECT ST_GEOGPOINT(4, 4) UNION ALL
+          SELECT ST_GEOGPOINT(5, 5) UNION ALL
+          SELECT ST_GEOGPOINT(6, 5) UNION ALL
+          SELECT NULL
+        )
+      SELECT
+        point AS input_point,
+        ST_LINELOCATEPOINT(ST_GEOGFROMTEXT('LINESTRING(1 1, 5 5)'), point)
+          AS percentage_from_beginning
+      FROM geos
+    expected:
+      rows:
+        - ['POINT (0 0)', '0']
+        - ['POINT (1 0)', '0']
+        - ['POINT (1 1)', '0']
+        - ['POINT (2 2)', '0.25015214685147907']
+        - ['POINT (3 3)', '0.5002284283637185']
+        - ['POINT (4 4)', '0.7501905913884388']
+        - ['POINT (5 5)', '1']
+        - ['POINT (6 5)', '1']
+        - [null, null]

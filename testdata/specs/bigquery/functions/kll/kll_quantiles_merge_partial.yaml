@@ -1,0 +1,8 @@
+spec: docs/specs/bigquery/functions/kll/kll_quantiles_merge_partial.md
+dialect: bigquery
+cases:
+  - desc: kll_quantiles_merge_partial runs end-to-end
+    sql: SELECT BYTE_LENGTH(KLL_QUANTILES.MERGE_PARTIAL(s)) > 0 FROM (SELECT KLL_QUANTILES.INIT_INT64(x) AS s FROM UNNEST([1,2,3]) AS x)
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/tokenize_substring.md
+dialect: spanner
+cases:
+  - desc: substring TOKENLIST is non-empty
+    sql: |-
+      SELECT LENGTH(CAST(TOKENIZE_SUBSTRING('hi') AS STRING)) > 0
+    expected:
+      rows:
+        - [true]

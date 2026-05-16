@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/graph/property_names.md
+dialect: spanner
+cases:
+  - desc: returns the declared property names
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS Persons_PN (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'INSERT INTO Persons_PN VALUES (1, ''Alice'')'
+      - 'CREATE OR REPLACE PROPERTY GRAPH G_PN NODE TABLES (Persons_PN AS P PROPERTIES (id, name))'
+    sql: |-
+      GRAPH G_PN MATCH (p:P) RETURN PROPERTY_NAMES(p) AS props
+    expected:
+      rows:
+        - [['id', 'name']]

@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/datetime.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata
+# (Apache-2.0 derivative). Simple type-construction cases.
+cases:
+  - desc: cast string to DATETIME
+    sql: SELECT CAST('2020-12-25 15:30:00' AS DATETIME) AS dt
+    expected:
+      rows:
+        - ['2020-12-25T15:30:00']
+  - desc: DATETIME literal
+    sql: SELECT DATETIME '2020-12-25 15:30:00' AS dt
+    expected:
+      rows:
+        - ['2020-12-25T15:30:00']

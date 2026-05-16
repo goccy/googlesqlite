@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/ml/ai_score.md
+dialect: spanner
+cases:
+  - desc: stub returns deterministic placeholder 0.5
+    sql: SELECT AI.SCORE('some text')
+    expected:
+      rows:
+        - [0.5]

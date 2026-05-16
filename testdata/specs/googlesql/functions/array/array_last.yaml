@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_last.md
+dialect: googlesql
+cases:
+  - desc: array_last basic input
+    sql: SELECT ARRAY_LAST([1, 2, 3])
+    expected:
+      rows:
+        - [3]

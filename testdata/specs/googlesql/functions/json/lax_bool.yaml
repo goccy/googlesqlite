@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_bool.md
+dialect: googlesql
+cases:
+  - desc: lax_bool basic behaviour
+    sql: SELECT LAX_BOOL(JSON 'true')
+    expected:
+      rows:
+        - [true]

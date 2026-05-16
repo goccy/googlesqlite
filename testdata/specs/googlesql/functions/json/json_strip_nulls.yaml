@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/json_strip_nulls.md
+dialect: googlesql
+cases:
+  - desc: json_strip_nulls basic behaviour
+    sql: SELECT JSON_TYPE(JSON_STRIP_NULLS(JSON '{"a":null, "b":1}'))
+    expected:
+      rows:
+        - ['object']

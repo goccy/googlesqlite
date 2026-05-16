@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_transform.md
+dialect: googlesql
+cases:
+  - desc: ARRAY_TRANSFORM doubles each element via lambda
+    sql: SELECT TO_JSON_STRING(ARRAY_TRANSFORM([1, 2, 3], (e) -> e * 2))
+    expected:
+      rows:
+        - ['[2,4,6]']

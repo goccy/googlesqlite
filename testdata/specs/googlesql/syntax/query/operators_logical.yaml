@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/syntax/query/operators_logical.md
+dialect: googlesql
+cases:
+  - desc: AND / OR / NOT on TRUE and FALSE
+    sql: SELECT TRUE AND FALSE AS a, TRUE OR FALSE AS o, NOT TRUE AS n
+    expected:
+      rows:
+        - [false, true, false]
+  - desc: NULL propagation in three-valued logic
+    sql: |-
+      SELECT
+        (NULL AND FALSE) AS a_false,
+        (NULL AND TRUE)  AS a_unknown,
+        (NULL OR TRUE)   AS o_true,
+        (NULL OR FALSE)  AS o_unknown
+    expected:
+      rows:
+        - [false, null, true, null]

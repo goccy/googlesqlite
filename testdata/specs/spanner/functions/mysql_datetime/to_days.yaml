@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/to_days.md
+dialect: spanner
+cases:
+  - desc: difference between adjacent DATEs is one day
+    sql: SELECT mysql.to_days(DATE '2024-03-15') - mysql.to_days(DATE '2024-03-14')
+    expected:
+      rows:
+        - [1]

@@ -1,0 +1,12 @@
+spec: docs/specs/spanner/functions/mysql_datetime/from_unixtime.md
+dialect: spanner
+# FROM_UNIXTIME(seconds) maps a Unix epoch seconds count to a
+# TIMESTAMP. The fixed input 1230219000 corresponds to
+# 2008-12-25T15:30:00 UTC per MySQL's reference behaviour;
+# FORMAT_TIMESTAMP yields the tz-deterministic textual form.
+cases:
+  - desc: FROM_UNIXTIME formats to upstream-documented UTC string
+    sql: SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S+00', mysql.from_unixtime(1230219000), 'UTC') AS s
+    expected:
+      rows:
+        - ['2008-12-25 15:30:00+00']

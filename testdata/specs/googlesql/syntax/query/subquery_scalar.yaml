@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/syntax/query/subquery_scalar.md
+dialect: googlesql
+cases:
+  - desc: scalar subquery returning one row
+    sql: SELECT (SELECT 42) AS r
+    expected:
+      rows:
+        - [42]
+  - desc: scalar subquery used inside an expression
+    sql: SELECT 1 + (SELECT 10) AS r
+    expected:
+      rows:
+        - [11]

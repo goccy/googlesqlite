@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_datetime/period_diff.md
+dialect: spanner
+cases:
+  - desc: difference is 2 months
+    sql: |-
+      SELECT mysql.period_diff(202403, 202401)
+    expected:
+      rows:
+        - [2]

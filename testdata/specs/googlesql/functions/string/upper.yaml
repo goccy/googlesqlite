@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/string/upper.md
+dialect: googlesql
+cases:
+  - desc: ascii uppercase
+    sql: SELECT UPPER('hello')
+    expected:
+      rows:
+        - ['HELLO']
+  - desc: already uppercase is unchanged
+    sql: SELECT UPPER('ABC')
+    expected:
+      rows:
+        - ['ABC']
+  - desc: empty string
+    sql: SELECT UPPER('')
+    expected:
+      rows:
+        - ['']
+  - desc: null propagates
+    sql: SELECT UPPER(NULL)
+    expected:
+      rows:
+        - [null]

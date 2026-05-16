@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/power.md
+dialect: googlesql
+cases:
+  - desc: 2 to the 10
+    sql: SELECT POWER(2.0, 10.0)
+    expected:
+      rows:
+        - [1024.0]

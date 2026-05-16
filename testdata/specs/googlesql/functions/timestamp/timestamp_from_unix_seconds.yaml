@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/timestamp/timestamp_from_unix_seconds.md
+dialect: googlesql
+cases:
+  - desc: round-trip via UNIX_SECONDS
+    sql: SELECT UNIX_SECONDS(TIMESTAMP_FROM_UNIX_SECONDS(1710504000))
+    expected:
+      rows:
+        - [1710504000]

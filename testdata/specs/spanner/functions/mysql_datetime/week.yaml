@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/mysql_datetime/week.md
+dialect: spanner
+cases:
+  - desc: ISO week of mid-March
+    sql: SELECT mysql.week(DATE "2024-03-15")
+    expected:
+      rows:
+        - [11]

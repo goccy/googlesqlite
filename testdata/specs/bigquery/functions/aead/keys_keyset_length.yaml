@@ -1,0 +1,9 @@
+spec: docs/specs/bigquery/functions/aead/keys_keyset_length.md
+dialect: bigquery
+# A freshly-minted keyset contains exactly one primary key.
+cases:
+  - desc: freshly created keyset has length 1
+    sql: SELECT KEYS.KEYSET_LENGTH(KEYS.NEW_KEYSET('AEAD_AES_GCM_256')) AS n
+    expected:
+      rows:
+        - [1]

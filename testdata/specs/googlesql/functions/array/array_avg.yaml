@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_avg.md
+dialect: googlesql
+cases:
+  - desc: array_avg basic input
+    sql: SELECT ARRAY_AVG([1.0, 2.0, 3.0])
+    expected:
+      rows:
+        - [2.0]

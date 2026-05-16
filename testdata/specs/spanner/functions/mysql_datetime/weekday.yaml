@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/mysql_datetime/weekday.md
+dialect: spanner
+cases:
+  - desc: Monday returns 0 (MySQL WEEKDAY convention)
+    sql: SELECT mysql.weekday(DATE "2024-03-11")
+    expected:
+      rows:
+        - [0]
+  - desc: Sunday returns 6 (MySQL WEEKDAY convention)
+    sql: SELECT mysql.weekday(DATE "2024-03-10")
+    expected:
+      rows:
+        - [6]

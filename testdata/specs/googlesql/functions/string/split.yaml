@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/string/split.md
+dialect: googlesql
+cases:
+  - desc: split on comma
+    sql: SELECT SPLIT("a,b,c", ",")
+    expected:
+      rows:
+        - [["a", "b", "c"]]
+  - desc: split on space
+    sql: SELECT SPLIT("hello world foo", " ")
+    expected:
+      rows:
+        - [["hello", "world", "foo"]]

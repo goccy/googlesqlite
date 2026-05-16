@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/syntax/script/begin_end.md
+dialect: googlesql
+cases:
+  - desc: BEGIN / COMMIT brackets a transaction
+    setup:
+      - BEGIN
+      - COMMIT
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

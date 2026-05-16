@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/syntax/ddl/create_or_replace_view.md
+dialect: googlesql
+cases:
+  - desc: CREATE OR REPLACE VIEW substitutes the new definition
+    setup:
+      - CREATE VIEW corv_ds.v1 AS SELECT 1 AS x
+      - CREATE OR REPLACE VIEW corv_ds.v1 AS SELECT 200 AS x
+    sql: SELECT x FROM corv_ds.v1
+    expected:
+      rows:
+        - [200]

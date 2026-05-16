@@ -1,0 +1,12 @@
+spec: docs/specs/spanner/functions/sequence/get_next_sequence_value.md
+dialect: spanner
+# GET_NEXT_SEQUENCE_VALUE returns the next INT64 from a bit-reversed
+# positive sequence. The local in-memory stub returns 1 for an
+# unseen sequence name -- the documented return type (INT64) is the
+# testable property.
+cases:
+  - desc: returns a positive INT64
+    sql: SELECT GET_NEXT_SEQUENCE_VALUE('my_seq') > 0 AS r
+    expected:
+      rows:
+        - [true]

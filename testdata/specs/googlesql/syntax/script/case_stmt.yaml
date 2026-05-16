@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/case_stmt.md
+dialect: googlesql
+cases:
+  - desc: CASE statement chooses first matching WHEN
+    setup:
+      - CASE WHEN 1 = 1 THEN SELECT 1; END CASE
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

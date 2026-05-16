@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/window/is_first.md
+dialect: googlesql
+cases:
+  - desc: IS_FIRST returns BOOL via numbering rewrite
+    sql: SELECT TYPEOF(IS_FIRST(2) OVER (ORDER BY x)) FROM UNNEST([1,2,3]) AS x LIMIT 1
+    expected:
+      rows:
+        - ['BOOL']

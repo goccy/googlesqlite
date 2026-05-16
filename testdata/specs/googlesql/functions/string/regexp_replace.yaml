@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/regexp_replace.md
+dialect: googlesql
+cases:
+  - desc: replace digits
+    sql: SELECT REGEXP_REPLACE("a1b2c3", "[0-9]", "X")
+    expected:
+      rows:
+        - ["aXbXcX"]

@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/graph/labels.md
+dialect: spanner
+cases:
+  - desc: returns the element-table label
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS Persons_LABELS (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'INSERT INTO Persons_LABELS VALUES (1, ''Alice'')'
+      - 'CREATE OR REPLACE PROPERTY GRAPH G_LABELS NODE TABLES (Persons_LABELS AS P PROPERTIES (id, name))'
+    sql: |-
+      GRAPH G_LABELS MATCH (p:P) RETURN LABELS(p) AS labels
+    expected:
+      rows:
+        - [['P']]

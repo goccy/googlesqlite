@@ -1,0 +1,10 @@
+spec: docs/specs/spanner/functions/mysql_datetime/utc_timestamp.md
+dialect: spanner
+# UTC_TIMESTAMP returns the current TIMESTAMP at evaluation time
+# under UTC. Testable property: positive Unix time.
+cases:
+  - desc: UTC_TIMESTAMP is after the Unix epoch
+    sql: SELECT mysql.utc_timestamp() > TIMESTAMP '1970-01-01 00:00:00 UTC' AS r
+    expected:
+      rows:
+        - [true]

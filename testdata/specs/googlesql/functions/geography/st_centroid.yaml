@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/functions/geography/st_centroid.md
+dialect: googlesql
+# ST_CENTROID of a single point returns that point. Per BigQuery /
+# Spanner reference: the centroid of an n-element point set, line, or
+# polygon is the mean position weighted by dimensional measure;
+# for a single-point input this reduces to the input itself.
+cases:
+  - desc: centroid of single point
+    sql: SELECT ST_ASTEXT(ST_CENTROID(ST_GEOGFROMTEXT('POINT(0 0)'))) AS s
+    expected:
+      rows:
+        - ['POINT (0 0)']

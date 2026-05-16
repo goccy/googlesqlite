@@ -1,0 +1,18 @@
+spec: docs/specs/spanner/functions/mysql_datetime/month.md
+dialect: spanner
+cases:
+  - desc: month from a TIMESTAMP literal
+    sql: SELECT mysql.month(TIMESTAMP "2024-03-15 12:34:56+00")
+    expected:
+      rows:
+        - [3]
+  - desc: month from a DATE literal
+    sql: SELECT mysql.month(DATE "2024-12-31")
+    expected:
+      rows:
+        - [12]
+  - desc: NULL propagates
+    sql: SELECT mysql.month(CAST(NULL AS DATE))
+    expected:
+      rows:
+        - [null]

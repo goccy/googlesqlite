@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_numgeometries.md
+dialect: googlesql
+cases:
+  - desc: Multi-point with 4 parts
+    sql: |-
+      SELECT ST_NUMGEOMETRIES(ST_GEOGFROMTEXT('MULTIPOINT(0 0, 1 0, 2 0, 3 0)'))
+    expected:
+      rows:
+        - [4]
+  - desc: Single POINT returns 1
+    sql: |-
+      SELECT ST_NUMGEOMETRIES(ST_GEOGFROMTEXT('POINT(0 0)'))
+    expected:
+      rows:
+        - [1]

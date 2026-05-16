@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/time_add.md
+dialect: googlesql
+cases:
+  - desc: add 30 minutes
+    sql: SELECT CAST(TIME_ADD(TIME "12:00:00", INTERVAL 30 MINUTE) AS STRING)
+    expected:
+      rows:
+        - ["12:30:00"]

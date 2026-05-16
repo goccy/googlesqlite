@@ -1,0 +1,30 @@
+GoogleSQLite
+Copyright 2026 Masaaki Goshima
+
+The original source code of this product is licensed under the MIT
+License (see LICENSE).
+
+This product also includes third-party material released under separate
+licenses. The notices below cover content snapshotted into this
+repository under docs/third_party/. Runtime Go module dependencies are
+not vendored here; each retains the license stated in its own upstream
+repository.
+
+================================================================================
+GoogleSQL documentation snapshot (docs/third_party/googlesql-docs/)
+--------------------------------------------------------------------------------
+Origin: https://github.com/google/googlesql
+License: Apache License 2.0
+
+The content under docs/third_party/googlesql-docs/ is a verbatim
+snapshot of upstream GoogleSQL documentation. It is licensed under the
+Apache License 2.0 and is NOT relicensed under MIT; the upstream LICENSE
+file is preserved at docs/third_party/googlesql-docs/LICENSE.
+
+Files under docs/specs/ are derivative works of that documentation. As
+derivative works of Apache-2.0-licensed material, the Apache License 2.0
+continues to govern the upstream-derived portions of those files. Each
+such file preserves attribution to its source in the frontmatter
+(source_url field) and in its References section, as required by
+Apache License 2.0 section 4.
+================================================================================

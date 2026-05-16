@@ -1,0 +1,52 @@
+spec: docs/specs/googlesql/functions/string/translate.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md (TRANSLATE
+# section). The Unicode / multi-byte / deletion cases below cover the
+# semantic that BigQuery documents (per-code-point translation) so a
+# byte-level implementation is caught by the test suite.
+cases:
+  - desc: upstream example — replaces ASCII characters per position
+    sql: SELECT TRANSLATE('This is a cookie', 'sco', 'zku')
+    expected:
+      rows:
+        - ['Thiz iz a kuukie']
+  - desc: single ASCII character replacement
+    sql: SELECT TRANSLATE('abc', 'b', 'B')
+    expected:
+      rows:
+        - ['aBc']
+  - desc: CJK source character substituted with another CJK character
+    sql: SELECT TRANSLATE('日本語', '本', '京')
+    expected:
+      rows:
+        - ['日京語']
+  - desc: surrogate-pair emoji (4-byte UTF-8) replaced by a single ASCII char
+    sql: SELECT TRANSLATE('a😀b', '😀', 'X')
+    expected:
+      rows:
+        - ['aXb']
+  - desc: target shorter than source — extra source characters delete
+    sql: SELECT TRANSLATE('abc', 'ab', 'A')
+    expected:
+      rows:
+        - ['Ac']
+  - desc: empty target — source characters are removed
+    sql: SELECT TRANSLATE('abc', 'b', '')
+    expected:
+      rows:
+        - ['ac']
+  - desc: empty source — input passes through unchanged
+    sql: SELECT TRANSLATE('hello', '', '')
+    expected:
+      rows:
+        - ['hello']
+  - desc: NULL input propagates as NULL
+    sql: SELECT TRANSLATE(CAST(NULL AS STRING), 'a', 'b')
+    expected:
+      rows:
+        - [null]
+  - desc: duplicated source character raises an error
+    sql: SELECT TRANSLATE('abc', 'aa', 'AB')
+    expected:
+      error:
+        contains: duplicated source character

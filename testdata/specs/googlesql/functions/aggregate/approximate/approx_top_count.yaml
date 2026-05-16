@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/approximate/approx_top_count.md
+dialect: googlesql
+cases:
+  - desc: approx_top_count returns array of structs
+    sql: SELECT APPROX_TOP_COUNT(x, 2) IS NOT NULL FROM UNNEST(['a', 'a', 'b']) AS x
+    expected:
+      rows:
+        - [true]

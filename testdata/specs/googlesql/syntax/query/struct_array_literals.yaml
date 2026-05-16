@@ -1,0 +1,28 @@
+spec: docs/specs/googlesql/syntax/query/struct_array_literals.md
+dialect: googlesql
+cases:
+  - desc: array literal of integers
+    sql: SELECT [1, 2, 3] AS arr
+    expected:
+      rows:
+        - [[1, 2, 3]]
+  - desc: typed array literal
+    sql: SELECT ARRAY<INT64>[10, 20] AS arr
+    expected:
+      rows:
+        - [[10, 20]]
+  - desc: array length via ARRAY_LENGTH
+    sql: SELECT ARRAY_LENGTH([1, 2, 3]) AS n
+    expected:
+      rows:
+        - [3]
+  - desc: struct with named fields, single-value access
+    sql: SELECT STRUCT(1 AS x, 'a' AS y).x AS first
+    expected:
+      rows:
+        - [1]
+  - desc: STRUCT positional construction renders as brace form
+    sql: SELECT STRUCT(1, 'a') AS s
+    expected:
+      rows:
+        - ['{1, a}']

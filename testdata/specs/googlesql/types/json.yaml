@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/types/json.md
+dialect: googlesql
+# Sourced from googlesql-wasm/googlesql/.../compliance/testdata/json_queries.test
+# (Apache-2.0 derivative).
+cases:
+  - desc: JSON literal scalar
+    sql: SELECT JSON '42' AS j
+    expected:
+      rows:
+        - ['42']
+  - desc: JSON literal string
+    sql: SELECT JSON '"hello"' AS j
+    expected:
+      rows:
+        - ['"hello"']

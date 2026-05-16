@@ -1,0 +1,13 @@
+spec: docs/specs/googlesql/functions/net/net_format_ip.md
+dialect: googlesql
+cases:
+  - desc: format 0 as 0.0.0.0
+    sql: SELECT NET.FORMAT_IP(0)
+    expected:
+      rows:
+        - ['0.0.0.0']
+  - desc: format 16909060 as 1.2.3.4
+    sql: SELECT NET.FORMAT_IP(16909060)
+    expected:
+      rows:
+        - ['1.2.3.4']

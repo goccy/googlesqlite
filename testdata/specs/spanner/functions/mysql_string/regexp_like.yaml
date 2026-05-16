@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_string/regexp_like.md
+dialect: spanner
+cases:
+  - desc: match anchored regex
+    sql: |-
+      SELECT mysql.regexp_like('hello', '^h.*o$')
+    expected:
+      rows:
+        - [true]

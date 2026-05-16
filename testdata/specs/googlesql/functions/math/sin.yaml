@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/sin.md
+dialect: googlesql
+cases:
+  - desc: sin(0) is 0
+    sql: SELECT SIN(0.0)
+    expected:
+      rows:
+        - [0.0]

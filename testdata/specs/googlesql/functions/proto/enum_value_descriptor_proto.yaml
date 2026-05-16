@@ -1,0 +1,27 @@
+spec: docs/specs/googlesql/functions/proto/enum_value_descriptor_proto.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/protocol_buffer_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH
+        EnabledFeatures AS (
+          SELECT CAST(999991 AS googlesql.LanguageFeature) AS feature UNION ALL
+          SELECT CAST(999992 AS googlesql.LanguageFeature) AS feature
+        )
+      SELECT
+        CAST(feature AS STRING) AS feature_enum_name,
+        CAST(feature AS INT64) AS feature_enum_id,
+        IFNULL(
+          ENUM_VALUE_DESCRIPTOR_PROTO(feature).options.(googlesql.language_feature_options).ideally_enabled,
+          TRUE) AS feature_is_ideally_enabled,
+        IFNULL(
+          ENUM_VALUE_DESCRIPTOR_PROTO(feature).options.(googlesql.language_feature_options).in_development,
+          FALSE) AS feature_is_in_development
+      FROM
+        EnabledFeatures
+    expected:
+      rows:
+        - ['FEATURE_TEST_IDEALLY_ENABLED_BUT_IN_DEVELOPMENT', '999991', true, true]
+        - ['FEATURE_TEST_IDEALLY_DISABLED', '999992', false, false]

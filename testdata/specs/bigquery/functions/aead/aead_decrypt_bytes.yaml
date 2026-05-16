@@ -1,0 +1,12 @@
+spec: docs/specs/bigquery/functions/aead/aead_decrypt_bytes.md
+dialect: bigquery
+# AEAD.DECRYPT_BYTES is the inverse of AEAD.ENCRYPT for BYTES.
+cases:
+  - desc: AEAD round-trip recovers plaintext BYTES
+    sql: |-
+      WITH k AS (SELECT KEYS.NEW_KEYSET('AEAD_AES_GCM_256') AS ks)
+      SELECT TO_HEX(AEAD.DECRYPT_BYTES(ks, AEAD.ENCRYPT(ks, b'hi', b'aad'), b'aad')) AS s
+      FROM k
+    expected:
+      rows:
+        - ['6869']

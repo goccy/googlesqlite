@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/string/ascii.md
+dialect: googlesql
+cases:
+  - desc: uppercase letter
+    sql: SELECT ASCII('A')
+    expected:
+      rows:
+        - [65]
+  - desc: lowercase letter
+    sql: SELECT ASCII('a')
+    expected:
+      rows:
+        - [97]
+  - desc: empty string
+    sql: SELECT ASCII('')
+    expected:
+      rows:
+        - [0]

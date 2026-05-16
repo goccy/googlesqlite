@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/statistical/covar_samp.md
+dialect: googlesql
+cases:
+  - desc: covar_samp returns a finite value
+    sql: SELECT IS_NAN(COVAR_SAMP(x, x)) FROM UNNEST([1.0, 2.0, 3.0]) AS x
+    expected:
+      rows:
+        - [false]

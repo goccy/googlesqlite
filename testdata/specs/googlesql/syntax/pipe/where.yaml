@@ -1,0 +1,27 @@
+spec: docs/specs/googlesql/syntax/pipe/where.md
+dialect: googlesql
+# Sourced from docs/third_party/googlesql-docs/pipe-syntax.md (`WHERE`
+# pipe operator section). Cases use inline `FROM (SELECT ...)` so
+# they run without a pre-existing table.
+cases:
+  - desc: filter integers above threshold
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3)
+      |> WHERE x > 1
+      |> SELECT x
+      |> ORDER BY x
+    expected:
+      rows:
+        - [2]
+        - [3]
+  - desc: chained WHERE acts as AND
+    sql: |-
+      FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4)
+      |> WHERE x > 1
+      |> WHERE x < 4
+      |> SELECT x
+      |> ORDER BY x
+    expected:
+      rows:
+        - [2]
+        - [3]

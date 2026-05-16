@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/syntax/ddl/drop_view.md
+dialect: googlesql
+cases:
+  - desc: DROP VIEW removes the view from INFORMATION_SCHEMA
+    setup:
+      - CREATE TABLE dropv_ds.anchor (k INT64)
+      - CREATE VIEW dropv_ds.v1 AS SELECT 1 AS x
+      - DROP VIEW dropv_ds.v1
+    sql: |-
+      SELECT table_name
+      FROM dropv_ds.INFORMATION_SCHEMA.TABLES
+      ORDER BY table_name
+    expected:
+      rows:
+        - ['anchor']

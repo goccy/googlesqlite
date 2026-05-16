@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/time/parse_time.md
+dialect: googlesql
+cases:
+  - desc: HH:MM:SS
+    sql: SELECT CAST(PARSE_TIME("%H:%M:%S", "12:30:45") AS STRING)
+    expected:
+      rows:
+        - ["12:30:45"]

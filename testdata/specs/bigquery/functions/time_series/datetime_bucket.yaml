@@ -1,0 +1,33 @@
+spec: docs/specs/bigquery/functions/time_series/datetime_bucket.md
+dialect: bigquery
+cases:
+  - desc: default origin 1950-01-01 00:00:00, 12-hour bucket — earlier half
+    sql: SELECT DATETIME_BUCKET(DATETIME '1949-12-30 13:00:00', INTERVAL 12 HOUR)
+    expected:
+      rows:
+        - ['1949-12-30T12:00:00']
+  - desc: default origin 1950-01-01 00:00:00, 12-hour bucket — at origin
+    sql: SELECT DATETIME_BUCKET(DATETIME '1950-01-01 00:00:00', INTERVAL 12 HOUR)
+    expected:
+      rows:
+        - ['1950-01-01T00:00:00']
+  - desc: default origin 1950-01-01 00:00:00, 12-hour bucket — afternoon half
+    sql: SELECT DATETIME_BUCKET(DATETIME '1950-01-01 13:00:00', INTERVAL 12 HOUR)
+    expected:
+      rows:
+        - ['1950-01-01T12:00:00']
+  - desc: custom origin, 7-day bucket — at origin
+    sql: SELECT DATETIME_BUCKET(DATETIME '2000-12-22 12:00:00', INTERVAL 7 DAY, DATETIME '2000-12-22 12:00:00')
+    expected:
+      rows:
+        - ['2000-12-22T12:00:00']
+  - desc: custom origin, 7-day bucket — before origin
+    sql: SELECT DATETIME_BUCKET(DATETIME '2000-12-20 00:00:00', INTERVAL 7 DAY, DATETIME '2000-12-22 12:00:00')
+    expected:
+      rows:
+        - ['2000-12-15T12:00:00']
+  - desc: NULL input propagates
+    sql: SELECT DATETIME_BUCKET(CAST(NULL AS DATETIME), INTERVAL 12 HOUR)
+    expected:
+      rows:
+        - [null]

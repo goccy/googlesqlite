@@ -1,0 +1,15 @@
+spec: docs/specs/spanner/functions/mysql_string/locate.md
+dialect: spanner
+cases:
+  - desc: 1-based offset
+    sql: |-
+      SELECT mysql.locate('bar', 'foobarbaz')
+    expected:
+      rows:
+        - [4]
+  - desc: not found returns 0
+    sql: |-
+      SELECT mysql.locate('xyz', 'foobar')
+    expected:
+      rows:
+        - [0]

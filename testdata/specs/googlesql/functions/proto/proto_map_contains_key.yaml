@@ -1,0 +1,21 @@
+spec: docs/specs/googlesql/functions/proto/proto_map_contains_key.md
+dialect: googlesql
+# Source: docs/third_party/googlesql-docs/protocol_buffer_functions.md
+#
+# The upstream Example uses a user-defined `Item` proto with a
+# `map<string,int64> purchased` field. The `register_protos: [item]`
+# field installs that descriptor (built programmatically in
+# internal/spectest/protos.go) via Conn.RegisterProto before the
+# query is analysed.
+cases:
+  - desc: upstream example 1
+    register_protos: [item]
+    sql: |-
+      SELECT
+        PROTO_MAP_CONTAINS_KEY(m.purchased, 'A') AS contains_a,
+        PROTO_MAP_CONTAINS_KEY(m.purchased, 'B') AS contains_b
+      FROM
+        (SELECT AS VALUE CAST("purchased { key: 'A' value: 2 }" AS Item)) AS m
+    expected:
+      rows:
+        - [true, false]

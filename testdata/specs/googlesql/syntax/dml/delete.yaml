@@ -1,0 +1,21 @@
+spec: docs/specs/googlesql/syntax/dml/delete.md
+dialect: googlesql
+cases:
+  - desc: DELETE removes rows matching a WHERE predicate
+    setup:
+      - CREATE TABLE del_ds.t (a INT64, b STRING)
+      - "INSERT INTO del_ds.t (a, b) VALUES (1, 'x'), (2, 'y'), (3, 'z')"
+      - DELETE FROM del_ds.t WHERE a = 2
+    sql: SELECT a, b FROM del_ds.t ORDER BY a
+    expected:
+      rows:
+        - [1, 'x']
+        - [3, 'z']
+  - desc: DELETE WHERE TRUE removes every row
+    setup:
+      - CREATE TABLE del_ds.del_all (a INT64)
+      - "INSERT INTO del_ds.del_all (a) VALUES (1), (2), (3)"
+      - DELETE FROM del_ds.del_all WHERE TRUE
+    sql: SELECT a FROM del_ds.del_all
+    expected:
+      rows: []

@@ -1,0 +1,16 @@
+spec: docs/specs/googlesql/functions/net/net_parse_packed_ip.md
+dialect: googlesql
+# NET.PARSE_PACKED_IP and NET.IP_TO_STRING form an inverse pair for
+# IPv4 addresses (the same property both BigQuery and Spanner docs
+# rely on for round-trip identity checks).
+cases:
+  - desc: round-trip via IP_TO_STRING
+    sql: SELECT NET.IP_TO_STRING(NET.PARSE_PACKED_IP('192.168.1.0')) AS v
+    expected:
+      rows:
+        - ['192.168.1.0']
+  - desc: zero address round-trip
+    sql: SELECT NET.IP_TO_STRING(NET.PARSE_PACKED_IP('0.0.0.0')) AS v
+    expected:
+      rows:
+        - ['0.0.0.0']

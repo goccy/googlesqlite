@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/rand.md
+dialect: googlesql
+cases:
+  - desc: RAND() returns a value in [0, 1)
+    sql: SELECT RAND() >= 0 AND RAND() < 1
+    expected:
+      rows:
+        - [true]

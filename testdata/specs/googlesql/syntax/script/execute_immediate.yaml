@@ -1,0 +1,10 @@
+spec: docs/specs/googlesql/syntax/script/execute_immediate.md
+dialect: googlesql
+cases:
+  - desc: EXECUTE IMMEDIATE with a literal string is accepted
+    setup:
+      - EXECUTE IMMEDIATE 'SELECT 1'
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]

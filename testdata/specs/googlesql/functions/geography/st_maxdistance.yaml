@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/functions/geography/st_maxdistance.md
+dialect: googlesql
+# Max distance between two single points equals the great-circle
+# distance between them. For (0,0) and (3,4) the chord length on the
+# spherical-earth model is ~555812.814 meters.
+cases:
+  - desc: max distance between two points
+    sql: SELECT ST_MAXDISTANCE(ST_GEOGFROMTEXT('POINT(0 0)'), ST_GEOGFROMTEXT('POINT(3 4)')) AS d
+    expected:
+      rows:
+        - [555812.8141039774]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/regexp_extract.md
+dialect: googlesql
+cases:
+  - desc: extract first digit run
+    sql: SELECT REGEXP_EXTRACT("abc123def", "[0-9]+")
+    expected:
+      rows:
+        - ["123"]

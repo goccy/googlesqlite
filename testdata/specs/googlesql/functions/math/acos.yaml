@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/acos.md
+dialect: googlesql
+cases:
+  - desc: acos(1) is 0
+    sql: SELECT ACOS(1.0)
+    expected:
+      rows:
+        - [0.0]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/cos.md
+dialect: googlesql
+cases:
+  - desc: cos(0) is 1
+    sql: SELECT COS(0.0)
+    expected:
+      rows:
+        - [1.0]

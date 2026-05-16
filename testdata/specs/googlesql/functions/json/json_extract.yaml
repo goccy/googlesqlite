@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/json/json_extract.md
+dialect: googlesql
+cases:
+  - desc: extract object subtree
+    sql: |
+      SELECT JSON_EXTRACT('{"a": 1, "b": 2}', "$.a")
+    expected:
+      rows:
+        - ["1"]

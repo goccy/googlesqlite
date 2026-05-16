@@ -1,0 +1,19 @@
+spec: docs/specs/googlesql/functions/geography/st_extent.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      WITH data AS (
+        SELECT 1 id, ST_GEOGFROMTEXT('POLYGON((-125 48, -124 46, -117 46, -117 49, -125 48))') g
+        UNION ALL
+        SELECT 2 id, ST_GEOGFROMTEXT('POLYGON((172 53, -130 55, -141 70, 172 53))') g
+        UNION ALL
+        SELECT 3 id, ST_GEOGFROMTEXT('POINT EMPTY') g
+      )
+      SELECT ST_EXTENT(g) AS box
+      FROM data
+    expected:
+      rows:
+        - ['{xmin:172, ymin:46, xmax:243, ymax:70}']

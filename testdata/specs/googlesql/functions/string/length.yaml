@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/string/length.md
+dialect: googlesql
+cases:
+  - desc: ascii string length
+    sql: SELECT LENGTH('abc')
+    expected:
+      rows:
+        - [3]
+  - desc: empty string is zero
+    sql: SELECT LENGTH('')
+    expected:
+      rows:
+        - [0]
+  - desc: null propagates
+    sql: SELECT LENGTH(NULL)
+    expected:
+      rows:
+        - [null]

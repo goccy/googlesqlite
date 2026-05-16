@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_bufferwithtolerance.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT
+        -- tolerance_meters=25, or 25% of the buffer radius.
+        ST_NumPoints(ST_BUFFERWITHTOLERANCE(ST_GEOGFROMTEXT('POINT(1 2)'), 100, 25)) AS five_sides,
+        -- tolerance_meters=1, or 1% of the buffer radius.
+        st_NumPoints(ST_BUFFERWITHTOLERANCE(ST_GEOGFROMTEXT('POINT(100 2)'), 100, 1)) AS twenty_four_sides
+    expected:
+      rows:
+        - ['6', '24']

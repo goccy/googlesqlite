@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/window/percentile_disc.md
+dialect: googlesql
+cases:
+  - desc: median of 1, 2, 3 is 2
+    sql: SELECT PERCENTILE_DISC(x, 0.5) OVER () FROM UNNEST([1,2,3]) AS x LIMIT 1
+    expected:
+      rows:
+        - [2]

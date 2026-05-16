@@ -1,0 +1,15 @@
+spec: docs/specs/googlesql/functions/geography/st_buffer.md
+dialect: googlesql
+# Auto-generated from the spec's upstream Examples section.
+# Source: docs/third_party/googlesql-docs/geography_functions.md
+cases:
+  - desc: upstream example 1
+    sql: |-
+      SELECT
+        -- num_seg_quarter_circle=2
+        ST_NUMPOINTS(ST_BUFFER(ST_GEOGFROMTEXT('POINT(1 2)'), 50, 2)) AS eight_sides,
+        -- num_seg_quarter_circle=8, since 8 is the default
+        ST_NUMPOINTS(ST_BUFFER(ST_GEOGFROMTEXT('POINT(100 2)'), 50)) AS thirty_two_sides
+    expected:
+      rows:
+        - ['9', '33']

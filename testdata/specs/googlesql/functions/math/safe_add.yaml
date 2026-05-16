@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/safe_add.md
+dialect: googlesql
+cases:
+  - desc: regular add
+    sql: SELECT SAFE_ADD(3, 4)
+    expected:
+      rows:
+        - [7]

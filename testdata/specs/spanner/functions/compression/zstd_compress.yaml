@@ -1,0 +1,8 @@
+spec: docs/specs/spanner/functions/compression/zstd_compress.md
+dialect: spanner
+cases:
+  - desc: zstd compress + decompress round trip
+    sql: SELECT ZSTD_DECOMPRESS_TO_STRING(ZSTD_COMPRESS(CAST('hello world hello world' AS BYTES)))
+    expected:
+      rows:
+        - ['hello world hello world']

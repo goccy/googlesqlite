@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/string/substr.md
+dialect: googlesql
+cases:
+  - desc: extract from middle
+    sql: SELECT SUBSTR('hello', 2, 3)
+    expected:
+      rows:
+        - ['ell']
+  - desc: from position to end
+    sql: SELECT SUBSTR('hello', 3)
+    expected:
+      rows:
+        - ['llo']
+  - desc: length zero returns empty string
+    sql: SELECT SUBSTR('hello', 1, 0)
+    expected:
+      rows:
+        - ['']
+  - desc: null source propagates
+    sql: SELECT SUBSTR(NULL, 1, 1)
+    expected:
+      rows:
+        - [null]

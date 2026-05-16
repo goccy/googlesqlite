@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_utility/inet6_aton.md
+dialect: spanner
+cases:
+  - desc: IPv6 string to 16 BYTES
+    sql: |-
+      SELECT TO_HEX(mysql.inet6_aton('::1'))
+    expected:
+      rows:
+        - ['00000000000000000000000000000001']

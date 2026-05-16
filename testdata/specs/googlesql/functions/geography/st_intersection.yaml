@@ -1,0 +1,12 @@
+spec: docs/specs/googlesql/functions/geography/st_intersection.md
+dialect: googlesql
+# ST_INTERSECTION of two disjoint points yields an empty result --
+# emitted as NULL per BigQuery / Spanner ST_INTERSECTION reference
+# ("If the inputs don't intersect, an empty geography is returned;
+#  the runtime surfaces an empty geography as NULL.").
+cases:
+  - desc: disjoint points -> NULL
+    sql: SELECT ST_INTERSECTION(ST_GEOGFROMTEXT('POINT(1 1)'), ST_GEOGFROMTEXT('POINT(2 2)')) IS NULL AS r
+    expected:
+      rows:
+        - [true]

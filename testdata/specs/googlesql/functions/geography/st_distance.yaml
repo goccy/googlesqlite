@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/geography/st_distance.md
+dialect: googlesql
+cases:
+  - desc: distance between coincident points is 0
+    sql: SELECT ST_DISTANCE(ST_GEOGPOINT(0,0), ST_GEOGPOINT(0,0))
+    expected:
+      rows:
+        - [0.0]

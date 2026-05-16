@@ -1,0 +1,12 @@
+spec: docs/specs/spanner/functions/mysql_datetime/str_to_date.md
+dialect: spanner
+# STR_TO_DATE parses a string with the given MySQL-style format spec
+# and returns a DATE (or TIMESTAMP, depending on the format). For
+# the canonical 'yyyy-mm-dd' input with '%Y-%m-%d', the result
+# round-trips through CAST(... AS STRING).
+cases:
+  - desc: parse yyyy-mm-dd
+    sql: SELECT CAST(mysql.str_to_date('2020-12-25', '%Y-%m-%d') AS DATE) AS d
+    expected:
+      rows:
+        - ['2020-12-25']

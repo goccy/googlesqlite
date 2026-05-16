@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_first.md
+dialect: googlesql
+cases:
+  - desc: array_first basic input
+    sql: SELECT ARRAY_FIRST([1, 2, 3])
+    expected:
+      rows:
+        - [1]

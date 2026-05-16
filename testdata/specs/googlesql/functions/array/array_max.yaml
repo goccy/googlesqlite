@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/array/array_max.md
+dialect: googlesql
+cases:
+  - desc: array_max basic input
+    sql: SELECT ARRAY_MAX([1, 2, 3])
+    expected:
+      rows:
+        - [3]

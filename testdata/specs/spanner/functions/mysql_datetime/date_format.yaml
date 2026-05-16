@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/mysql_datetime/date_format.md
+dialect: spanner
+cases:
+  - desc: format DATE with YMD
+    sql: |-
+      SELECT mysql.date_format(DATE '2024-03-15', '%Y/%m/%d')
+    expected:
+      rows:
+        - ['2024/03/15']

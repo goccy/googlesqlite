@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/safe_convert_bytes_to_string.md
+dialect: googlesql
+cases:
+  - desc: valid UTF-8 bytes decode to string
+    sql: SELECT SAFE_CONVERT_BYTES_TO_STRING(CAST('hi' AS BYTES))
+    expected:
+      rows:
+        - ['hi']

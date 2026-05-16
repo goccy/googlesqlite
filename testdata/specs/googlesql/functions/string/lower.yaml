@@ -1,0 +1,23 @@
+spec: docs/specs/googlesql/functions/string/lower.md
+dialect: googlesql
+cases:
+  - desc: ascii lowercase
+    sql: SELECT LOWER('HELLO')
+    expected:
+      rows:
+        - ['hello']
+  - desc: already lowercase is unchanged
+    sql: SELECT LOWER('abc')
+    expected:
+      rows:
+        - ['abc']
+  - desc: empty string
+    sql: SELECT LOWER('')
+    expected:
+      rows:
+        - ['']
+  - desc: null propagates
+    sql: SELECT LOWER(NULL)
+    expected:
+      rows:
+        - [null]

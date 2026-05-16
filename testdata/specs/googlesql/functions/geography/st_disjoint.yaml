@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_disjoint.md
+dialect: googlesql
+cases:
+  - desc: Disjoint points
+    sql: |-
+      SELECT ST_DISJOINT(ST_GEOGFROMTEXT('POINT(0 0)'), ST_GEOGFROMTEXT('POINT(1 1)'))
+    expected:
+      rows:
+        - [true]

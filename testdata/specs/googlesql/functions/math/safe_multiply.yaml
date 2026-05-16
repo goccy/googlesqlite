@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/math/safe_multiply.md
+dialect: googlesql
+cases:
+  - desc: regular multiply
+    sql: SELECT SAFE_MULTIPLY(3, 4)
+    expected:
+      rows:
+        - [12]

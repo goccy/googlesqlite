@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_endpoint.md
+dialect: googlesql
+cases:
+  - desc: Last vertex of linestring
+    sql: |-
+      SELECT ST_ASGEOJSON(ST_ENDPOINT(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0, 2 0)')))
+    expected:
+      rows:
+        - ['{"type":"Point","coordinates":[2,0]}']

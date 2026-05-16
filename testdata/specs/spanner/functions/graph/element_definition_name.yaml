@@ -1,0 +1,13 @@
+spec: docs/specs/spanner/functions/graph/element_definition_name.md
+dialect: spanner
+cases:
+  - desc: returns the element-table alias name
+    setup:
+      - 'CREATE TABLE IF NOT EXISTS Persons_EDN (id INT64 PRIMARY KEY NOT ENFORCED, name STRING)'
+      - 'INSERT INTO Persons_EDN VALUES (1, ''Alice'')'
+      - 'CREATE OR REPLACE PROPERTY GRAPH G_EDN NODE TABLES (Persons_EDN AS P PROPERTIES (id, name))'
+    sql: |-
+      GRAPH G_EDN MATCH (p:P) RETURN ELEMENT_DEFINITION_NAME(p) AS def
+    expected:
+      rows:
+        - ['P']

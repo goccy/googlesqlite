@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/interval/justify_hours.md
+dialect: googlesql
+cases:
+  - desc: JUSTIFY_HOURS executes without error
+    sql: SELECT JUSTIFY_HOURS(INTERVAL 24 HOUR) IS NOT NULL
+    expected:
+      rows:
+        - [true]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/to_code_points.md
+dialect: googlesql
+cases:
+  - desc: ASCII letters map to their codepoints
+    sql: SELECT TO_JSON_STRING(TO_CODE_POINTS('AB'))
+    expected:
+      rows:
+        - ['[65,66]']

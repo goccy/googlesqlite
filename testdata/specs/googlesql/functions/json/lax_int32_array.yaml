@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/lax_int32_array.md
+dialect: googlesql
+cases:
+  - desc: lax_int32_array extracts a typed array with NULLs on bad elements
+    sql: SELECT TO_JSON_STRING(LAX_INT32_ARRAY(JSON '[1,2,3]'))
+    expected:
+      rows:
+        - ['[1,2,3]']

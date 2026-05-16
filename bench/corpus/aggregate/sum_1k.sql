@@ -1,0 +1,4 @@
+CREATE TABLE nums (n INT64);
+INSERT INTO nums (n) SELECT n FROM UNNEST(GENERATE_ARRAY(1, 1000)) AS n;
+-- @query
+SELECT SUM(n), AVG(n), COUNT(*) FROM nums

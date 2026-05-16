@@ -1,0 +1,18 @@
+spec: docs/specs/googlesql/functions/conversion/cast.md
+dialect: googlesql
+cases:
+  - desc: int to string
+    sql: SELECT CAST(42 AS STRING)
+    expected:
+      rows:
+        - ["42"]
+  - desc: string to int
+    sql: SELECT CAST("123" AS INT64)
+    expected:
+      rows:
+        - [123]
+  - desc: int to float
+    sql: SELECT CAST(7 AS FLOAT64)
+    expected:
+      rows:
+        - [7.0]

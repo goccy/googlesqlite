@@ -1,0 +1,9 @@
+spec: docs/specs/spanner/functions/search/score_ngrams.md
+dialect: spanner
+cases:
+  - desc: ngrams score is positive
+    sql: |-
+      SELECT SCORE_NGRAMS(TOKENIZE_NGRAMS('hello world', 3), 'wor') > 0
+    expected:
+      rows:
+        - [true]

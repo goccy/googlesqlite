@@ -1,0 +1,10 @@
+spec: docs/specs/bigquery/functions/aead/keys_rotate_keyset.md
+dialect: bigquery
+# KEYS.ROTATE_KEYSET adds a new primary key to the existing keyset.
+# The result is non-NULL.
+cases:
+  - desc: rotated keyset is non-NULL
+    sql: SELECT KEYS.ROTATE_KEYSET(KEYS.NEW_KEYSET('AEAD_AES_GCM_256'), 'AEAD_AES_GCM_256') IS NOT NULL AS r
+    expected:
+      rows:
+        - [true]

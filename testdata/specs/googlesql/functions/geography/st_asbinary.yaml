@@ -1,0 +1,11 @@
+spec: docs/specs/googlesql/functions/geography/st_asbinary.md
+dialect: googlesql
+# WKB hex for POINT(0 0) under little-endian byte order:
+# 01 (LE) | 01000000 (geom type 1 = POINT) | 00 * 16 (two IEEE-754
+# zero doubles).
+cases:
+  - desc: WKB encoding of POINT(0 0)
+    sql: SELECT TO_HEX(ST_ASBINARY(ST_GEOGFROMTEXT('POINT(0 0)'))) AS h
+    expected:
+      rows:
+        - ['010100000000000000000000000000000000000000']

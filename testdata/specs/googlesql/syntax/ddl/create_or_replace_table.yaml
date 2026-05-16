@@ -1,0 +1,16 @@
+spec: docs/specs/googlesql/syntax/ddl/create_or_replace_table.md
+dialect: googlesql
+cases:
+  - desc: CREATE OR REPLACE replaces the existing table's schema
+    setup:
+      - CREATE TABLE cor_ds.cor_tbl (a INT64)
+      - CREATE OR REPLACE TABLE cor_ds.cor_tbl (b STRING, c FLOAT64)
+    sql: |-
+      SELECT column_name
+      FROM cor_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 'cor_tbl'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['b']
+        - ['c']

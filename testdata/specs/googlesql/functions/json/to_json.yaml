@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/json/to_json.md
+dialect: googlesql
+cases:
+  - desc: TO_JSON of an integer
+    sql: SELECT TO_JSON_STRING(TO_JSON(42))
+    expected:
+      rows:
+        - ['42']

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/string/regexp_extract_all.md
+dialect: googlesql
+cases:
+  - desc: capture-group extraction returns digits
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('a1 b2 c3', r'(\w)(\d)'))
+    expected:
+      rows:
+        - ['["1","2","3"]']

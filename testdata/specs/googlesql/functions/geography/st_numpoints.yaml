@@ -1,0 +1,9 @@
+spec: docs/specs/googlesql/functions/geography/st_numpoints.md
+dialect: googlesql
+cases:
+  - desc: 3-point linestring
+    sql: |-
+      SELECT ST_NUMPOINTS(ST_GEOGFROMTEXT('LINESTRING(0 0, 1 0, 2 0)'))
+    expected:
+      rows:
+        - [3]

@@ -1,0 +1,8 @@
+spec: docs/specs/googlesql/functions/aggregate/approximate/approx_top_sum.md
+dialect: googlesql
+cases:
+  - desc: approx_top_sum runs over weighted inputs
+    sql: SELECT APPROX_TOP_SUM(x, 1, 2) IS NOT NULL FROM UNNEST(['a', 'b']) AS x
+    expected:
+      rows:
+        - [true]
