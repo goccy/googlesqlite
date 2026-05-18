@@ -17,15 +17,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # wasm builds the wasm-opt-optimised js/wasm Playground engine
-  # through the reusable workflow that release-test also uses — a
-  # single definition of the wasm build. The release and deploy-pages
-  # jobs consume its artifact, so the published engine and the engine
-  # embedded in the hosted Playground are the exact same build.
+  # wasm builds the js/wasm Playground engine through the reusable
+  # workflow that release-test also uses — a single definition of the
+  # wasm build. The release and deploy-pages jobs consume its artifact,
+  # so the published engine and the engine embedded in the hosted
+  # Playground are the exact same build.
   wasm:
     uses: ./.github/workflows/wasm.yml
     with:
-      optimize: true
+      upload: true
 
   # release publishes the cross-platform CLI archives with GoReleaser
   # and attaches the engine binary the wasm job produced — it downloads

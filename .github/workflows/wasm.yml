@@ -2,18 +2,18 @@ name: wasm
 
 # Reusable workflow that builds the js/wasm Playground engine — and
 # nothing else. It is the single definition of the wasm build: the
-# release-test workflow calls it as a fast compile-only check, and the
-# release workflow calls it with optimize=true to produce the
-# wasm-opt-optimised engine, which the release then consumes as an
-# artifact. The bundled static site is built separately by the release
-# workflow, so this job needs no Node toolchain.
+# release-test workflow calls it as a compile-only check, and the
+# release workflow calls it with upload=true to publish the engine as
+# an artifact the release then consumes. The bundled static site is
+# built separately by the release workflow, so this job needs no Node
+# toolchain.
 on:
   workflow_call:
     inputs:
-      optimize:
+      upload:
         description: >-
-          When true, optimise the engine with wasm-opt and upload it as
-          an artifact. When false, only compile-check the js/wasm build.
+          When true, upload the built engine as an artifact for the
+          release. When false, only compile-check the js/wasm build.
         type: boolean
         default: false
 
@@ -34,20 +34,12 @@ jobs:
           go-version: stable
           cache-dependency-path: go.sum
 
-      # Fast path: confirm cmd/googlesqlite still compiles to js/wasm.
-      - name: Compile-check the engine
-        if: ${{ !inputs.optimize }}
+      - name: Build the js/wasm engine
         working-directory: docs/playground
         run: make build/wasm
 
-      # Release path: the wasm-opt-optimised engine binary.
-      - name: Build the optimised engine
-        if: ${{ inputs.optimize }}
-        working-directory: docs/playground
-        run: make build/engine
-
       - name: Upload the Playground engine
-        if: ${{ inputs.optimize }}
+        if: ${{ inputs.upload }}
         uses: actions/upload-artifact@v4
         with:
           name: playground-engine

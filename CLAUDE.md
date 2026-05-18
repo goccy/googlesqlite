@@ -53,21 +53,6 @@ Currently managed tools:
 - `github.com/golangci/golangci-lint/v2/cmd/golangci-lint`
 - `github.com/goreleaser/goreleaser/v2` (run via `make release`)
 
-### Non-Go tools
-
-Tools that are not Go programs cannot live in `tools/go.mod`. They MUST
-still be pinned and obtained by a single mechanism shared between local
-builds and CI — never an ad-hoc `brew install` locally versus a
-different install path in a workflow.
-
-Currently the only such tool is **Binaryen** (`wasm-opt`, used to
-optimise the Playground engine). It is pinned and downloaded entirely
-by `docs/playground/Makefile`: `BINARYEN_VERSION` pins the release and
-the `$(WASMOPT)` file target downloads, checksum-verifies and unpacks
-it under `tools/binaryen-<version>/` on demand. `make optimize` (and
-therefore `make build/release` and `make release`) depends on that
-target, so the release workflow needs no separate install step.
-
 ## Compatibility
 
 This project provides a `database/sql` driver registered as

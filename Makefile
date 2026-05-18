@@ -74,8 +74,8 @@ GORELEASER_PARALLELISM := 1
 # docs/playground/public/googlesqlite.wasm — GoReleaser attaches it to
 # the release. The release workflow builds it in a dedicated `wasm`
 # job and hands it to the release job as an artifact; to publish from
-# a local checkout, run `make -C docs/playground deps build/release`
-# first. GITHUB_TOKEN must be set in the environment.
+# a local checkout, run `make -C docs/playground build/wasm` first.
+# GITHUB_TOKEN must be set in the environment.
 release:
 	$(GORELEASER) release --clean --parallelism $(GORELEASER_PARALLELISM)
 
@@ -99,4 +99,4 @@ identity-check:
 	fi
 
 clean:
-	rm -rf $(BIN) tools/binaryen-*
+	rm -rf $(BIN)
