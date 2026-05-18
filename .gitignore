@@ -36,6 +36,13 @@ go.work.sum
 # Build output
 /bin/
 
+# GoReleaser build output (`make release`, `make release/check`).
+/dist/
+
+# Binaryen release downloaded by docs/playground/Makefile (provides
+# wasm-opt). Pinned and reproducible, so it is fetched, not tracked.
+/tools/binaryen-*
+
 # Stray top-level binaries from `go build ./cmd/...`
 /specctl
 /googlesqlite

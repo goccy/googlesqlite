@@ -5,8 +5,10 @@ go 1.25.0
 require (
 	cloud.google.com/go/bigquery v1.76.0
 	github.com/DataDog/go-hll v1.0.2
+	github.com/chzyer/readline v1.5.1
 	github.com/dgryski/go-farm v0.0.0-20240924180020-3414d57e47da
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
+	github.com/fatih/color v1.19.0
 	github.com/goccy/go-googlesql v0.2.2
 	github.com/goccy/go-json v0.10.6
 	github.com/goccy/go-yaml v1.11.0
@@ -14,6 +16,8 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/klauspost/compress v1.16.7
+	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-runewidth v0.0.23
 	github.com/ncruces/go-sqlite3 v0.34.0
 	github.com/spaolacci/murmur3 v1.1.0
 	golang.org/x/net v0.53.0
@@ -31,8 +35,8 @@ require (
 	cloud.google.com/go/iam v1.7.0 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
-	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -43,8 +47,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
 	github.com/googleapis/gax-go/v2 v2.21.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/ncruces/go-sqlite3-wasm/v2 v2.1.35300 // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect

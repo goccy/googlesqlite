@@ -1,0 +1,60 @@
+---
+version: 2
+project_name: googlesqlite
+
+builds:
+  - main: ./cmd/googlesqlite
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - name_template: >-
+      {{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+nfpms:
+  - file_name_template: >-
+      {{ .ProjectName }}_{{ .Version }}-1_{{ .Arch }}
+    homepage: https://github.com/goccy/googlesqlite
+    maintainer: goccy
+    description: Pure-Go database/sql driver and CLI running GoogleSQL on SQLite
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+# The js/wasm Playground engine is compiled and optimised by the
+# release workflow before GoReleaser runs (see
+# .github/workflows/release.yml). extra_files attaches that optimised
+# binary to the GitHub release as-is, so downstream consumers can pull
+# the exact engine that backs the hosted Playground.
+release:
+  prerelease: auto
+  extra_files:
+    - glob: ./docs/playground/public/googlesqlite.wasm

@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# The default token is read-only; each job widens it to exactly what it
+# needs — release upload plus provenance, or the Pages deployment.
+permissions:
+  contents: read
+
+# Only one Pages deployment may run at a time; never cancel one in
+# flight, so a tagged release always finishes publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # wasm builds the wasm-opt-optimised js/wasm Playground engine
+  # through the reusable workflow that release-test also uses — a
+  # single definition of the wasm build. The release and deploy-pages
+  # jobs consume its artifact, so the published engine and the engine
+  # embedded in the hosted Playground are the exact same build.
+  wasm:
+    uses: ./.github/workflows/wasm.yml
+    with:
+      optimize: true
+
+  # release publishes the cross-platform CLI archives with GoReleaser
+  # and attaches the engine binary the wasm job produced — it downloads
+  # that exact artifact instead of rebuilding it. It also records a
+  # build-provenance attestation for every artifact.
+  release:
+    needs: wasm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # create the GitHub release and upload assets
+      id-token: write      # sign the build-provenance attestation
+      attestations: write  # record the build-provenance attestation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # GoReleaser derives the changelog from the commit history.
+          fetch-depth: 0
+
+      # GoReleaser cross-compiles the CLI here; the latest stable Go
+      # builds the published binaries and also satisfies tools/go.mod,
+      # which `go tool` resolves GoReleaser against.
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Download the Playground engine
+        uses: actions/download-artifact@v4
+        with:
+          name: playground-engine
+          path: docs/playground/public
+
+      - name: Build and publish the release
+        run: make release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.deb
+            dist/*.rpm
+            dist/*.apk
+            dist/checksums.txt
+            docs/playground/public/googlesqlite.wasm
+
+  # deploy-pages bundles the static Playground site around the engine
+  # the wasm job built and publishes it to GitHub Pages. Bundling the
+  # site is a Node-only step kept out of the wasm job, which builds the
+  # engine alone. It depends only on wasm, so it runs in parallel with
+  # the release job.
+  deploy-pages:
+    needs: wasm
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write     # publish the GitHub Pages deployment
+      id-token: write  # authenticate the Pages deployment
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docs/playground/package-lock.json
+
+      - name: Download the Playground engine
+        uses: actions/download-artifact@v4
+        with:
+          name: playground-engine
+          path: docs/playground/public
+
+      - name: Bundle the static site
+        working-directory: docs/playground
+        run: |
+          make deps
+          make build/assets
+          make build/page
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/playground/dist
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
