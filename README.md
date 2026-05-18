@@ -39,6 +39,28 @@ The driver registers under `googlesqlite`. DSN is the underlying
 SQLite path (`:memory:`, a file path, or
 `file:foo.db?cache=shared`).
 
+## Playground
+
+Try GoogleSQLite in your browser, with nothing to install:
+
+**<https://goccy.github.io/googlesqlite/>**
+
+The Playground is the whole engine — GoogleSQL parsing, analysis, and
+the SQLite backend — compiled to WebAssembly and run entirely
+client-side. Highlights:
+
+- **No server, no install.** Every query is parsed, analyzed, and
+  executed inside the browser tab; nothing is sent anywhere.
+- **Responsive UI.** The engine runs in a Web Worker, so editing and
+  running queries never blocks the page.
+- **Persistent database.** The SQLite database lives in the Origin
+  Private File System (OPFS), so your tables and data survive page
+  reloads with no explicit save step.
+- **A real SQL editor**, with query history and result export.
+
+It is the quickest way to explore the supported GoogleSQL syntax and
+functions without setting up a Go environment.
+
 ## Status
 
 Every function and type is backed by a declarative spec under
