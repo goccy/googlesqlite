@@ -1,0 +1,46 @@
+name: Release test
+
+# Exercises the release pipeline on every pull request and main push,
+# without publishing: it compile-checks the js/wasm Playground engine
+# and validates the GoReleaser configuration with a dry-run build, so a
+# broken release is caught on the pull request rather than at tag time.
+# It mirrors the Release workflow's job layout (a wasm job plus the
+# release job).
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # wasm compile-checks the js/wasm Playground engine through the
+  # reusable workflow the release also uses. `make test` builds
+  # natively and does not cover the js/wasm build, so this is the only
+  # check that catches a broken engine compile.
+  wasm:
+    uses: ./.github/workflows/wasm.yml
+
+  # release-test validates the GoReleaser configuration and runs a
+  # publish-free dry-run build.
+  release-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # GoReleaser is a tools/go.mod tool; install the Go version that
+      # module pins so `go tool -modfile=tools/go.mod` can build it.
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/go.mod
+
+      - name: Validate the GoReleaser configuration
+        run: make release/check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -337,9 +337,9 @@ func newAnalyzerOptions() (*googlesql.AnalyzerOptions, error) {
 	if err := langOpt.EnableReservableKeyword("QUALIFY", true); err != nil {
 		return nil, err
 	}
-	opt := m1(googlesql.NewAnalyzerOptions2())
+	opt, optErr := googlesql.NewAnalyzerOptions2()
 	if opt == nil {
-		return nil, fmt.Errorf("failed to initialize analyzer options")
+		return nil, fmt.Errorf("failed to initialize analyzer options: %w", optErr)
 	}
 	opt.SetAllowUndeclaredParameters(true)
 	opt.SetLanguage(langOpt)
@@ -2578,6 +2578,12 @@ func collectFormatParams(ctx context.Context, n googlesql.ResolvedNode) (string,
 	formatted, err := newNode(n).FormatSQL(ctx)
 	if err != nil {
 		return "", nil, err
+	}
+	// Surface the translated SQLite text to the CLI debug hook, if one
+	// is installed on the context. This is the single chokepoint every
+	// statement kind (query / DML / DDL / graph) routes through.
+	if collector := sqlCollectorFromContext(ctx); collector != nil {
+		collector.Add(formatted)
 	}
 	return formatted, getParamsFromNode(c), nil
 }

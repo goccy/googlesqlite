@@ -85,10 +85,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # golangci-lint is a tools/go.mod tool; `go tool -modfile=tools/
+      # go.mod` resolves against the Go version of the directory it runs
+      # in (the repo root), so the installed Go must satisfy whichever
+      # of the two go.mod files needs the newer release. tools/go.mod is
+      # that file, so set Go up from it.
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: tools/go.mod
           cache: false
 
       # tools/go.sum pins golangci-lint itself, so the module cache key

@@ -1,0 +1,16 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  /* The Playground is a fixed-viewport layout: it always fills the
+     window exactly and never scrolls as a whole. Individual panes
+     (editor, results, history) scroll internally instead. */
+  overflow: hidden;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+}

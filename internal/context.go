@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	googlesql "github.com/goccy/go-googlesql"
@@ -27,6 +28,7 @@ type (
 	useTableNameForColumnKey        struct{}
 	paramCollectorKey               struct{}
 	safeEvalModeKey                 struct{}
+	sqlCollectorKey                 struct{}
 )
 
 // withSafeEvalMode marks a sub-context as the argument to IFERROR /
@@ -319,6 +321,55 @@ func paramCollectorFromContext(ctx context.Context) *paramCollector {
 		return nil
 	}
 	return v.(*paramCollector)
+}
+
+// SQLCollector accumulates the SQLite queries that the formatter emits
+// while analyzing GoogleSQL statements. It is the introspection hook
+// behind the CLI's debug mode: the caller installs one on the context
+// via NewSQLCollectorContext, runs a statement through the driver, and
+// reads back the translated SQLite text with Queries.
+//
+// It lives in the internal package so cmd/googlesqlite (and the wasm
+// Playground) can surface the translated SQL without the public
+// googlesqlite API having to grow a debug surface.
+type SQLCollector struct {
+	mu      sync.Mutex
+	queries []string
+}
+
+// Add records one translated SQLite query. Called by the formatter
+// chokepoint (collectFormatParams) once per analyzed statement.
+func (c *SQLCollector) Add(query string) {
+	c.mu.Lock()
+	c.queries = append(c.queries, query)
+	c.mu.Unlock()
+}
+
+// Queries returns a copy of every translated SQLite query collected so
+// far, in analysis order.
+func (c *SQLCollector) Queries() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]string, len(c.queries))
+	copy(out, c.queries)
+	return out
+}
+
+// NewSQLCollectorContext derives a context carrying a fresh
+// SQLCollector. Pass the returned context to database/sql's
+// QueryContext / ExecContext and the analyzer will populate the
+// collector with the SQLite text it generates.
+func NewSQLCollectorContext(ctx context.Context) (context.Context, *SQLCollector) {
+	c := &SQLCollector{}
+	return context.WithValue(ctx, sqlCollectorKey{}, c), c
+}
+
+func sqlCollectorFromContext(ctx context.Context) *SQLCollector {
+	v := ctx.Value(sqlCollectorKey{})
+	if v == nil {
+		return nil
+	}
+	return v.(*SQLCollector)
 }
 
 func WithCurrentTime(ctx context.Context, now time.Time) context.Context {
