@@ -38,10 +38,16 @@ jobs:
         working-directory: docs/playground
         run: make build/wasm
 
+      # The engine artifact carries both the wasm binary and its
+      # matching Go wasm_exec.js loader: the release and deploy-pages
+      # jobs only download this artifact, so a missing wasm_exec.js
+      # leaves the deployed site unable to start the engine.
       - name: Upload the Playground engine
         if: ${{ inputs.upload }}
         uses: actions/upload-artifact@v4
         with:
           name: playground-engine
-          path: docs/playground/public/googlesqlite.wasm
+          path: |
+            docs/playground/public/googlesqlite.wasm
+            docs/playground/public/wasm_exec.js
           retention-days: 1
