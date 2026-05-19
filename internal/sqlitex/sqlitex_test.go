@@ -237,7 +237,16 @@ func (s *sumIntWithInverse) Inverse(args ...any) error {
 	return nil
 }
 
-// TestRegisterAggregator drives the standard aggregate path.
+// TestRegisterAggregator drives the standard aggregate path, both over
+// a populated table and — critically — over an empty group.
+//
+// The empty-group case is a regression guard: an aggregate over zero
+// input rows must still invoke Done() exactly once (SQLite's final
+// callback runs even when Step never did), so a never-stepped
+// aggregator emits its zero value rather than NULL. RegisterAggregator
+// previously registered through ncruces' CreateAggregateFunction,
+// whose iter.Seq wrapper skipped the user function entirely for an
+// empty group; that made COUNT(*) over an empty table return NULL.
 func TestRegisterAggregator(t *testing.T) {
 	t.Parallel()
 	c := openConn(t)
@@ -248,7 +257,17 @@ func TestRegisterAggregator(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := scalarResult(t, c, "SELECT sum_int(x) FROM t"); got != int64(6) {
-		t.Fatalf("got %v", got)
+		t.Fatalf("aggregate over populated table = %v; want 6", got)
+	}
+
+	// sumInt.Done returns int64(0) when it was never stepped. If the
+	// machinery skips Done() for the empty group, scalarResult sees
+	// SQLite's synthetic NULL instead.
+	if err := c.Exec("CREATE TABLE empty_t(x)"); err != nil {
+		t.Fatal(err)
+	}
+	if got := scalarResult(t, c, "SELECT sum_int(x) FROM empty_t"); got != int64(0) {
+		t.Fatalf("aggregate over empty group = %v (%T); want int64(0) — Done() was not invoked", got, got)
 	}
 }
 

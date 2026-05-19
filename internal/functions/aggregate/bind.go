@@ -116,7 +116,7 @@ func BindCountStar() func() *helper.Aggregator {
 
 func BindBitAndAgg() func() *helper.Aggregator {
 	return func() *helper.Aggregator {
-		fn := &BIT_AND_AGG{value.IntValue(-1)}
+		fn := &BIT_AND_AGG{}
 		return helper.NewAggregator(
 			func(args []value.Value, opt *helper.Option) error {
 				return fn.Step(args[0], opt)
@@ -130,7 +130,7 @@ func BindBitAndAgg() func() *helper.Aggregator {
 
 func BindBitOrAgg() func() *helper.Aggregator {
 	return func() *helper.Aggregator {
-		fn := &BIT_OR_AGG{-1}
+		fn := &BIT_OR_AGG{}
 		return helper.NewAggregator(
 			func(args []value.Value, opt *helper.Option) error {
 				return fn.Step(args[0], opt)
@@ -144,7 +144,7 @@ func BindBitOrAgg() func() *helper.Aggregator {
 
 func BindBitXorAgg() func() *helper.Aggregator {
 	return func() *helper.Aggregator {
-		fn := &BIT_XOR_AGG{1}
+		fn := &BIT_XOR_AGG{}
 		return helper.NewAggregator(
 			func(args []value.Value, opt *helper.Option) error {
 				return fn.Step(args[0], opt)
@@ -172,7 +172,7 @@ func BindCountIf() func() *helper.Aggregator {
 
 func BindLogicalAnd() func() *helper.Aggregator {
 	return func() *helper.Aggregator {
-		fn := &LOGICAL_AND{true}
+		fn := &LOGICAL_AND{}
 		return helper.NewAggregator(
 			func(args []value.Value, opt *helper.Option) error {
 				return fn.Step(args[0], opt)

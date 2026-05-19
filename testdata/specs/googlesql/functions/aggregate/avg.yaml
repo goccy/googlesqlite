@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [2.0]
+  - desc: empty input returns NULL
+    sql: SELECT AVG(x) FROM UNNEST(CAST([] AS ARRAY<FLOAT64>)) AS x
+    expected:
+      rows:
+        - [null]

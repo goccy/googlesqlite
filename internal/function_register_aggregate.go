@@ -10,7 +10,7 @@ import (
 )
 
 // aggregateFuncs lists every aggregate function the driver registers
-// via Conn.CreateAggregateFunction. The functions are grouped by
+// through sqlitex.RegisterAggregator. The functions are grouped by
 // their GoogleSQL reference category page:
 //
 //   - aggregate_functions.md

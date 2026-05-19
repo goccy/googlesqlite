@@ -11,3 +11,8 @@ cases:
     expected:
       rows:
         - [[1, 2, 3, 4]]
+  - desc: empty input returns NULL
+    sql: SELECT ARRAY_CONCAT_AGG(arr) FROM UNNEST([STRUCT([1, 2] AS arr)]) WHERE FALSE
+    expected:
+      rows:
+        - [null]

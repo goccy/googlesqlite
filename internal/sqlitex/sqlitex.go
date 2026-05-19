@@ -12,7 +12,6 @@ package sqlitex
 import (
 	"errors"
 	"fmt"
-	"iter"
 	"reflect"
 
 	sqlite3 "github.com/ncruces/go-sqlite3"
@@ -97,15 +96,30 @@ func RegisterFunc(conn *sqlite3.Conn, name string, fn any, opts FunctionFlags) e
 	})
 }
 
-// RegisterAggregator registers an aggregate (or window-as-aggregate)
+// RegisterAggregator registers a plain (non-window) aggregate
 // function. ctor must be a Go function with signature `func() T` where
 // T has Step and Done methods matching the predecessor's shape
 // (variadic interface{} args; interface{} result on Done).
 //
-// Both standard aggregates and the predecessor's window-as-aggregate
-// emulation share this entry point. We hand the aggregator to ncruces'
-// CreateAggregateFunction (no Inverse method); native window-frame
-// optimisation can be added later via a second registration path.
+// Registration goes through ncruces' CreateWindowFunction rather than
+// CreateAggregateFunction. CreateAggregateFunction's iter.Seq wrapper
+// drives the user function from a coroutine that is started lazily on
+// the first Step: when a group has zero input rows SQLite invokes only
+// the final callback, which stops the never-started coroutine without
+// ever running the user function. The aggregate then never calls
+// ctx.Result*, so SQLite reports NULL — e.g. COUNT(*) over an empty
+// table yields NULL instead of 0.
+//
+// CreateWindowFunction has no such gap: ncruces constructs a fresh
+// aggregate instance and calls Value even when Step never ran, so an
+// empty group still produces each aggregate's zero value (COUNT -> 0,
+// SUM -> NULL, ...). windowAggSimpleAdapter forwards Step directly to
+// the instance (O(1) memory, unlike the buffered window adapter) and
+// calls Done on Value. It implements no Inverse method, so it is
+// registered as a plain aggregate; functions registered here are only
+// ever emitted by the formatter for non-OVER aggregates (window use
+// routes to the separately registered googlesqlite_window_* variants),
+// so SQLite never drives the inverse callback on them.
 func RegisterAggregator(conn *sqlite3.Conn, name string, ctor any, opts FunctionFlags) error {
 	cv := reflect.ValueOf(ctor)
 	if !cv.IsValid() || cv.Kind() != reflect.Func {
@@ -124,32 +138,10 @@ func RegisterAggregator(conn *sqlite3.Conn, name string, ctor any, opts Function
 	stepNArg := stepArgCount(stepMethod.Type())
 
 	flag := flagBits(opts)
-	return conn.CreateAggregateFunction(name, stepNArg, flag, func(ctx *sqlite3.Context, seq iter.Seq[[]sqlite3.Value]) {
+	return conn.CreateWindowFunction(name, stepNArg, flag, sqlite3.AggregateConstructor(func() sqlite3.AggregateFunction {
 		inst := cv.Call(nil)[0].Interface()
-		step, done, err := lookupStepDone(inst)
-		if err != nil {
-			ctx.ResultError(err)
-			return
-		}
-		for vargs := range seq {
-			args := decodeArgs(vargs)
-			rets := callMethod(step, args)
-			if err := lastError(rets); err != nil {
-				ctx.ResultError(err)
-				return
-			}
-		}
-		out := done.Call(nil)
-		if err := lastError(out); err != nil {
-			ctx.ResultError(err)
-			return
-		}
-		var result any
-		if len(out) >= 1 {
-			result = out[0].Interface()
-		}
-		applyResult(*ctx, result)
-	})
+		return &windowAggSimpleAdapter{inst: inst}
+	}))
 }
 
 // RegisterWindow registers a window-aggregate function backed by
@@ -194,12 +186,21 @@ func RegisterWindow(conn *sqlite3.Conn, name string, ctor any, opts FunctionFlag
 	}))
 }
 
-// windowAggSimpleAdapter wraps an aggregator with Step + Done. It is
-// only used when the wrapped instance ALSO has an Inverse method;
-// without Inverse, the buffered adapter takes over (see
-// newBufferedWindowAdapter) because ncruces' CreateWindowFunction
-// always wires up the SQLite x_inverse callback regardless of
-// whether the Go side implements it.
+// windowAggSimpleAdapter wraps an aggregator with Step + Done,
+// forwarding each Step straight to the instance and producing the
+// result from Done on Value. It carries no Inverse method, so ncruces
+// registers it as a plain aggregate.
+//
+// It backs two registration paths:
+//
+//   - RegisterAggregator, for plain (non-OVER) aggregates. These never
+//     receive an inverse callback from SQLite.
+//   - RegisterWindow, but only when the wrapped instance ALSO has an
+//     Inverse method (then windowAggAdapter embeds this and adds
+//     Inverse). A window aggregator without Inverse instead goes
+//     through newBufferedWindowAdapter, which replays buffered Step
+//     args, because SQLite drives the inverse callback for moving
+//     frames and a plain Step+Done aggregator cannot undo a Step.
 type windowAggSimpleAdapter struct {
 	inst    any
 	stepErr error

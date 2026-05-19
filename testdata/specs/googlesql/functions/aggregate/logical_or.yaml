@@ -11,3 +11,8 @@ cases:
     expected:
       rows:
         - [false]
+  - desc: empty input returns NULL
+    sql: SELECT LOGICAL_OR(x) FROM UNNEST(CAST([] AS ARRAY<BOOL>)) AS x
+    expected:
+      rows:
+        - [null]

@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ["a,b,c"]
+  - desc: empty input returns NULL
+    sql: SELECT STRING_AGG(x, ",") FROM UNNEST(CAST([] AS ARRAY<STRING>)) AS x
+    expected:
+      rows:
+        - [null]

@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [5]
+  - desc: empty input returns NULL
+    sql: SELECT MAX(x) FROM UNNEST(CAST([] AS ARRAY<INT64>)) AS x
+    expected:
+      rows:
+        - [null]

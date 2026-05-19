@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [2]
+  - desc: countif of empty input is zero
+    sql: SELECT COUNTIF(x > 2) FROM UNNEST(CAST([] AS ARRAY<INT64>)) AS x
+    expected:
+      rows:
+        - [0]
