@@ -235,10 +235,11 @@ func TestBindLogicalAnd(t *testing.T) {
 		t.Fatalf("got %v", got)
 	}
 
-	// Empty → true (per docs: empty AND defaults to TRUE).
+	// Empty input over zero rows is NULL (BigQuery semantics): with no
+	// row observed there is no truth value to report.
 	a = newAgg(t, BindLogicalAnd())
-	if got := mustDone(t, a); got != true {
-		t.Fatalf("got %v", got)
+	if got := mustDone(t, a); got != nil {
+		t.Fatalf("empty LOGICAL_AND: got %v; want nil", got)
 	}
 }
 
@@ -264,10 +265,11 @@ func TestBindLogicalOr(t *testing.T) {
 		t.Fatalf("got %v", got)
 	}
 
-	// Empty → false.
+	// Empty input over zero rows is NULL (BigQuery semantics): with no
+	// row observed there is no truth value to report.
 	a = newAgg(t, BindLogicalOr())
-	if got := mustDone(t, a); got != false {
-		t.Fatalf("got %v", got)
+	if got := mustDone(t, a); got != nil {
+		t.Fatalf("empty LOGICAL_OR: got %v; want nil", got)
 	}
 }
 
@@ -346,8 +348,7 @@ func TestBindBitAggregates(t *testing.T) {
 	}
 
 	// BigQuery: BIT_XOR(5, 12, 10) = 5 ^ 12 ^ 10 = 0b0101 ^ 0b1100 ^
-	// 0b1010 = 0b0011 = 3. (We avoid 1 as the first input because
-	// the implementation uses 1 as an "uninitialised" sentinel.)
+	// 0b1010 = 0b0011 = 3.
 	a = newAgg(t, BindBitXorAgg())
 	stepN(t, a, int64(5), int64(12), int64(10))
 	if got := mustDone(t, a); got != int64(3) {
@@ -361,13 +362,19 @@ func TestBindBitAggregates(t *testing.T) {
 		t.Fatalf("got %v", got)
 	}
 
-	// Empty BIT_AND -> initial sentinel (-1). Per BigQuery semantics
-	// BIT_AND over zero rows is NULL, but this implementation surfaces
-	// the all-ones sentinel; the test pins the observable behaviour so
-	// any future fix is visible.
+	// BIT_AND / BIT_OR / BIT_XOR over zero input rows are NULL — there
+	// is no value to report (BigQuery semantics).
 	a = newAgg(t, BindBitAndAgg())
-	if got := mustDone(t, a); got != int64(-1) {
-		t.Fatalf("got %v", got)
+	if got := mustDone(t, a); got != nil {
+		t.Fatalf("empty BIT_AND: got %v; want nil", got)
+	}
+	a = newAgg(t, BindBitOrAgg())
+	if got := mustDone(t, a); got != nil {
+		t.Fatalf("empty BIT_OR: got %v; want nil", got)
+	}
+	a = newAgg(t, BindBitXorAgg())
+	if got := mustDone(t, a); got != nil {
+		t.Fatalf("empty BIT_XOR: got %v; want nil", got)
 	}
 }
 
@@ -406,6 +413,12 @@ func TestBindArrayAgg(t *testing.T) {
 	a = newAgg(t, BindArrayAgg())
 	if err := a.Step(nil); err == nil {
 		t.Fatal("expected error on NULL input")
+	}
+
+	// ARRAY_AGG over zero input rows is NULL, not an empty array.
+	a = newAgg(t, BindArrayAgg())
+	if got := mustDone(t, a); got != nil {
+		t.Fatalf("empty ARRAY_AGG: got %v; want nil", got)
 	}
 }
 
@@ -1007,6 +1020,12 @@ func TestBindArrayConcatAgg(t *testing.T) {
 	a = newAgg(t, BindArrayConcatAgg())
 	if err := a.Step(nil); err != nil {
 		t.Fatal(err)
+	}
+
+	// ARRAY_CONCAT_AGG over zero input rows is NULL, not an empty array.
+	a = newAgg(t, BindArrayConcatAgg())
+	if got := mustDone(t, a); got != nil {
+		t.Fatalf("empty ARRAY_CONCAT_AGG: got %v; want nil", got)
 	}
 }
 

@@ -27,6 +27,11 @@ func (f *ARRAY_CONCAT_AGG) Step(v *value.ArrayValue, opt *helper.Option) error {
 }
 
 func (f *ARRAY_CONCAT_AGG) Done() (value.Value, error) {
+	// ARRAY_CONCAT_AGG over zero input rows is SQL NULL, not an empty
+	// array.
+	if len(f.values) == 0 {
+		return nil, nil
+	}
 	f.values = helper.SortAggregatedValues(f.values, f.opt)
 
 	if f.opt != nil && f.opt.Limit != nil {

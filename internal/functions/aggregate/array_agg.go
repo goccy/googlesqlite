@@ -27,6 +27,10 @@ func (f *ARRAY_AGG) Step(v value.Value, opt *helper.Option) error {
 }
 
 func (f *ARRAY_AGG) Done() (value.Value, error) {
+	// ARRAY_AGG over zero input rows is SQL NULL, not an empty array.
+	if len(f.values) == 0 {
+		return nil, nil
+	}
 	f.values = helper.SortAggregatedValues(f.values, f.opt)
 	if f.opt != nil && f.opt.Limit != nil {
 		minLen := min(*f.opt.Limit, int64(len(f.values)))

@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [170]
+  - desc: empty input returns NULL
+    sql: SELECT BIT_XOR(x) FROM UNNEST(CAST([] AS ARRAY<INT64>)) AS x
+    expected:
+      rows:
+        - [null]
