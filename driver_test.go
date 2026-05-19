@@ -1512,18 +1512,14 @@ func TestPreparedCreateAndDML(t *testing.T) {
 		t.Fatalf("DELETE Exec: %v", err)
 	}
 
-	// Final assertion: table is empty. We assert via "no rows
-	// returned by a SELECT" rather than COUNT(*) — under googlesqlite
-	// COUNT(*) of an empty table returns NULL not 0 (a quirk of the
-	// analyzer's group-by-without-rows lowering), so use a row-stream
-	// probe instead.
-	probe, err := conn.QueryContext(ctx, "SELECT SingerId FROM Singers")
-	if err != nil {
-		t.Fatalf("probe Query: %v", err)
+	// Final assertion: table is empty. COUNT(*) over an empty table
+	// returns 0 (see TestRegression_AggregateOverEmptyGroup).
+	var remaining int64
+	if err := conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM Singers").Scan(&remaining); err != nil {
+		t.Fatalf("COUNT(*) Query: %v", err)
 	}
-	defer probe.Close()
-	if probe.Next() {
-		t.Fatalf("expected zero rows after DELETE; got at least one")
+	if remaining != 0 {
+		t.Fatalf("expected zero rows after DELETE; got %d", remaining)
 	}
 }
 
