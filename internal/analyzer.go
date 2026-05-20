@@ -2381,21 +2381,20 @@ func (a *Analyzer) newExportDataStmtAction(ctx context.Context, query string, ar
 // resolved literal — no SQL re-format / unquote dance — so escapes and
 // quoting handled by the analyzer are honoured by construction.
 //
-// Unknown options are tolerated for forward compatibility: real BigQuery
-// accepts `header`, `overwrite`, `compression` etc. that this engine has
-// not implemented yet, and silently ignoring them on parse keeps callers'
-// SQL portable until they are added. Options we DO consume (`uri`,
-// `format`) must be readable string literals; an unreadable known option
-// is a hard error rather than a silent drop — otherwise a stray
-// non-literal `uri = CONCAT('gs://', 'b')` would surface as the wrong
-// downstream error ("required option `uri` is missing") and mislead the
-// caller about what is actually wrong.
+// Every option in the list must be one the engine actually honours
+// (today, just `uri` and `format`) and must be a readable string literal.
+// Real BigQuery rejects unknown / unreadable OPTIONS at analysis time;
+// silently dropping them here would let a `header = true`,
+// `compression = 'GZIP'`, or `overwrite = true` pass through and produce
+// output the caller did not ask for, with no signal that the option had
+// no effect. The error names the offending option so it is obvious what
+// to remove or, when implemented later, what new behaviour was wired up.
 func readExportDataOptions(_ context.Context, opts []*googlesql.ResolvedOption) (uri string, format string, err error) {
 	for _, opt := range opts {
 		name, _ := opt.Name()
 		key := strings.ToLower(name)
 		if key != "uri" && key != "format" {
-			continue
+			return "", "", fmt.Errorf("EXPORT DATA: option %q is not supported by googlesqlite", name)
 		}
 		val, ok, verr := exportDataStringLiteralOption(opt)
 		if verr != nil {
