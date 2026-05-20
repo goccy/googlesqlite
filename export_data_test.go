@@ -238,6 +238,66 @@ func TestExportDataErrorPaths(t *testing.T) {
 			`EXPORT DATA WITH CONNECTION `+"`proj.region.conn`"+` OPTIONS(uri = '%s://x/y', format = 'CSV')
              AS SELECT 1 AS id`, scheme), "connection")
 	})
+
+	// Reverse-ETL destination formats — BigQuery accepts CLOUD_SPANNER /
+	// CLOUD_BIGTABLE / CLOUD_PUBSUB / ALLOYDB to push rows into
+	// operational stores. The googlesqlite engine has no managed
+	// connector for any of them, so each must surface as a named error
+	// (caller learns "this destination, specifically") rather than a
+	// vague "unknown format" message.
+	for _, fmtName := range []string{"CLOUD_SPANNER", "CLOUD_BIGTABLE", "CLOUD_PUBSUB", "ALLOYDB"} {
+		fmtName := fmtName
+		t.Run("reverse-ETL format "+fmtName+" is named in the error", func(t *testing.T) {
+			expectErr(t, fmt.Sprintf(
+				`EXPORT DATA OPTIONS(uri = 'https://example.googleapis.com/x', format = '%s')
+                 AS SELECT 1 AS id`, fmtName), fmtName)
+		})
+	}
+
+	t.Run("spanner_options names the destination gap", func(t *testing.T) {
+		// `spanner_options` is the JSON-encoded STRING that configures
+		// `format = 'CLOUD_SPANNER'` exports (table name, request
+		// priority, change-timestamp column, …). Dropping it silently
+		// would lose schema-level config; falling through to the
+		// generic "unknown option" message would hide that we DO know
+		// about the option but lack the destination connector. The
+		// diagnostic must name the option AND the destination class.
+		expectErr(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(uri = '%s://x/y', format = 'CSV',
+                                 spanner_options = '{"table":"t","priority":"MEDIUM"}')
+             AS SELECT 1 AS id`, scheme), "spanner_options")
+	})
+
+	t.Run("bigtable_options names the destination gap", func(t *testing.T) {
+		expectErr(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(uri = '%s://x/y', format = 'CSV',
+                                 bigtable_options = '{"columnFamilies":[]}')
+             AS SELECT 1 AS id`, scheme), "bigtable_options")
+	})
+
+	t.Run("alloydb_options names the destination gap", func(t *testing.T) {
+		expectErr(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(uri = '%s://x/y', format = 'CSV',
+                                 alloydb_options = '{"schema":"public","table":"t"}')
+             AS SELECT 1 AS id`, scheme), "alloydb_options")
+	})
+
+	t.Run("auto_create_column_families names the Bigtable gap", func(t *testing.T) {
+		expectErr(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(uri = '%s://x/y', format = 'CSV', auto_create_column_families = true)
+             AS SELECT 1 AS id`, scheme), "auto_create_column_families")
+	})
+
+	t.Run("reverse-ETL option with wrong literal type is reported by name", func(t *testing.T) {
+		// Type-check fires BEFORE the destination-gap message, so the
+		// error names the option AND the expected literal type. This
+		// is the same shape as `header = 'yes'` — without it a misuse
+		// like `spanner_options = 42` would surface as "format
+		// CLOUD_SPANNER not supported" which buries the original mistake.
+		expectErr(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(uri = '%s://x/y', format = 'CSV', spanner_options = 42)
+             AS SELECT 1 AS id`, scheme), "spanner_options")
+	})
 }
 
 // TestExportDataMemRoundTrip exercises the full EXPORT DATA path —

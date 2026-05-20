@@ -2466,6 +2466,27 @@ func readExportDataOptions(opts []*googlesql.ResolvedOption) (*ResolvedExportDat
 				return nil, err
 			}
 			return nil, fmt.Errorf("EXPORT DATA: option `use_avro_logical_types` is only valid with format = 'AVRO', which is not yet supported by googlesqlite")
+		case "spanner_options", "bigtable_options", "alloydb_options":
+			// Reverse-ETL destination options. Each is documented as a
+			// JSON-encoded STRING that configures the target connector
+			// (`spanner_options` → Cloud Spanner table/priority/tag,
+			// `bigtable_options` → Bigtable column families, etc.).
+			// Type-check the value as a string literal so a misuse like
+			// `spanner_options = 42` is reported as an option type error
+			// (naming the option) rather than collapsing into the
+			// downstream "format CLOUD_SPANNER not supported" message,
+			// then surface the destination gap with the option named.
+			if _, err := readExportDataStringOption(opt); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("EXPORT DATA: option `%s` targets a reverse-ETL destination (Cloud Spanner / Bigtable / AlloyDB) that is not supported by googlesqlite", key)
+		case "auto_create_column_families":
+			// Bigtable-only BOOL. Same shape as use_avro_logical_types:
+			// type-check first, then point at the missing destination.
+			if _, err := readExportDataBoolOption(opt); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("EXPORT DATA: option `auto_create_column_families` is only valid with format = 'CLOUD_BIGTABLE', which is not supported by googlesqlite")
 		default:
 			return nil, fmt.Errorf("EXPORT DATA: option %q is not supported by googlesqlite", name)
 		}
