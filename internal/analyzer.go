@@ -2416,11 +2416,11 @@ type ResolvedExportDataOptions struct {
 func readExportDataOptions(opts []*googlesql.ResolvedOption) (*ResolvedExportDataOptions, error) {
 	out := &ResolvedExportDataOptions{}
 	var (
-		formatStr    string
-		compressStr  string
-		headerSet    bool
-		headerValue  bool
-		uriSet       bool
+		formatStr   string
+		compressStr string
+		headerSet   bool
+		headerValue bool
+		uriSet      bool
 	)
 	for _, opt := range opts {
 		name, _ := opt.Name()

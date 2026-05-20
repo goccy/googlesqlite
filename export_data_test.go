@@ -235,7 +235,7 @@ func TestExportDataErrorPaths(t *testing.T) {
 		// whatever the URIWriter for the scheme picks by default,
 		// which is almost never what the caller meant.
 		expectErr(t, fmt.Sprintf(
-			`EXPORT DATA WITH CONNECTION ` + "`proj.region.conn`" + ` OPTIONS(uri = '%s://x/y', format = 'CSV')
+			`EXPORT DATA WITH CONNECTION `+"`proj.region.conn`"+` OPTIONS(uri = '%s://x/y', format = 'CSV')
              AS SELECT 1 AS id`, scheme), "connection")
 	})
 }
@@ -252,8 +252,8 @@ func TestExportDataErrorPaths(t *testing.T) {
 func TestExportDataMemRoundTrip(t *testing.T) {
 	cases := []struct {
 		name    string
-		options string  // body of OPTIONS(...) less the uri
-		key     string  // expected capture key (host/path of the uri)
+		options string // body of OPTIONS(...) less the uri
+		key     string // expected capture key (host/path of the uri)
 		decode  func(t *testing.T, raw []byte) []byte
 		want    string
 	}{
