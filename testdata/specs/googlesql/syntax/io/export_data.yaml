@@ -1,11 +1,16 @@
 spec: docs/specs/googlesql/syntax/io/export_data.md
 dialect: googlesql
 cases:
-  - desc: EXPORT DATA OPTIONS(...) AS SELECT yields the inner rows
+  # EXPORT DATA materializes the inner query's rows to the URI in OPTIONS
+  # and returns no rows to the caller (matching real BigQuery). The case
+  # routes its destination at the `mem://` scheme registered by
+  # export_data_test.go for the duration of the test binary; the actual
+  # bytes that land at a destination — including the gs:// path against a
+  # fake-gcs-server — are asserted by TestExportDataStatement.
+  - desc: EXPORT DATA OPTIONS(...) AS SELECT writes to the URI and yields no rows
     sql: |-
       EXPORT DATA
-      OPTIONS(uri = 'gs://demo/out.csv', format = 'CSV')
+      OPTIONS(uri = 'mem://specsuite/out.csv', format = 'CSV')
       AS SELECT 1 AS x, 'a' AS y
     expected:
-      rows:
-        - [1, 'a']
+      rows: []

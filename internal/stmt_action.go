@@ -2,11 +2,16 @@ package internal
 
 import (
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"net/url"
 	"strings"
 
 	googlesql "github.com/goccy/go-googlesql"
+
+	"github.com/goccy/googlesqlite/internal/exportdata"
+	"github.com/goccy/googlesqlite/internal/value"
 )
 
 type StmtAction interface {
@@ -476,6 +481,196 @@ func (a *QueryStmtAction) Args() []any {
 
 func (a *QueryStmtAction) Cleanup(ctx context.Context, conn *Conn) error {
 	return nil
+}
+
+// ExportDataStmtAction materializes the rows of an
+// `EXPORT DATA OPTIONS(uri = '...', format = '...') AS <query>` statement
+// to the destination URI. The inner query is run through the standard
+// QueryStmtAction code path; the rows it produces are streamed through the
+// format encoder into a writer obtained from the URI's registered scheme
+// (see exportdata.RegisterURIWriter — `gs://` is registered by default).
+//
+// EXPORT DATA returns no rows to the caller — neither Exec nor Query yields
+// any — so the result is always an empty driver.Result / *Rows after the
+// destination object has been written. Real BigQuery has the same shape.
+type ExportDataStmtAction struct {
+	query          string
+	params         []*googlesql.ResolvedParameter
+	args           []any
+	formattedQuery string
+	outputColumns  []*ColumnSpec
+	uri            string
+	format         exportdata.Format
+}
+
+// NewExportDataStmtAction constructs the action from a parsed inner query
+// and the OPTIONS extracted from the EXPORT DATA statement's resolved AST.
+// Exported so the analyzer (which lives in the same package today but may
+// move) can construct it without reaching into private fields.
+func NewExportDataStmtAction(
+	query, formattedQuery string,
+	params []*googlesql.ResolvedParameter,
+	args []any,
+	outputColumns []*ColumnSpec,
+	uri string,
+	format exportdata.Format,
+) *ExportDataStmtAction {
+	return &ExportDataStmtAction{
+		query:          query,
+		params:         params,
+		args:           args,
+		formattedQuery: formattedQuery,
+		outputColumns:  outputColumns,
+		uri:            uri,
+		format:         format,
+	}
+}
+
+func (a *ExportDataStmtAction) Prepare(ctx context.Context, conn *Conn) (driver.Stmt, error) {
+	// EXPORT DATA is fundamentally an Exec — there is nothing to prepare
+	// in advance for the destination write. Fall back to preparing the
+	// inner query so a Stmt wrapper has something to bind against; the
+	// actual export happens on ExecContext / QueryContext below.
+	s, err := conn.PrepareContext(ctx, a.formattedQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare %s: %w", a.query, err)
+	}
+	return newQueryStmt(s, a.params, a.formattedQuery, a.outputColumns), nil
+}
+
+func (a *ExportDataStmtAction) ExecContext(ctx context.Context, conn *Conn) (driver.Result, error) {
+	if err := a.export(ctx, conn); err != nil {
+		return nil, err
+	}
+	return &Result{conn: conn}, nil
+}
+
+func (a *ExportDataStmtAction) QueryContext(ctx context.Context, conn *Conn) (*Rows, error) {
+	if err := a.export(ctx, conn); err != nil {
+		return nil, err
+	}
+	return &Rows{conn: conn}, nil
+}
+
+func (a *ExportDataStmtAction) Args() []any { return nil }
+
+func (a *ExportDataStmtAction) Cleanup(ctx context.Context, conn *Conn) error { return nil }
+
+// export resolves the URI's scheme writer, opens the destination, runs the
+// inner query, and streams each row through the format encoder. The writer
+// is closed before the function returns — that is where the bytes commit
+// for stores like GCS.
+func (a *ExportDataStmtAction) export(ctx context.Context, conn *Conn) error {
+	u, err := url.Parse(a.uri)
+	if err != nil {
+		return fmt.Errorf("EXPORT DATA: invalid uri %q: %w", a.uri, err)
+	}
+	if u.Scheme == "" {
+		return fmt.Errorf("EXPORT DATA: uri %q has no scheme", a.uri)
+	}
+	writer := exportdata.LookupURIWriter(u.Scheme)
+	if writer == nil {
+		return fmt.Errorf("EXPORT DATA: no writer registered for %q scheme — call googlesqlite.RegisterExportURIWriter to install one", u.Scheme)
+	}
+
+	rows, err := conn.QueryContext(ctx, a.formattedQuery, a.args...)
+	if err != nil {
+		return fmt.Errorf("EXPORT DATA: run inner query: %w", err)
+	}
+	defer rows.Close()
+
+	// Prefer the resolved output column names; fall back to whatever the
+	// driver reports if the analyzer did not surface a column list (an
+	// inner SELECT that bypasses OutputColumnList — unlikely, but
+	// defensive).
+	columns := make([]string, len(a.outputColumns))
+	for i, c := range a.outputColumns {
+		columns[i] = c.Name
+	}
+	if len(columns) == 0 {
+		columns, err = rows.Columns()
+		if err != nil {
+			return fmt.Errorf("EXPORT DATA: read column names: %w", err)
+		}
+	}
+
+	wc, err := writer(ctx, a.uri)
+	if err != nil {
+		return fmt.Errorf("EXPORT DATA: open destination %q: %w", a.uri, err)
+	}
+	encodeErr := exportdata.EncodeRows(wc, a.format, columns, sqlRowsSource(rows, len(columns)))
+	if closeErr := wc.Close(); closeErr != nil && encodeErr == nil {
+		encodeErr = fmt.Errorf("EXPORT DATA: close destination %q: %w", a.uri, closeErr)
+	}
+	return encodeErr
+}
+
+// sqlRowsSource adapts a database/sql.Rows iterator to exportdata.RowSource.
+// Each invocation advances one row, scans the raw driver values, and decodes
+// them out of googlesqlite's envelope into Go-native primitives so the
+// format encoders see real strings / ints / floats rather than the base64
+// `{header, body}` layout the driver round-trips internally. The (false,
+// nil) terminator surfaces both natural end-of-stream and an underlying
+// scan error (via rows.Err()).
+func sqlRowsSource(rows *sql.Rows, ncols int) exportdata.RowSource {
+	return func() ([]any, bool, error) {
+		if !rows.Next() {
+			if err := rows.Err(); err != nil {
+				return nil, false, fmt.Errorf("EXPORT DATA: iterate inner query: %w", err)
+			}
+			return nil, false, nil
+		}
+		raw := make([]any, ncols)
+		ptrs := make([]any, ncols)
+		for i := range raw {
+			ptrs[i] = &raw[i]
+		}
+		if err := rows.Scan(ptrs...); err != nil {
+			return nil, false, fmt.Errorf("EXPORT DATA: scan row: %w", err)
+		}
+		out := make([]any, ncols)
+		for i, v := range raw {
+			decoded, err := decodeExportValue(v)
+			if err != nil {
+				return nil, false, fmt.Errorf("EXPORT DATA: decode column %d: %w", i, err)
+			}
+			out[i] = decoded
+		}
+		return out, true, nil
+	}
+}
+
+// decodeExportValue turns a single scanned driver value (still wrapped in
+// googlesqlite's `{header, body}` envelope) into the Go-native value the
+// EXPORT DATA encoders work in. Primitives (string, int64, float64, bool,
+// []byte) pass through to keep the encoder's type-driven branches happy;
+// richer types (Date, Timestamp, Numeric, Array, Struct ...) collapse to
+// their canonical string form via the value's ToString — that string is
+// what BigQuery itself uses for the same column in CSV / JSON output.
+func decodeExportValue(v any) (any, error) {
+	if v == nil {
+		return nil, nil
+	}
+	decoded, err := DecodeValue(v)
+	if err != nil {
+		return nil, err
+	}
+	if decoded == nil {
+		return nil, nil
+	}
+	switch tv := decoded.(type) {
+	case value.StringValue:
+		return string(tv), nil
+	case value.IntValue:
+		return int64(tv), nil
+	case value.FloatValue:
+		return float64(tv), nil
+	case value.BoolValue:
+		return bool(tv), nil
+	case value.BytesValue:
+		return []byte(tv), nil
+	}
+	return decoded.ToString()
 }
 
 // NoopStmtAction handles statements that the analyzer accepts but

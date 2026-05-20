@@ -15,6 +15,7 @@ import (
 
 	googlesql "github.com/goccy/go-googlesql"
 
+	"github.com/goccy/googlesqlite/internal/exportdata"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -2333,12 +2334,27 @@ func (a *Analyzer) newCreateTableFunctionStmtAction(ctx context.Context, _ strin
 	}, nil
 }
 
-// newExportDataStmtAction wraps the inner SELECT of an
-// `EXPORT DATA OPTIONS(...) AS SELECT ...` statement as a normal
-// query action. The driver itself does not write anywhere — the
-// emulator on top reads the rows and performs the export. Treating
-// EXPORT DATA as a query is enough.
-func (a *Analyzer) newExportDataStmtAction(ctx context.Context, query string, args []driver.NamedValue, node *googlesql.ResolvedExportDataStmt) (*QueryStmtAction, error) {
+// newExportDataStmtAction lowers an
+// `EXPORT DATA OPTIONS(uri = '...', format = '...') AS <query>` statement
+// into an ExportDataStmtAction. The OPTIONS clause is parsed off the
+// resolved AST (uri is required, format defaults to CSV — matching real
+// BigQuery), the inner query is formatted in the usual way, and the action
+// at execute time runs the inner query and streams its rows through the
+// format encoder into the writer registered for the URI's scheme (see
+// exportdata.RegisterURIWriter).
+func (a *Analyzer) newExportDataStmtAction(ctx context.Context, query string, args []driver.NamedValue, node *googlesql.ResolvedExportDataStmt) (StmtAction, error) {
+	uri, formatStr, err := readExportDataOptions(ctx, m1(node.OptionList()))
+	if err != nil {
+		return nil, err
+	}
+	if uri == "" {
+		return nil, fmt.Errorf("EXPORT DATA: required option `uri` is missing")
+	}
+	format, err := exportdata.ParseFormat(formatStr)
+	if err != nil {
+		return nil, err
+	}
+
 	outputColumns := []*ColumnSpec{}
 	for _, col := range m1(node.OutputColumnList()) {
 		outputColumns = append(outputColumns, &ColumnSpec{
@@ -2357,14 +2373,65 @@ func (a *Analyzer) newExportDataStmtAction(ctx context.Context, query string, ar
 	if err != nil {
 		return nil, err
 	}
-	return &QueryStmtAction{
-		query:          query,
-		params:         params,
-		args:           queryArgs,
-		formattedQuery: formattedQuery,
-		outputColumns:  outputColumns,
-		isExplainMode:  a.isExplainMode,
-	}, nil
+	return NewExportDataStmtAction(query, formattedQuery, params, queryArgs, outputColumns, uri, format), nil
+}
+
+// readExportDataOptions extracts the string-valued options off a ResolvedOption
+// list. The option's value is read directly from its resolved literal — no
+// SQL re-format / unquote dance — so escapes and quoting handled by the
+// analyzer are honoured by construction. Unknown options are tolerated for
+// forward compatibility (real BigQuery accepts options like `overwrite`,
+// `header`, `compression` etc. that this engine has not implemented yet, and
+// silently ignoring them on parse keeps callers' SQL portable until they
+// are added).
+func readExportDataOptions(_ context.Context, opts []*googlesql.ResolvedOption) (uri string, format string, err error) {
+	for _, opt := range opts {
+		name, _ := opt.Name()
+		val, ok, verr := exportDataStringOption(opt)
+		if verr != nil {
+			return "", "", fmt.Errorf("EXPORT DATA: read option %q: %w", name, verr)
+		}
+		if !ok {
+			// Non-literal or non-string options are not relevant to
+			// the two we currently consume; skip silently.
+			continue
+		}
+		switch strings.ToLower(name) {
+		case "uri":
+			uri = val
+		case "format":
+			format = val
+		}
+	}
+	return uri, format, nil
+}
+
+// exportDataStringOption reads a string value from a ResolvedOption whose
+// value is a ResolvedLiteral. Returns (value, true, nil) on success,
+// (_, false, nil) for non-literal / non-string options, or an error if the
+// underlying value extraction fails.
+func exportDataStringOption(opt *googlesql.ResolvedOption) (string, bool, error) {
+	expr, _ := opt.Value()
+	lit, ok := expr.(*googlesql.ResolvedLiteral)
+	if !ok {
+		return "", false, nil
+	}
+	v, err := lit.Value()
+	if err != nil {
+		return "", false, err
+	}
+	kind, err := v.TypeKind()
+	if err != nil {
+		return "", false, err
+	}
+	if kind != googlesql.TypeKindTypeString {
+		return "", false, nil
+	}
+	s, err := v.StringValue()
+	if err != nil {
+		return "", false, err
+	}
+	return s, true, nil
 }
 
 func (a *Analyzer) newBeginStmtAction(ctx context.Context, query string, args []driver.NamedValue, node googlesql.ResolvedNode) (*BeginStmtAction, error) {
