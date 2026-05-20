@@ -31,7 +31,12 @@ func init() {
 // can produce many objects, one per shard) is collapsed to the 12-digit
 // shard identifier BigQuery uses for the first shard, so a one-shard write
 // against `gs://b/out/*.csv` lands at `gs://b/out/000000000000.csv`.
-func openGCSWriter(ctx context.Context, uri string) (io.WriteCloser, error) {
+//
+// WriterOpts.Overwrite=false (the BigQuery default) is enforced by a
+// DoesNotExist precondition on the object; the write fails with HTTP 412
+// PreconditionFailed if the object already exists. Overwrite=true skips the
+// precondition so the object is replaced unconditionally.
+func openGCSWriter(ctx context.Context, uri string, opts WriterOpts) (io.WriteCloser, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
 		return nil, fmt.Errorf("exportdata: parse gs:// URI %q: %w", uri, err)
@@ -49,15 +54,23 @@ func openGCSWriter(ctx context.Context, uri string) (io.WriteCloser, error) {
 	// shard identifier BigQuery uses for the first shard.
 	object = strings.ReplaceAll(object, "*", "000000000000")
 
-	var opts []option.ClientOption
+	var clientOpts []option.ClientOption
 	if host := os.Getenv("STORAGE_EMULATOR_HOST"); host != "" {
-		opts = append(opts, option.WithEndpoint(host), option.WithoutAuthentication())
+		clientOpts = append(clientOpts, option.WithEndpoint(host), option.WithoutAuthentication())
 	}
-	client, err := storage.NewClient(ctx, opts...)
+	client, err := storage.NewClient(ctx, clientOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("exportdata: open GCS client: %w", err)
 	}
-	w := client.Bucket(bucket).Object(object).NewWriter(ctx)
+	obj := client.Bucket(bucket).Object(object)
+	if !opts.Overwrite {
+		// DoesNotExist makes the write atomic against concurrent
+		// creators and matches BigQuery's `overwrite = false` default
+		// (the statement must fail when the destination already exists
+		// instead of silently clobbering it).
+		obj = obj.If(storage.Conditions{DoesNotExist: true})
+	}
+	w := obj.NewWriter(ctx)
 	return &gcsObjectWriter{Writer: w, client: client}, nil
 }
 

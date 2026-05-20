@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 // Format is the EXPORT DATA output format selected by the `format` option.
@@ -34,6 +35,18 @@ func ParseFormat(s string) (Format, error) {
 	}
 }
 
+// CSVOptions carries the CSV-specific EXPORT DATA options. The zero value
+// is a sentinel: Header defaults to true at encode time when nil, matching
+// BigQuery, and FieldDelimiter defaults to ",".
+type CSVOptions struct {
+	// Header writes a header row of column names when true. nil leaves
+	// the default (true) in place; *false explicitly suppresses it.
+	Header *bool
+	// FieldDelimiter is the single-character cell separator. Empty
+	// defaults to ",". Strings longer than one rune are rejected.
+	FieldDelimiter string
+}
+
 // RowSource yields successive rows of an EXPORT DATA output. Each call must
 // return the next row's values in the order matching the column list passed
 // to EncodeRows. The bool result is true while more rows remain and false
@@ -43,20 +56,33 @@ type RowSource func() (values []any, hasMore bool, err error)
 // EncodeRows streams rows from src into w using the chosen format. CSV
 // writes a header row of column names; NDJSON writes one JSON object per
 // row keyed by column name.
-func EncodeRows(w io.Writer, format Format, columns []string, src RowSource) error {
+func EncodeRows(w io.Writer, format Format, columns []string, csvOpts CSVOptions, src RowSource) error {
 	switch format {
 	case FormatCSV:
-		return encodeCSV(w, columns, src)
+		return encodeCSV(w, columns, csvOpts, src)
 	case FormatNDJSON:
 		return encodeNDJSON(w, columns, src)
 	}
 	return fmt.Errorf("EXPORT DATA: unsupported format %q", format)
 }
 
-func encodeCSV(w io.Writer, columns []string, src RowSource) error {
+func encodeCSV(w io.Writer, columns []string, opts CSVOptions, src RowSource) error {
 	cw := csv.NewWriter(w)
-	if err := cw.Write(columns); err != nil {
-		return fmt.Errorf("EXPORT DATA: write CSV header: %w", err)
+	if delim := opts.FieldDelimiter; delim != "" {
+		r, size := utf8.DecodeRuneInString(delim)
+		if r == utf8.RuneError || size != len(delim) {
+			return fmt.Errorf("EXPORT DATA: field_delimiter must be a single rune, got %q", delim)
+		}
+		cw.Comma = r
+	}
+	writeHeader := true
+	if opts.Header != nil {
+		writeHeader = *opts.Header
+	}
+	if writeHeader {
+		if err := cw.Write(columns); err != nil {
+			return fmt.Errorf("EXPORT DATA: write CSV header: %w", err)
+		}
 	}
 	for {
 		values, hasMore, err := src()
