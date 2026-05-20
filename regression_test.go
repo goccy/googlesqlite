@@ -3,6 +3,7 @@ package googlesqlite_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 )
@@ -276,35 +277,46 @@ ORDER BY i
 // (C3 EXPORT DATA, G2 RANGE, G3 TVF, G4 WITH RECURSIVE, G1 ST_*)
 // =====================================================================
 
-// TestW_ExportData asserts that the driver treats
-// `EXPORT DATA OPTIONS(...) AS SELECT ...` as a query and returns the
-// inner SELECT's rows, leaving the actual export to consumer code.
+// TestW_ExportData asserts the driver treats
+// `EXPORT DATA OPTIONS(...) AS <query>` as a write: the inner query's
+// rows are materialized to the OPTIONS URI through the registered
+// URIWriter for the scheme, and no rows are returned to the caller. The
+// actual bytes landing at a gs:// destination (against fake-gcs-server)
+// are covered by TestExportDataStatementGCS; this test runs the same
+// shape through a per-test scoped URIWriter so the assertion stays at the
+// driver layer with no process-wide state.
 func TestW_ExportData(t *testing.T) {
-	t.Parallel()
+	scheme, capture := registerMemScheme(t)
 	db, err := sql.Open("googlesqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	rows, err := db.QueryContext(context.Background(), `
-EXPORT DATA OPTIONS(uri='gs://bucket/file.csv', format='CSV') AS
+	rows, err := db.QueryContext(context.Background(), fmt.Sprintf(`
+EXPORT DATA OPTIONS(uri='%s://regression/wexport.csv', format='CSV') AS
 SELECT 1 AS id, 'alice' AS name
-UNION ALL SELECT 2, 'bob'`)
+UNION ALL SELECT 2, 'bob'`, scheme))
 	if err != nil {
 		t.Fatalf("EXPORT DATA failed: %v", err)
 	}
 	defer rows.Close()
-	got := [][]any{}
-	for rows.Next() {
+	if rows.Next() {
 		var id int64
 		var name string
 		if err := rows.Scan(&id, &name); err != nil {
 			t.Fatal(err)
 		}
-		got = append(got, []any{id, name})
+		t.Fatalf("EXPORT DATA returned a row (%d, %q); want none", id, name)
 	}
-	if len(got) != 2 {
-		t.Fatalf("got %d rows want 2: %v", len(got), got)
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+	got, ok := capture.get("regression/wexport.csv")
+	if !ok {
+		t.Fatalf("URI writer did not capture the export (keys: %v)", capture.keys())
+	}
+	if want := "id,name\n1,alice\n2,bob\n"; string(got) != want {
+		t.Errorf("captured body = %q; want %q", got, want)
 	}
 }
 
