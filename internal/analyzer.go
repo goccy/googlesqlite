@@ -2335,22 +2335,34 @@ func (a *Analyzer) newCreateTableFunctionStmtAction(ctx context.Context, _ strin
 }
 
 // newExportDataStmtAction lowers an
-// `EXPORT DATA OPTIONS(uri = '...', format = '...') AS <query>` statement
-// into an ExportDataStmtAction. The OPTIONS clause is parsed off the
-// resolved AST (uri is required, format defaults to CSV — matching real
-// BigQuery), the inner query is formatted in the usual way, and the action
-// at execute time runs the inner query and streams its rows through the
-// format encoder into the writer registered for the URI's scheme (see
-// exportdata.RegisterURIWriter).
+// `EXPORT DATA OPTIONS(...) AS <query>` statement into an
+// ExportDataStmtAction. The OPTIONS clause is parsed off the resolved AST
+// (`uri` is required, `format` defaults to CSV — matching real BigQuery),
+// the inner query is formatted in the usual way, and the action at execute
+// time runs the inner query and streams its rows through the format
+// encoder, optional compression wrapper and the writer registered for the
+// URI's scheme.
 func (a *Analyzer) newExportDataStmtAction(ctx context.Context, query string, args []driver.NamedValue, node *googlesql.ResolvedExportDataStmt) (StmtAction, error) {
-	uri, formatStr, err := readExportDataOptions(ctx, m1(node.OptionList()))
-	if err != nil {
-		return nil, err
+	// WITH CONNECTION <name> selects a BigQuery Omni connection for
+	// `s3://` / `azure://...` destinations. The connection identity is a
+	// caller-supplied credential — silently dropping it would route
+	// the export to whatever the URIWriter for that scheme picks by
+	// default, which is almost never what the caller meant. Reject it
+	// here; if a caller needs connection-based routing they should
+	// register a scheme-specific URIWriter that resolves the connection
+	// out-of-band.
+	if conn, _ := node.Connection(); conn != nil {
+		return nil, fmt.Errorf("EXPORT DATA: WITH CONNECTION is not supported by googlesqlite (register a scheme-specific URIWriter to handle this destination)")
 	}
-	if uri == "" {
-		return nil, fmt.Errorf("EXPORT DATA: required option `uri` is missing")
-	}
-	format, err := exportdata.ParseFormat(formatStr)
+	// IsValueTable is NOT rejected up-front: real BigQuery accepts
+	// `EXPORT DATA AS (SELECT AS STRUCT ...)` and similar value-table
+	// queries (the OutputColumnList carries the struct's fields as
+	// columns, so the format encoders below render the same per-row
+	// shape BigQuery emits). Any encoder-specific gap that surfaces
+	// for an exotic value-table value (e.g. a top-level ARRAY in CSV)
+	// will be caught by that encoder, matching how BigQuery itself
+	// rejects nested data in CSV — see ParseFormat / encodeCSV.
+	resolved, err := readExportDataOptions(m1(node.OptionList()))
 	if err != nil {
 		return nil, err
 	}
@@ -2373,73 +2385,198 @@ func (a *Analyzer) newExportDataStmtAction(ctx context.Context, query string, ar
 	if err != nil {
 		return nil, err
 	}
-	return NewExportDataStmtAction(query, formattedQuery, params, queryArgs, outputColumns, uri, format), nil
+	return NewExportDataStmtAction(query, formattedQuery, params, queryArgs, outputColumns, resolved), nil
 }
 
-// readExportDataOptions extracts the string-valued options off a
-// ResolvedOption list. The option's value is read directly from its
-// resolved literal — no SQL re-format / unquote dance — so escapes and
-// quoting handled by the analyzer are honoured by construction.
+// ResolvedExportDataOptions is the parsed, type-checked, and
+// format-validated form of an EXPORT DATA OPTIONS(...) clause. The fields
+// flow into ExportDataStmtAction.
+type ResolvedExportDataOptions struct {
+	URI         string
+	Format      exportdata.Format
+	Compression exportdata.Compression
+	Overwrite   bool
+	CSV         exportdata.CSVOptions
+}
+
+// readExportDataOptions parses every option off the resolved OPTIONS
+// list, type-checks it against the option's expected value kind, and
+// validates format-specific combinations (the CSV-only options must not
+// be supplied with a non-CSV format, etc.). Unknown options are a hard
+// error rather than a silent drop — letting an unimplemented option pass
+// through silently would produce output the caller did not ask for with
+// no signal that the option had no effect.
 //
-// Every option in the list must be one the engine actually honours
-// (today, just `uri` and `format`) and must be a readable string literal.
-// Real BigQuery rejects unknown / unreadable OPTIONS at analysis time;
-// silently dropping them here would let a `header = true`,
-// `compression = 'GZIP'`, or `overwrite = true` pass through and produce
-// output the caller did not ask for, with no signal that the option had
-// no effect. The error names the offending option so it is obvious what
-// to remove or, when implemented later, what new behaviour was wired up.
-func readExportDataOptions(_ context.Context, opts []*googlesql.ResolvedOption) (uri string, format string, err error) {
+// Every value is read directly from its resolved literal (no SQL re-format
+// / unquote dance) so escapes and quoting handled by the analyzer are
+// honoured by construction; non-literal expressions (e.g.
+// `uri = CONCAT(...)`) are rejected with a message that names the option,
+// avoiding the misdiagnosis where a stripped value would later surface as
+// "required option `uri` is missing".
+func readExportDataOptions(opts []*googlesql.ResolvedOption) (*ResolvedExportDataOptions, error) {
+	out := &ResolvedExportDataOptions{}
+	var (
+		formatStr   string
+		compressStr string
+		headerSet   bool
+		headerValue bool
+		uriSet      bool
+	)
 	for _, opt := range opts {
 		name, _ := opt.Name()
 		key := strings.ToLower(name)
-		if key != "uri" && key != "format" {
-			return "", "", fmt.Errorf("EXPORT DATA: option %q is not supported by googlesqlite", name)
-		}
-		val, ok, verr := exportDataStringLiteralOption(opt)
-		if verr != nil {
-			return "", "", fmt.Errorf("EXPORT DATA: read option %q: %w", name, verr)
-		}
-		if !ok {
-			return "", "", fmt.Errorf("EXPORT DATA: option %q must be a string literal", name)
-		}
 		switch key {
-		case "uri":
-			uri = val
-		case "format":
-			format = val
+		case "uri", "format", "compression", "field_delimiter":
+			val, err := readExportDataStringOption(opt)
+			if err != nil {
+				return nil, err
+			}
+			switch key {
+			case "uri":
+				out.URI = val
+				uriSet = true
+			case "format":
+				formatStr = val
+			case "compression":
+				compressStr = val
+			case "field_delimiter":
+				out.CSV.FieldDelimiter = val
+			}
+		case "overwrite":
+			b, err := readExportDataBoolOption(opt)
+			if err != nil {
+				return nil, err
+			}
+			out.Overwrite = b
+		case "header":
+			b, err := readExportDataBoolOption(opt)
+			if err != nil {
+				return nil, err
+			}
+			headerSet = true
+			headerValue = b
+		case "use_avro_logical_types":
+			// `use_avro_logical_types` is a real BigQuery option but only
+			// meaningful for `format = 'AVRO'`, which the encoder does
+			// not implement. Type-check the value so misuse (e.g.
+			// `use_avro_logical_types = 'yes'`) is reported as an option
+			// type error rather than a vague "format AVRO is not
+			// supported" downstream, then surface the format gap.
+			if _, err := readExportDataBoolOption(opt); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("EXPORT DATA: option `use_avro_logical_types` is only valid with format = 'AVRO', which is not yet supported by googlesqlite")
+		case "spanner_options", "bigtable_options", "alloydb_options":
+			// Reverse-ETL destination options. Each is documented as a
+			// JSON-encoded STRING that configures the target connector
+			// (`spanner_options` → Cloud Spanner table/priority/tag,
+			// `bigtable_options` → Bigtable column families, etc.).
+			// Type-check the value as a string literal so a misuse like
+			// `spanner_options = 42` is reported as an option type error
+			// (naming the option) rather than collapsing into the
+			// downstream "format CLOUD_SPANNER not supported" message,
+			// then surface the destination gap with the option named.
+			if _, err := readExportDataStringOption(opt); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("EXPORT DATA: option `%s` targets a reverse-ETL destination (Cloud Spanner / Bigtable / AlloyDB) that is not supported by googlesqlite", key)
+		case "auto_create_column_families":
+			// Bigtable-only BOOL. Same shape as use_avro_logical_types:
+			// type-check first, then point at the missing destination.
+			if _, err := readExportDataBoolOption(opt); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("EXPORT DATA: option `auto_create_column_families` is only valid with format = 'CLOUD_BIGTABLE', which is not supported by googlesqlite")
+		default:
+			return nil, fmt.Errorf("EXPORT DATA: option %q is not supported by googlesqlite", name)
 		}
 	}
-	return uri, format, nil
+
+	if !uriSet || out.URI == "" {
+		return nil, fmt.Errorf("EXPORT DATA: required option `uri` is missing")
+	}
+
+	format, err := exportdata.ParseFormat(formatStr)
+	if err != nil {
+		return nil, err
+	}
+	out.Format = format
+
+	compression, err := exportdata.ParseCompression(compressStr, format)
+	if err != nil {
+		return nil, err
+	}
+	out.Compression = compression
+
+	// Format-compatibility checks for CSV-only options. Real BigQuery
+	// rejects `header` / `field_delimiter` outside of format = 'CSV';
+	// dropping them silently would mean the JSON output looked fine but
+	// the caller's intent was discarded.
+	if headerSet {
+		if format != exportdata.FormatCSV {
+			return nil, fmt.Errorf("EXPORT DATA: option `header` is only valid with format = 'CSV'")
+		}
+		out.CSV.Header = &headerValue
+	}
+	if out.CSV.FieldDelimiter != "" && format != exportdata.FormatCSV {
+		return nil, fmt.Errorf("EXPORT DATA: option `field_delimiter` is only valid with format = 'CSV'")
+	}
+	return out, nil
 }
 
-// exportDataStringLiteralOption reads a string value from a ResolvedOption
-// whose value is a ResolvedLiteral of STRING type. Returns (value, true,
-// nil) on success, (_, false, nil) when the option's value is not a string
-// literal (an expression, a non-string literal, ...), or an error if the
-// underlying value extraction fails.
-func exportDataStringLiteralOption(opt *googlesql.ResolvedOption) (string, bool, error) {
+// readExportDataStringOption reads a STRING-typed literal value off an
+// option. Non-literal or non-string values are rejected with an error
+// naming the option, so the caller does not silently lose a value they
+// supplied (and is not misled into "required option missing" downstream).
+func readExportDataStringOption(opt *googlesql.ResolvedOption) (string, error) {
+	name, _ := opt.Name()
 	expr, _ := opt.Value()
 	lit, ok := expr.(*googlesql.ResolvedLiteral)
 	if !ok {
-		return "", false, nil
+		return "", fmt.Errorf("EXPORT DATA: option %q must be a string literal", name)
 	}
 	v, err := lit.Value()
 	if err != nil {
-		return "", false, err
+		return "", fmt.Errorf("EXPORT DATA: read option %q: %w", name, err)
 	}
 	kind, err := v.TypeKind()
 	if err != nil {
-		return "", false, err
+		return "", fmt.Errorf("EXPORT DATA: read option %q: %w", name, err)
 	}
 	if kind != googlesql.TypeKindTypeString {
-		return "", false, nil
+		return "", fmt.Errorf("EXPORT DATA: option %q must be a string literal", name)
 	}
 	s, err := v.StringValue()
 	if err != nil {
-		return "", false, err
+		return "", fmt.Errorf("EXPORT DATA: read option %q: %w", name, err)
 	}
-	return s, true, nil
+	return s, nil
+}
+
+// readExportDataBoolOption reads a BOOL-typed literal value off an option.
+func readExportDataBoolOption(opt *googlesql.ResolvedOption) (bool, error) {
+	name, _ := opt.Name()
+	expr, _ := opt.Value()
+	lit, ok := expr.(*googlesql.ResolvedLiteral)
+	if !ok {
+		return false, fmt.Errorf("EXPORT DATA: option %q must be a boolean literal", name)
+	}
+	v, err := lit.Value()
+	if err != nil {
+		return false, fmt.Errorf("EXPORT DATA: read option %q: %w", name, err)
+	}
+	kind, err := v.TypeKind()
+	if err != nil {
+		return false, fmt.Errorf("EXPORT DATA: read option %q: %w", name, err)
+	}
+	if kind != googlesql.TypeKindTypeBool {
+		return false, fmt.Errorf("EXPORT DATA: option %q must be a boolean literal", name)
+	}
+	b, err := v.BoolValue()
+	if err != nil {
+		return false, fmt.Errorf("EXPORT DATA: read option %q: %w", name, err)
+	}
+	return b, nil
 }
 
 func (a *Analyzer) newBeginStmtAction(ctx context.Context, query string, args []driver.NamedValue, node googlesql.ResolvedNode) (*BeginStmtAction, error) {

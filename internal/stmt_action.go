@@ -484,23 +484,24 @@ func (a *QueryStmtAction) Cleanup(ctx context.Context, conn *Conn) error {
 }
 
 // ExportDataStmtAction materializes the rows of an
-// `EXPORT DATA OPTIONS(uri = '...', format = '...') AS <query>` statement
-// to the destination URI. The inner query is run through the standard
-// QueryStmtAction code path; the rows it produces are streamed through the
-// format encoder into a writer obtained from the URI's registered scheme
-// (see exportdata.RegisterURIWriter — `gs://` is registered by default).
+// `EXPORT DATA OPTIONS(...) AS <query>` statement to the destination URI.
+// The inner query is run through the standard QueryStmtAction code path;
+// the rows it produces are streamed through the format encoder, an
+// optional compression wrapper and the writer obtained from the URI's
+// registered scheme (see exportdata.RegisterURIWriter — `gs://` is
+// registered by default).
 //
-// EXPORT DATA returns no rows to the caller — neither Exec nor Query yields
-// any — so the result is always an empty driver.Result / *Rows after the
-// destination object has been written. Real BigQuery has the same shape.
+// EXPORT DATA returns no rows to the caller — neither Exec nor Query
+// yields any — so the result is always an empty driver.Result / *Rows
+// after the destination object has been written. Real BigQuery has the
+// same shape.
 type ExportDataStmtAction struct {
 	query          string
 	params         []*googlesql.ResolvedParameter
 	args           []any
 	formattedQuery string
 	outputColumns  []*ColumnSpec
-	uri            string
-	format         exportdata.Format
+	opts           *ResolvedExportDataOptions
 }
 
 // NewExportDataStmtAction constructs the action from a parsed inner query
@@ -512,8 +513,7 @@ func NewExportDataStmtAction(
 	params []*googlesql.ResolvedParameter,
 	args []any,
 	outputColumns []*ColumnSpec,
-	uri string,
-	format exportdata.Format,
+	opts *ResolvedExportDataOptions,
 ) *ExportDataStmtAction {
 	return &ExportDataStmtAction{
 		query:          query,
@@ -521,8 +521,7 @@ func NewExportDataStmtAction(
 		args:           args,
 		formattedQuery: formattedQuery,
 		outputColumns:  outputColumns,
-		uri:            uri,
-		format:         format,
+		opts:           opts,
 	}
 }
 
@@ -556,17 +555,19 @@ func (a *ExportDataStmtAction) Args() []any { return nil }
 
 func (a *ExportDataStmtAction) Cleanup(ctx context.Context, conn *Conn) error { return nil }
 
-// export resolves the URI's scheme writer, opens the destination, runs the
-// inner query, and streams each row through the format encoder. The writer
-// is closed before the function returns — that is where the bytes commit
-// for stores like GCS.
+// export resolves the URI's scheme writer, opens the destination
+// (honouring `overwrite`), runs the inner query, wraps the writer in the
+// requested compression codec, and streams each row through the format
+// encoder. Every wrapper is closed in reverse order before the function
+// returns — that is where the bytes commit for stores like GCS, and where
+// the compression trailer is flushed.
 func (a *ExportDataStmtAction) export(ctx context.Context, conn *Conn) error {
-	u, err := url.Parse(a.uri)
+	u, err := url.Parse(a.opts.URI)
 	if err != nil {
-		return fmt.Errorf("EXPORT DATA: invalid uri %q: %w", a.uri, err)
+		return fmt.Errorf("EXPORT DATA: invalid uri %q: %w", a.opts.URI, err)
 	}
 	if u.Scheme == "" {
-		return fmt.Errorf("EXPORT DATA: uri %q has no scheme", a.uri)
+		return fmt.Errorf("EXPORT DATA: uri %q has no scheme", a.opts.URI)
 	}
 	writer := exportdata.LookupURIWriter(u.Scheme)
 	if writer == nil {
@@ -594,13 +595,20 @@ func (a *ExportDataStmtAction) export(ctx context.Context, conn *Conn) error {
 		}
 	}
 
-	wc, err := writer(ctx, a.uri)
+	dest, err := writer(ctx, a.opts.URI, exportdata.WriterOpts{Overwrite: a.opts.Overwrite})
 	if err != nil {
-		return fmt.Errorf("EXPORT DATA: open destination %q: %w", a.uri, err)
+		return fmt.Errorf("EXPORT DATA: open destination %q: %w", a.opts.URI, err)
 	}
-	encodeErr := exportdata.EncodeRows(wc, a.format, columns, sqlRowsSource(rows, len(columns)))
-	if closeErr := wc.Close(); closeErr != nil && encodeErr == nil {
-		encodeErr = fmt.Errorf("EXPORT DATA: close destination %q: %w", a.uri, closeErr)
+	// Wrap with the compression codec; both Closers must run so the
+	// compression trailer flushes AND the underlying object commits.
+	encStream, err := exportdata.WrapCompressor(dest, a.opts.Compression)
+	if err != nil {
+		_ = dest.Close()
+		return err
+	}
+	encodeErr := exportdata.EncodeRows(encStream, a.opts.Format, columns, a.opts.CSV, sqlRowsSource(rows, len(columns)))
+	if closeErr := encStream.Close(); closeErr != nil && encodeErr == nil {
+		encodeErr = fmt.Errorf("EXPORT DATA: close destination %q: %w", a.opts.URI, closeErr)
 	}
 	return encodeErr
 }

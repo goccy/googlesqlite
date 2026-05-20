@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 	// captured bytes register their own scheme via registerMemScheme(t)
 	// (see export_data_test.go) — that helper picks a per-test scheme so
 	// concurrent tests do not contend on a shared map.
-	googlesqlite.RegisterExportURIWriter("mem", func(_ context.Context, _ string) (io.WriteCloser, error) {
+	googlesqlite.RegisterExportURIWriter("mem", func(_ context.Context, _ string, _ googlesqlite.ExportWriterOpts) (io.WriteCloser, error) {
 		return nopWriteCloser{}, nil
 	})
 
