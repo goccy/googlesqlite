@@ -2376,27 +2376,35 @@ func (a *Analyzer) newExportDataStmtAction(ctx context.Context, query string, ar
 	return NewExportDataStmtAction(query, formattedQuery, params, queryArgs, outputColumns, uri, format), nil
 }
 
-// readExportDataOptions extracts the string-valued options off a ResolvedOption
-// list. The option's value is read directly from its resolved literal — no
-// SQL re-format / unquote dance — so escapes and quoting handled by the
-// analyzer are honoured by construction. Unknown options are tolerated for
-// forward compatibility (real BigQuery accepts options like `overwrite`,
-// `header`, `compression` etc. that this engine has not implemented yet, and
-// silently ignoring them on parse keeps callers' SQL portable until they
-// are added).
+// readExportDataOptions extracts the string-valued options off a
+// ResolvedOption list. The option's value is read directly from its
+// resolved literal — no SQL re-format / unquote dance — so escapes and
+// quoting handled by the analyzer are honoured by construction.
+//
+// Unknown options are tolerated for forward compatibility: real BigQuery
+// accepts `header`, `overwrite`, `compression` etc. that this engine has
+// not implemented yet, and silently ignoring them on parse keeps callers'
+// SQL portable until they are added. Options we DO consume (`uri`,
+// `format`) must be readable string literals; an unreadable known option
+// is a hard error rather than a silent drop — otherwise a stray
+// non-literal `uri = CONCAT('gs://', 'b')` would surface as the wrong
+// downstream error ("required option `uri` is missing") and mislead the
+// caller about what is actually wrong.
 func readExportDataOptions(_ context.Context, opts []*googlesql.ResolvedOption) (uri string, format string, err error) {
 	for _, opt := range opts {
 		name, _ := opt.Name()
-		val, ok, verr := exportDataStringOption(opt)
+		key := strings.ToLower(name)
+		if key != "uri" && key != "format" {
+			continue
+		}
+		val, ok, verr := exportDataStringLiteralOption(opt)
 		if verr != nil {
 			return "", "", fmt.Errorf("EXPORT DATA: read option %q: %w", name, verr)
 		}
 		if !ok {
-			// Non-literal or non-string options are not relevant to
-			// the two we currently consume; skip silently.
-			continue
+			return "", "", fmt.Errorf("EXPORT DATA: option %q must be a string literal", name)
 		}
-		switch strings.ToLower(name) {
+		switch key {
 		case "uri":
 			uri = val
 		case "format":
@@ -2406,11 +2414,12 @@ func readExportDataOptions(_ context.Context, opts []*googlesql.ResolvedOption) 
 	return uri, format, nil
 }
 
-// exportDataStringOption reads a string value from a ResolvedOption whose
-// value is a ResolvedLiteral. Returns (value, true, nil) on success,
-// (_, false, nil) for non-literal / non-string options, or an error if the
+// exportDataStringLiteralOption reads a string value from a ResolvedOption
+// whose value is a ResolvedLiteral of STRING type. Returns (value, true,
+// nil) on success, (_, false, nil) when the option's value is not a string
+// literal (an expression, a non-string literal, ...), or an error if the
 // underlying value extraction fails.
-func exportDataStringOption(opt *googlesql.ResolvedOption) (string, bool, error) {
+func exportDataStringLiteralOption(opt *googlesql.ResolvedOption) (string, bool, error) {
 	expr, _ := opt.Value()
 	lit, ok := expr.(*googlesql.ResolvedLiteral)
 	if !ok {

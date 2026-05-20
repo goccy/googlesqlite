@@ -104,6 +104,27 @@ func TestExportDataErrorPaths(t *testing.T) {
 			t.Fatalf("error %q does not name the missing scheme", err)
 		}
 	})
+
+	t.Run("known option as non-literal expression is rejected", func(t *testing.T) {
+		// Concatenating the URI is a perfectly valid SQL expression but
+		// the option-reader only consumes string LITERALS today (the
+		// analyzer does not constant-fold OPTIONS expressions for us).
+		// The failure must call out the offending option by name, not
+		// drop the value and surface as "required option `uri` is
+		// missing" — that would mislead the caller about what is wrong.
+		_, err := conn.QueryContext(ctx,
+			`EXPORT DATA OPTIONS(uri = CONCAT('mem://', 'x/y'), format = 'CSV')
+             AS SELECT 1 AS id`)
+		if err == nil {
+			t.Fatal("EXPORT DATA with non-literal `uri` should fail")
+		}
+		if !containsFold(err.Error(), `"uri"`) && !containsFold(err.Error(), "`uri`") && !containsFold(err.Error(), " uri ") {
+			t.Fatalf("error %q does not pin the offending `uri` option", err)
+		}
+		if containsFold(err.Error(), "missing") {
+			t.Fatalf("error %q wrongly reports `uri` as missing when it was supplied non-literal", err)
+		}
+	})
 }
 
 func containsFold(haystack, needle string) bool {
