@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"time"
 
-	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 )
 
 type IntervalValue struct {
-	*bigquery.IntervalValue
+	*intervalvalue.IntervalValue
 }
 
 func (iv *IntervalValue) Add(v Value) (Value, error) {

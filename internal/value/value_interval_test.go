@@ -3,7 +3,7 @@ package value_test
 import (
 	"testing"
 
-	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -13,7 +13,7 @@ import (
 func TestIntervalValue(t *testing.T) {
 	t.Parallel()
 
-	iv := &value.IntervalValue{IntervalValue: &bigquery.IntervalValue{Months: 2, Days: 3}}
+	iv := &value.IntervalValue{IntervalValue: &intervalvalue.IntervalValue{Months: 2, Days: 3}}
 
 	t.Run("arithmetic and comparison unsupported", func(t *testing.T) {
 		if _, err := iv.Add(iv); err == nil {
@@ -87,7 +87,7 @@ func TestIntervalValue(t *testing.T) {
 
 	t.Run("ToString negative months fix-up", func(t *testing.T) {
 		// Years==0 && Months<0 triggers the leading-minus branch.
-		neg := &value.IntervalValue{IntervalValue: &bigquery.IntervalValue{Months: -1}}
+		neg := &value.IntervalValue{IntervalValue: &intervalvalue.IntervalValue{Months: -1}}
 		s, _ := neg.ToString()
 		if s == "" || s[0] != '-' {
 			t.Fatalf("ToString negative: %q", s)

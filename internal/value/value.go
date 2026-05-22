@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 )
 
 type Value interface {
@@ -130,7 +130,7 @@ func parseInterval(v string) (*IntervalValue, error) {
 		return nil, fmt.Errorf("interval value is empty")
 	}
 	isNegative := v[0] == '-'
-	interval, err := bigquery.ParseInterval(v)
+	interval, err := intervalvalue.ParseInterval(v)
 	if err != nil {
 		return nil, err
 	}

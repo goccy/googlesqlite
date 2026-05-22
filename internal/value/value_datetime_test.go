@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -16,7 +16,7 @@ func TestDatetimeValue(t *testing.T) {
 	base := value.DatetimeValue(time.Date(2020, 1, 1, 12, 30, 45, 0, time.UTC))
 
 	t.Run("Add IntervalValue", func(t *testing.T) {
-		iv := &value.IntervalValue{IntervalValue: &bigquery.IntervalValue{Hours: 1}}
+		iv := &value.IntervalValue{IntervalValue: &intervalvalue.IntervalValue{Hours: 1}}
 		got, err := base.Add(iv)
 		if err != nil {
 			t.Fatal(err)
@@ -33,7 +33,7 @@ func TestDatetimeValue(t *testing.T) {
 	})
 
 	t.Run("Sub IntervalValue", func(t *testing.T) {
-		iv := &value.IntervalValue{IntervalValue: &bigquery.IntervalValue{Hours: 1}}
+		iv := &value.IntervalValue{IntervalValue: &intervalvalue.IntervalValue{Hours: 1}}
 		got, err := base.Sub(iv)
 		if err != nil {
 			t.Fatal(err)

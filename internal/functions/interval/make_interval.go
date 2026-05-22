@@ -1,8 +1,8 @@
 package interval
 
 import (
-	"cloud.google.com/go/bigquery"
 	"github.com/goccy/googlesqlite/internal/functions/helper"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -32,7 +32,7 @@ func MAKE_INTERVAL(year, month, day, hour, minute, second int64) (value.Value, e
 		return nil, err
 	}
 	return &value.IntervalValue{
-		IntervalValue: &bigquery.IntervalValue{
+		IntervalValue: &intervalvalue.IntervalValue{
 			Years:   year32,
 			Months:  month32,
 			Days:    day32,

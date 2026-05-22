@@ -3,14 +3,14 @@ package interval
 import (
 	"testing"
 
-	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
 func mkIV(years, months, days, hours, minutes, seconds, subSecondNanos int32) *value.IntervalValue {
 	return &value.IntervalValue{
-		IntervalValue: &bigquery.IntervalValue{
+		IntervalValue: &intervalvalue.IntervalValue{
 			Years: years, Months: months, Days: days,
 			Hours: hours, Minutes: minutes, Seconds: seconds,
 			SubSecondNanos: subSecondNanos,
