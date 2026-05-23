@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"os"
 	"runtime/debug"
@@ -346,7 +347,70 @@ type Conn struct {
 	systemVars     map[string]string
 	scriptVars     map[string]string
 	materializeCTE bool
+
+	// dead is set when an operation on this Conn observes that the
+	// inner *sql.Conn has been closed (sql.ErrConnDone). database/sql
+	// pools Conn values across requests; without an explicit signal it
+	// happily hands a Conn whose inner handle has been closed by a
+	// cancelled tx's discardConn rollback to the next caller, which
+	// then surfaces a confusing "sql: connection is already closed"
+	// 500 on every subsequent request (see IsValid and the
+	// translateConnDone defers below). The dead flag is read by IsValid
+	// and written from any goroutine that drove the failing operation;
+	// concurrent writes are harmless because they all store the same
+	// value (true).
+	dead atomic.Bool
 }
+
+// IsValid implements database/sql/driver.Validator. database/sql calls
+// it on every pool fetch before handing the Conn to the next caller —
+// returning false makes the pool discard us and pull a fresh one
+// instead of letting us surface a confusing "sql: connection is
+// already closed" error inside the next request. The flag is set by
+// translateConnDone whenever an earlier operation observed the inner
+// handle had been closed (typically by a request whose context was
+// cancelled mid-statement; database/sql's tx watcher then ran
+// Rollback(discardConn=true) on the inner connection).
+func (c *Conn) IsValid() bool {
+	return !c.dead.Load()
+}
+
+// translateConnDone is the single point that converts the inner
+// "connection is closed" sentinel into the driver-level "drop me"
+// sentinel.
+//
+// The inner *sql.Conn we hold can become done while still appearing
+// healthy to database/sql's outer pool: a cancelled request triggers
+// the inner-tx watcher's Rollback(discardConn=true), which closes the
+// inner conn, but the outer pool doesn't know because the failure
+// hasn't surfaced yet. The first operation on the poisoned Conn then
+// fails with sql.ErrConnDone — which to a caller looks like a server
+// error, not a transient retryable condition. Mapping it to
+// driver.ErrBadConn tells database/sql to drop the Conn from the pool
+// and retry on a fresh one (when the call has not yet sent data),
+// hiding the transient from the caller; setting dead=true means the
+// next IsValid call returns false so the Conn never even gets that
+// far again.
+//
+// Wrapped errors are inspected because ExecContext / QueryContext may
+// fold cleanup-time errors into an internal.ErrorGroup; the group
+// implements Unwrap() []error so errors.Is reaches the sentinel.
+func (c *Conn) translateConnDone(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, sql.ErrConnDone) {
+		c.dead.Store(true)
+		return driver.ErrBadConn
+	}
+	return err
+}
+
+// Static contract check: database/sql's pool only calls IsValid via a
+// type assertion against driver.Validator. Failing this assertion at
+// compile time keeps a future refactor that drops the method visible
+// instead of silently regressing the #478 fix.
+var _ driver.Validator = (*Conn)(nil)
 
 func newConn(db *sql.DB, catalog *internal.Catalog) (*Conn, error) {
 	conn, err := db.Conn(context.Background())
@@ -419,6 +483,7 @@ func recoverPanicAsError(e *error) {
 }
 
 func (c *Conn) PrepareContext(ctx context.Context, query string) (s driver.Stmt, e error) {
+	defer func() { e = c.translateConnDone(e) }()
 	defer recoverPanicAsError(&e)
 	conn := internal.NewConnWithOptions(c.conn, c.tx, c.systemVars, c.scriptVars, c.materializeCTE)
 	actionFuncs, err := c.analyzer.Analyze(ctx, conn, query, nil)
@@ -441,6 +506,7 @@ func (c *Conn) PrepareContext(ctx context.Context, query string) (s driver.Stmt,
 }
 
 func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (r driver.Result, e error) {
+	defer func() { e = c.translateConnDone(e) }()
 	defer recoverPanicAsError(&e)
 	conn := internal.NewConnWithOptions(c.conn, c.tx, c.systemVars, c.scriptVars, c.materializeCTE)
 	actionFuncs, err := c.analyzer.Analyze(ctx, conn, query, args)
@@ -476,6 +542,7 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 }
 
 func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (r driver.Rows, e error) {
+	defer func() { e = c.translateConnDone(e) }()
 	defer recoverPanicAsError(&e)
 	conn := internal.NewConnWithOptions(c.conn, c.tx, c.systemVars, c.scriptVars, c.materializeCTE)
 	actionFuncs, err := c.analyzer.Analyze(ctx, conn, query, args)
@@ -514,7 +581,8 @@ func (c *Conn) Close() error {
 	return c.conn.Close()
 }
 
-func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (t driver.Tx, e error) {
+	defer func() { e = c.translateConnDone(e) }()
 	tx, err := c.conn.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.IsolationLevel(opts.Isolation),
 		ReadOnly:  opts.ReadOnly,
@@ -529,7 +597,8 @@ func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 	}, nil
 }
 
-func (c *Conn) Begin() (driver.Tx, error) {
+func (c *Conn) Begin() (t driver.Tx, e error) {
+	defer func() { e = c.translateConnDone(e) }()
 	tx, err := c.conn.BeginTx(context.Background(), nil)
 	if err != nil {
 		return nil, err

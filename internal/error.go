@@ -29,3 +29,12 @@ func (eg *ErrorGroup) Error() string {
 	}
 	return ""
 }
+
+// Unwrap exposes the wrapped errors so errors.Is / errors.As can
+// traverse them. Without this an ErrorGroup that happens to contain a
+// sentinel like sql.ErrConnDone or driver.ErrBadConn is opaque to
+// callers that use errors.Is for control flow — notably the driver's
+// dead-connection translation in driver.go.
+func (eg *ErrorGroup) Unwrap() []error {
+	return eg.errs
+}
