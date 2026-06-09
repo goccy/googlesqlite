@@ -2601,7 +2601,9 @@ func (n *RecursiveRefScanNode) FormatSQL(ctx context.Context) (string, error) {
 	if name == "" {
 		return "", fmt.Errorf("recursive ref scan rendered outside a recursive WITH entry")
 	}
-	return name, nil
+	// Quote to match the WITH definition (WithEntryNode) so names with
+	// hyphens and other non-bare-identifier characters resolve.
+	return fmt.Sprintf("`%s`", name), nil
 }
 
 // findRecursiveRefScanCols walks a scan tree looking for the column
@@ -2808,9 +2810,9 @@ func (n *WithEntryNode) FormatSQL(ctx context.Context) (string, error) {
 		for _, c := range canonical {
 			cols = append(cols, fmt.Sprintf("`%s`", uniqueColumnName(ctx, c)))
 		}
-		return fmt.Sprintf("%s(%s) AS%s ( %s )", queryName, strings.Join(cols, ","), hint, subquery), nil
+		return fmt.Sprintf("`%s`(%s) AS%s ( %s )", queryName, strings.Join(cols, ","), hint, subquery), nil
 	}
-	return fmt.Sprintf("%s AS%s ( %s )", queryName, hint, subquery), nil
+	return fmt.Sprintf("`%s` AS%s ( %s )", queryName, hint, subquery), nil
 }
 
 // cteMaterializeHint returns either " MATERIALIZED" (with a leading

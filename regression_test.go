@@ -1425,6 +1425,39 @@ SELECT n FROM t ORDER BY n`)
 	}
 }
 
+// TestRegression_CTENameWithHyphen: a backtick-quoted CTE name containing a
+// hyphen (valid in BigQuery) was emitted unquoted by WithEntryNode, producing
+// `near "-": syntax error`. Covers plain and RECURSIVE CTEs. goccy/googlesqlite#17
+func TestRegression_CTENameWithHyphen(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	var x int64
+	if err := db.QueryRowContext(ctx,
+		"WITH `with-hyphen` AS (SELECT 1 AS x) SELECT x FROM `with-hyphen`",
+	).Scan(&x); err != nil {
+		t.Fatalf("non-recursive hyphenated CTE failed: %v", err)
+	}
+	if x != 1 {
+		t.Errorf("non-recursive: got %d want 1", x)
+	}
+
+	var total int64
+	if err := db.QueryRowContext(ctx,
+		"WITH RECURSIVE `rec-hyphen` AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM `rec-hyphen` WHERE n < 3) SELECT SUM(n) AS total FROM `rec-hyphen`",
+	).Scan(&total); err != nil {
+		t.Fatalf("recursive hyphenated CTE failed: %v", err)
+	}
+	if total != 6 {
+		t.Errorf("recursive: got %d want 6", total)
+	}
+}
+
 // TestRegression_DDLPartitionByAccepted: bqe#152
 func TestRegression_DDLPartitionByAccepted(t *testing.T) {
 	t.Parallel()
