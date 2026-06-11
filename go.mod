@@ -11,7 +11,7 @@ require (
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
 	github.com/fatih/color v1.19.0
 	github.com/fsouza/fake-gcs-server v1.54.0
-	github.com/goccy/go-googlesql v0.2.2
+	github.com/goccy/go-googlesql v0.3.0
 	github.com/goccy/go-json v0.10.6
 	github.com/goccy/go-yaml v1.11.0
 	github.com/golang/geo v0.0.0-20260505155700-1c5af9662e82
@@ -54,6 +54,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
+	github.com/goccy/googlesqlwasm2go v0.1.0 // indirect
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/google/renameio/v2 v2.0.0 // indirect
@@ -71,7 +72,6 @@ require (
 	github.com/pkg/xattr v0.4.12 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
-	github.com/tetratelabs/wazero v1.11.0 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

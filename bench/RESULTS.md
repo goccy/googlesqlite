@@ -9,8 +9,9 @@ compare a fresh run against a saved baseline of this file.
 
 ## Runtime initialisation
 
-One-time wazero AOT compilation of the embedded GoogleSQL
-wasm (cold cache): **4,343,884,208 ns** (4.34 s).
+One-time warm-up of the embedded GoogleSQL wasm runtime
+(wasm2go-transpiled, AOT-compiled into Go at generation
+time — no JIT step at startup): **328,774,375 ns** (0.33 s).
 
 This cost is paid once per process. The runtime is warmed
 before the corpus runs, so it is NOT included in the
@@ -20,46 +21,46 @@ per-query numbers below.
 
 | Query | ns/op | B/op | allocs/op |
 |-------|-------|------|-----------|
-| array_agg_window | 30,674,321 | 1,565,693 | 56,002 |
-| lag_lead | 211,569,666 | 5,942,088 | 267,496 |
-| rank_dense_rank | 210,941,125 | 5,857,432 | 256,015 |
-| row_number_partition | 129,596,042 | 3,505,172 | 155,011 |
-| sum_running_total | 337,477,709 | 9,439,288 | 425,759 |
+| array_agg_window | 2,180,118 | 954,588 | 32,601 |
+| lag_lead | 8,855,898 | 1,431,074 | 92,843 |
+| rank_dense_rank | 7,727,864 | 1,337,377 | 81,012 |
+| row_number_partition | 4,998,529 | 793,137 | 50,010 |
+| sum_running_total | 12,799,940 | 2,207,235 | 145,756 |
 
 ## Aggregate
 
 | Query | ns/op | B/op | allocs/op |
 |-------|-------|------|-----------|
-| group_by_partition | 3,011,537 | 677,720 | 32,269 |
-| sum_1k | 1,948,296 | 898,640 | 45,684 |
+| group_by_partition | 2,006,992 | 817,669 | 34,969 |
+| sum_1k | 2,233,878 | 1,158,532 | 51,539 |
 
 ## Scalar
 
 | Query | ns/op | B/op | allocs/op |
 |-------|-------|------|-----------|
-| concat_strings | 47,102 | 3,664 | 122 |
-| select_constant | 44,669 | 2,208 | 76 |
-| upper_string | 46,400 | 3,128 | 105 |
+| concat_strings | 4,719 | 2,760 | 87 |
+| select_constant | 2,537 | 1,296 | 41 |
+| upper_string | 4,123 | 2,216 | 70 |
 
 ## Mixed
 
 | Query | ns/op | B/op | allocs/op |
 |-------|-------|------|-----------|
-| cte_session_funnel | 31,047,304 | 16,881,261 | 590,810 |
-| filtered_lookup | 29,707,899 | 9,077,066 | 274,925 |
-| information_schema_columns | 2,292,618 | 104,960 | 3,744 |
-| json_extract_pipeline | 768,479,209 | 7,622,168 | 232,191 |
-| priced_orders_report | 4,621,382 | 3,561,671 | 95,033 |
-| struct_array_unnest | 39,979,764 | 45,587,726 | 510,205 |
-| wildcard_table_scan | 1,969,200 | 732,308 | 25,973 |
+| cte_session_funnel | 28,763,357 | 18,207,522 | 620,271 |
+| filtered_lookup | 12,815,065 | 8,715,852 | 260,929 |
+| information_schema_columns | 111,229 | 57,936 | 1,924 |
+| json_extract_pipeline | 9,633,854 | 6,777,939 | 198,195 |
+| priced_orders_report | 4,555,531 | 3,561,507 | 95,029 |
+| struct_array_unnest | 31,445,476 | 45,310,771 | 500,427 |
+| wildcard_table_scan | 1,933,625 | 857,560 | 28,727 |
 
 ## Tpch_like
 
 | Query | ns/op | B/op | allocs/op |
 |-------|-------|------|-----------|
-| q14_promo_revenue | 125,140,812 | 63,082,828 | 2,585,505 |
-| q1_lineitem_pricing_summary | 57,165,812 | 27,303,854 | 1,264,737 |
-| q3_shipping_priority | 32,174,879,084 | 23,687,822,488 | 667,107,996 |
-| q5_local_supplier | 2,525,881,208 | 1,224,183,936 | 47,020,466 |
-| q6_forecast_revenue | 17,817,119 | 11,536,675 | 355,095 |
+| q14_promo_revenue | 125,039,666 | 63,122,772 | 2,586,403 |
+| q1_lineitem_pricing_summary | 59,344,083 | 30,469,280 | 1,335,724 |
+| q3_shipping_priority | 32,651,585,916 | 23,687,854,456 | 667,105,812 |
+| q5_local_supplier | 2,536,403,500 | 1,224,174,160 | 47,020,145 |
+| q6_forecast_revenue | 18,138,157 | 11,563,444 | 355,676 |
 

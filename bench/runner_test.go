@@ -21,40 +21,29 @@ import (
 	"testing"
 	"time"
 
-	"github.com/goccy/googlesqlite"
+	// Register the googlesqlite database/sql driver.
+	_ "github.com/goccy/googlesqlite"
 )
 
 // driverName is the database/sql driver name under benchmark.
 const driverName = "googlesqlite"
 
-// TestMain runs the benchmark in wazero Compiler mode so the numbers
-// reflect steady-state performance rather than the interpreter.
+// TestMain warms the embedded GoogleSQL wasm runtime once before
+// m.Run so the one-time initialisation cost lands on the warm-up
+// rather than whichever corpus query happens to run first. The
+// figure is emitted as a `wasm-compile-ns` line that
+// render_results.go reports separately. The corpus benchmarks
+// therefore all run against an already-initialised runtime.
 //
-// The embedded GoogleSQL wasm is AOT-compiled once, lazily, on the
-// first connection. To keep that one-time compilation cost out of
-// whichever corpus query runs first, TestMain warms the runtime
-// before m.Run and measures the compile cost on its own — the figure
-// is emitted as a `wasm-compile-ns` line that render_results.go
-// reports separately. The corpus benchmarks below therefore all run
-// against an already-compiled runtime.
+// The runtime is the wasm2go-transpiled module — AOT-compiled into
+// Go at generation time — so there is no runtime compilation mode
+// to pick and no on-disk cache to configure. The `wasm-compile-ns`
+// figure measures init + first-query latency only.
 func TestMain(m *testing.M) {
 	os.Exit(runBenchmarks(m))
 }
 
 func runBenchmarks(m *testing.M) int {
-	if os.Getenv(googlesqlite.EnvWasmCompilationMode) == "" {
-		// A fresh cache directory per run makes the warm-up below a
-		// genuine cold AOT compile rather than a precompiled-module
-		// load, so the reported compile cost is consistent.
-		cacheDir, err := os.MkdirTemp("", "googlesqlite-bench-wasm-")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "bench: temp cache dir: %v\n", err)
-			return 1
-		}
-		defer os.RemoveAll(cacheDir)
-		os.Setenv(googlesqlite.EnvWasmCompilationMode, string(googlesqlite.WasmCompilationModeCompiler))
-		os.Setenv(googlesqlite.EnvWasmCacheDir, cacheDir)
-	}
 	fmt.Printf("wasm-compile-ns %d\n", warmWasmRuntime())
 	return m.Run()
 }

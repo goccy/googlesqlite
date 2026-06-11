@@ -68,7 +68,7 @@ func main() {
 }
 
 // parseCompileLine recognises the `wasm-compile-ns <n>` line emitted by
-// the benchmark's TestMain — the one-time wazero AOT compilation cost.
+// the benchmark's TestMain — the one-time wasm runtime warm-up cost.
 func parseCompileLine(line string) (int64, bool) {
 	const prefix = "wasm-compile-ns "
 	if !strings.HasPrefix(line, prefix) {
@@ -158,8 +158,9 @@ func render(w *os.File, matrix map[string]map[string]entry, compileNS int64) {
 	if compileNS >= 0 {
 		fmt.Fprintln(w, "## Runtime initialisation")
 		fmt.Fprintln(w)
-		fmt.Fprintf(w, "One-time wazero AOT compilation of the embedded GoogleSQL\n")
-		fmt.Fprintf(w, "wasm (cold cache): **%s ns** (%.2f s).\n",
+		fmt.Fprintf(w, "One-time warm-up of the embedded GoogleSQL wasm runtime\n")
+		fmt.Fprintf(w, "(wasm2go-transpiled, AOT-compiled into Go at generation\n")
+		fmt.Fprintf(w, "time — no JIT step at startup): **%s ns** (%.2f s).\n",
 			commaSeparate(strconv.FormatInt(compileNS, 10)),
 			float64(compileNS)/1e9)
 		fmt.Fprintln(w)
