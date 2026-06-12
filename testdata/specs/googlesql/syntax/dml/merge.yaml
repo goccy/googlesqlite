@@ -1,0 +1,325 @@
+spec: docs/specs/googlesql/syntax/dml/merge.md
+dialect: googlesql
+cases:
+  # Inventory + NewArrivals walkthrough. Authoritative source:
+  # docs/third_party/googlesql-docs/data-manipulation-language.md, the
+  # "after" table (lines 1462-1471 of the upstream doc) names every
+  # expected post-MERGE row.
+  - desc: MERGE upstream Inventory + NewArrivals walkthrough
+    setup:
+      - CREATE TABLE merge_ds.NewArrivals (product STRING, quantity INT64, warehouse STRING)
+      - CREATE TABLE merge_ds.Inventory (product STRING, quantity INT64)
+      - "INSERT INTO merge_ds.NewArrivals (product, quantity, warehouse) VALUES ('dryer', 20, 'warehouse #2'), ('oven', 30, 'warehouse #3'), ('refrigerator', 25, 'warehouse #2'), ('top load washer', 10, 'warehouse #1')"
+      - "INSERT INTO merge_ds.Inventory (product, quantity) VALUES ('dishwasher', 30), ('dryer', 30), ('front load washer', 20), ('microwave', 20), ('oven', 5), ('top load washer', 10)"
+      - |
+        MERGE merge_ds.Inventory T
+        USING merge_ds.NewArrivals S
+        ON T.product = S.product
+        WHEN MATCHED THEN
+          UPDATE SET quantity = T.quantity + S.quantity
+        WHEN NOT MATCHED THEN
+          INSERT (product, quantity) VALUES(product, quantity)
+    sql: SELECT product, quantity FROM merge_ds.Inventory ORDER BY product
+    expected:
+      rows:
+        - ['dishwasher', 30]
+        - ['dryer', 50]
+        - ['front load washer', 20]
+        - ['microwave', 20]
+        - ['oven', 35]
+        - ['refrigerator', 25]
+        - ['top load washer', 20]
+
+  # `ON FALSE` REPLACE. Upstream prose (data-manipulation-language.md,
+  # the merge_condition bullet at lines 1382-1386) names this exact
+  # idiom: "atomic DELETE on the target plus an INSERT from a source
+  # (DELETE with INSERT is also known as a REPLACE operation)". After
+  # MERGE the target row set MUST equal the source row set.
+  - desc: MERGE ON FALSE — REPLACE idiom (constant-false-predicate)
+    setup:
+      - CREATE TABLE merge_ds.target (k STRING, v INT64)
+      - CREATE TABLE merge_ds.source (k STRING, v INT64)
+      - "INSERT INTO merge_ds.target (k, v) VALUES ('a', 1), ('b', 2)"
+      - "INSERT INTO merge_ds.source (k, v) VALUES ('c', 3), ('d', 4)"
+      - |
+        MERGE merge_ds.target T
+        USING merge_ds.source S
+        ON FALSE
+        WHEN NOT MATCHED BY SOURCE THEN DELETE
+        WHEN NOT MATCHED BY TARGET THEN INSERT (k, v) VALUES (k, v)
+    sql: SELECT k, v FROM merge_ds.target ORDER BY k
+    expected:
+      rows:
+        - ['c', 3]
+        - ['d', 4]
+
+  # `ON FALSE` with only `WHEN NOT MATCHED BY TARGET THEN INSERT` —
+  # every source row is unmatched, so the clause acts as a bulk INSERT
+  # against the target without disturbing existing rows. Derived from
+  # the same upstream merge_condition rule.
+  - desc: MERGE ON FALSE — bulk INSERT leaves existing target rows intact
+    setup:
+      - CREATE TABLE merge_ds.t (k STRING, v INT64)
+      - CREATE TABLE merge_ds.s (k STRING, v INT64)
+      - "INSERT INTO merge_ds.t (k, v) VALUES ('x', 100)"
+      - "INSERT INTO merge_ds.s (k, v) VALUES ('a', 1), ('b', 2)"
+      - |
+        MERGE merge_ds.t T
+        USING merge_ds.s S
+        ON FALSE
+        WHEN NOT MATCHED BY TARGET THEN INSERT (k, v) VALUES (k, v)
+    sql: SELECT k, v FROM merge_ds.t ORDER BY k
+    expected:
+      rows:
+        - ['a', 1]
+        - ['b', 2]
+        - ['x', 100]
+
+  # Multi-column equality `ON T.a = S.a AND T.b = S.b`. Spec text
+  # (merge_condition bullet, line 1341) defines the predicate as any
+  # bool_expression; this case pins that multiple equality conjuncts
+  # join correctly. Each matched target row's c is overwritten with
+  # the matched source row's c; unmatched target rows are unchanged.
+  - desc: MERGE on a multi-equality ON predicate
+    setup:
+      - CREATE TABLE merge_ds.t2 (a INT64, b INT64, c STRING)
+      - CREATE TABLE merge_ds.s2 (a INT64, b INT64, c STRING)
+      - "INSERT INTO merge_ds.t2 (a, b, c) VALUES (1, 1, 'x'), (1, 2, 'x'), (2, 1, 'x')"
+      - "INSERT INTO merge_ds.s2 (a, b, c) VALUES (1, 1, 'y'), (2, 1, 'z')"
+      - |
+        MERGE merge_ds.t2 T
+        USING merge_ds.s2 S
+        ON T.a = S.a AND T.b = S.b
+        WHEN MATCHED THEN
+          UPDATE SET c = S.c
+    sql: SELECT a, b, c FROM merge_ds.t2 ORDER BY a, b
+    expected:
+      rows:
+        - [1, 1, 'y']
+        - [1, 2, 'x']
+        - [2, 1, 'z']
+
+  # Non-equality predicate `ON S.value > T.threshold`. The same
+  # bool_expression rule covers this; every target row whose threshold
+  # is exceeded by at least one source row matches and is updated.
+  # The unreachable threshold (1000) has no exceeding source value
+  # and stays unchanged.
+  - desc: MERGE on a non-equality ON predicate
+    setup:
+      - CREATE TABLE merge_ds.thresholds (label STRING, threshold INT64)
+      - CREATE TABLE merge_ds.reading (value INT64)
+      - "INSERT INTO merge_ds.thresholds (label, threshold) VALUES ('low', 10), ('high', 50), ('unreachable', 1000)"
+      - "INSERT INTO merge_ds.reading (value) VALUES (5), (20), (60)"
+      - |
+        MERGE merge_ds.thresholds T
+        USING merge_ds.reading S
+        ON S.value > T.threshold
+        WHEN MATCHED THEN
+          UPDATE SET label = 'TRIGGERED'
+    sql: SELECT label, threshold FROM merge_ds.thresholds ORDER BY threshold
+    expected:
+      rows:
+        - ['TRIGGERED', 10]
+        - ['TRIGGERED', 50]
+        - ['unreachable', 1000]
+
+  # `merge_delete_clause: DELETE` (line 1353) — WHEN MATCHED THEN
+  # DELETE removes every target row that joined a source row, leaving
+  # only target rows with no source match.
+  - desc: MERGE WHEN MATCHED THEN DELETE
+    setup:
+      - CREATE TABLE merge_ds.t3 (k INT64, v STRING)
+      - CREATE TABLE merge_ds.s3 (k INT64)
+      - "INSERT INTO merge_ds.t3 (k, v) VALUES (1, 'a'), (2, 'b'), (3, 'c')"
+      - "INSERT INTO merge_ds.s3 (k) VALUES (1), (3)"
+      - |
+        MERGE merge_ds.t3 T
+        USING merge_ds.s3 S
+        ON T.k = S.k
+        WHEN MATCHED THEN DELETE
+    sql: SELECT k, v FROM merge_ds.t3 ORDER BY k
+    expected:
+      rows:
+        - [2, 'b']
+
+  # `matched_clause: WHEN MATCHED [ AND search_condition ]`
+  # (line 1329-1331). Upstream prose at lines 1391-1394:
+  #   "Each WHEN clause can have an optional search condition.
+  #    The WHEN clause is executed for a row if both the merge
+  #    condition and search condition are satisfied."
+  # Only the matched rows whose search_condition holds get updated.
+  - desc: MERGE WHEN MATCHED AND search_condition THEN UPDATE
+    setup:
+      - CREATE TABLE merge_ds.t4 (k INT64, v INT64)
+      - CREATE TABLE merge_ds.s4 (k INT64, w INT64)
+      - "INSERT INTO merge_ds.t4 (k, v) VALUES (1, 10), (2, 20), (3, 30)"
+      - "INSERT INTO merge_ds.s4 (k, w) VALUES (1, 100), (2, 5), (3, 999)"
+      - |
+        MERGE merge_ds.t4 T
+        USING merge_ds.s4 S
+        ON T.k = S.k
+        WHEN MATCHED AND S.w > 50 THEN
+          UPDATE SET v = S.w
+    sql: SELECT k, v FROM merge_ds.t4 ORDER BY k
+    expected:
+      rows:
+        - [1, 100]
+        - [2, 20]
+        - [3, 999]
+
+  # `not_matched_by_target_clause` with a search_condition (line 1334)
+  # — only source rows for which the search_condition holds are
+  # inserted. Same upstream prose (lines 1391-1394) applies.
+  - desc: MERGE WHEN NOT MATCHED BY TARGET AND search_condition THEN INSERT
+    setup:
+      - CREATE TABLE merge_ds.t5 (k INT64)
+      - CREATE TABLE merge_ds.s5 (k INT64, eligible BOOL)
+      - "INSERT INTO merge_ds.t5 (k) VALUES (1)"
+      - "INSERT INTO merge_ds.s5 (k, eligible) VALUES (2, true), (3, false), (4, true)"
+      - |
+        MERGE merge_ds.t5 T
+        USING merge_ds.s5 S
+        ON T.k = S.k
+        WHEN NOT MATCHED BY TARGET AND S.eligible THEN
+          INSERT (k) VALUES (k)
+    sql: SELECT k FROM merge_ds.t5 ORDER BY k
+    expected:
+      rows:
+        - [1]
+        - [2]
+        - [4]
+
+  # `not_matched_by_source_clause` with UPDATE (lines 1337-1339).
+  # Upstream prose at lines 1413-1415:
+  #   "The WHEN NOT MATCHED BY SOURCE clause defines how to update or
+  #    delete a row in the target table if that row doesn't match any
+  #    row in the source table."
+  # Only unmatched target rows get updated; the UPDATE expression may
+  # only reference target columns (BigQuery rule).
+  - desc: MERGE WHEN NOT MATCHED BY SOURCE THEN UPDATE
+    setup:
+      - CREATE TABLE merge_ds.t6 (k INT64, status STRING)
+      - CREATE TABLE merge_ds.s6 (k INT64)
+      - "INSERT INTO merge_ds.t6 (k, status) VALUES (1, 'A'), (2, 'A'), (3, 'A')"
+      - "INSERT INTO merge_ds.s6 (k) VALUES (1), (2)"
+      - |
+        MERGE merge_ds.t6 T
+        USING merge_ds.s6 S
+        ON T.k = S.k
+        WHEN NOT MATCHED BY SOURCE THEN
+          UPDATE SET status = 'ORPHAN'
+    sql: SELECT k, status FROM merge_ds.t6 ORDER BY k
+    expected:
+      rows:
+        - [1, 'A']
+        - [2, 'A']
+        - [3, 'ORPHAN']
+
+  # `not_matched_by_source_clause` with a search_condition + DELETE
+  # — only unmatched target rows whose search_condition holds get
+  # deleted; other unmatched rows survive.
+  - desc: MERGE WHEN NOT MATCHED BY SOURCE AND search_condition THEN DELETE
+    setup:
+      - CREATE TABLE merge_ds.t7 (k INT64, age INT64)
+      - CREATE TABLE merge_ds.s7 (k INT64)
+      - "INSERT INTO merge_ds.t7 (k, age) VALUES (1, 100), (2, 50), (3, 5)"
+      - "INSERT INTO merge_ds.s7 (k) VALUES (2)"
+      - |
+        MERGE merge_ds.t7 T
+        USING merge_ds.s7 S
+        ON T.k = S.k
+        WHEN NOT MATCHED BY SOURCE AND T.age > 10 THEN DELETE
+    sql: SELECT k, age FROM merge_ds.t7 ORDER BY k
+    expected:
+      rows:
+        - [2, 50]
+        - [3, 5]
+
+  # Grammar: `MERGE [INTO] target_name [[AS] alias] USING source_name`
+  # (lines 1316-1318). The `INTO` keyword and the explicit `AS` are
+  # both optional; this case pins that both forms parse and resolve
+  # the same way as the bare `MERGE target alias` shape used by the
+  # walkthrough.
+  - desc: MERGE INTO + explicit AS alias on both sides
+    setup:
+      - CREATE TABLE merge_ds.t_into (k INT64, v INT64)
+      - CREATE TABLE merge_ds.s_into (k INT64, v INT64)
+      - "INSERT INTO merge_ds.t_into (k, v) VALUES (1, 0)"
+      - "INSERT INTO merge_ds.s_into (k, v) VALUES (1, 99)"
+      - |
+        MERGE INTO merge_ds.t_into AS T
+        USING merge_ds.s_into AS S
+        ON T.k = S.k
+        WHEN MATCHED THEN
+          UPDATE SET v = S.v
+    sql: SELECT k, v FROM merge_ds.t_into ORDER BY k
+    expected:
+      rows:
+        - [1, 99]
+
+  # Grammar: `merge_insert_clause: INSERT [(column [, ...])] input`
+  # (line 1356). The column list is optional — upstream prose at
+  # lines 1406-1408 says: "When the column names of the target table
+  # are omitted, all columns in the target table are included in
+  # ascending order based on their ordinal positions." This case
+  # exercises that path: VALUES supplies values for every target
+  # column in declaration order.
+  - desc: MERGE WHEN NOT MATCHED THEN INSERT VALUES (no column list)
+    setup:
+      - CREATE TABLE merge_ds.t_nocols (k INT64, v INT64)
+      - CREATE TABLE merge_ds.s_nocols (k INT64, v INT64)
+      - "INSERT INTO merge_ds.s_nocols (k, v) VALUES (1, 10), (2, 20)"
+      - |
+        MERGE merge_ds.t_nocols T
+        USING merge_ds.s_nocols S
+        ON T.k = S.k
+        WHEN NOT MATCHED THEN
+          INSERT VALUES (S.k, S.v)
+    sql: SELECT k, v FROM merge_ds.t_nocols ORDER BY k
+    expected:
+      rows:
+        - [1, 10]
+        - [2, 20]
+
+  # Grammar: `input: { VALUES (expr [, ... ]) | ROW }` (line 1359).
+  # The `ROW` shorthand is documented at lines 1410-1412: "ROW can be
+  # used to include all the columns of the source in the ascending
+  # sequence of their ordinal positions." Source columns map to
+  # target columns positionally.
+  - desc: MERGE WHEN NOT MATCHED THEN INSERT ROW
+    setup:
+      - CREATE TABLE merge_ds.t_row (k INT64, v INT64)
+      - CREATE TABLE merge_ds.s_row (k INT64, v INT64)
+      - "INSERT INTO merge_ds.s_row (k, v) VALUES (1, 10), (2, 20)"
+      - |
+        MERGE merge_ds.t_row T
+        USING merge_ds.s_row S
+        ON T.k = S.k
+        WHEN NOT MATCHED THEN INSERT ROW
+    sql: SELECT k, v FROM merge_ds.t_row ORDER BY k
+    expected:
+      rows:
+        - [1, 10]
+        - [2, 20]
+
+  # `ON TRUE` — the dual degenerate predicate to ON FALSE. Every
+  # source row joins every target row (Cartesian product), so every
+  # target row is MATCHED. With a single source row this becomes a
+  # bulk UPDATE that reaches every target row.
+  - desc: MERGE ON TRUE — every target row updated against the single source row
+    setup:
+      - CREATE TABLE merge_ds.t8 (id INT64, n INT64)
+      - CREATE TABLE merge_ds.s8 (multiplier INT64)
+      - "INSERT INTO merge_ds.t8 (id, n) VALUES (1, 10), (2, 20)"
+      - "INSERT INTO merge_ds.s8 (multiplier) VALUES (3)"
+      - |
+        MERGE merge_ds.t8 T
+        USING merge_ds.s8 S
+        ON TRUE
+        WHEN MATCHED THEN
+          UPDATE SET n = n * S.multiplier
+    sql: SELECT id, n FROM merge_ds.t8 ORDER BY id
+    expected:
+      rows:
+        - [1, 30]
+        - [2, 60]
