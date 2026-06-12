@@ -139,6 +139,329 @@ WHEN NOT MATCHED THEN
 	}
 }
 
+// TestMergeOnFalseInsert exercises the `MERGE ... ON FALSE` idiom for
+// bulk INSERT. With ON FALSE no source row ever matches a target row,
+// so every WHEN NOT MATCHED BY TARGET THEN INSERT clause fires for
+// every source row — effectively `INSERT INTO target SELECT ... FROM
+// source`. Authoritative source: BigQuery docs (data-manipulation-
+// language) describe ON FALSE as a way to express conditional INSERTs
+// over a source table.
+// goccy/googlesqlite#16
+func TestMergeOnFalseInsert(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=merge_on_false_insert")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("Conn: %v", err)
+	}
+	defer conn.Close()
+
+	mustExec := func(q string) {
+		t.Helper()
+		if _, err := conn.ExecContext(ctx, q); err != nil {
+			t.Fatalf("exec %q: %v", q, err)
+		}
+	}
+
+	mustExec("CREATE TABLE NewArrivals (product STRING, quantity INT64)")
+	mustExec("CREATE TABLE Inventory (product STRING, quantity INT64)")
+	for _, r := range []struct {
+		p string
+		q int64
+	}{
+		{"dryer", 20},
+		{"oven", 30},
+		{"refrigerator", 25},
+	} {
+		if _, err := conn.ExecContext(ctx,
+			"INSERT INTO NewArrivals (product, quantity) VALUES (?, ?)", r.p, r.q); err != nil {
+			t.Fatalf("INSERT NewArrivals %s: %v", r.p, err)
+		}
+	}
+
+	// Pre-seed Inventory with a row to verify that ON FALSE does not
+	// touch the existing target rows when the only WHEN clause is
+	// NOT MATCHED BY TARGET (i.e. an append-only bulk INSERT).
+	if _, err := conn.ExecContext(ctx,
+		"INSERT INTO Inventory (product, quantity) VALUES (?, ?)", "microwave", 20); err != nil {
+		t.Fatalf("INSERT Inventory seed: %v", err)
+	}
+
+	if _, err := conn.ExecContext(ctx, `MERGE Inventory T
+USING NewArrivals S
+ON FALSE
+WHEN NOT MATCHED BY TARGET THEN
+  INSERT (product, quantity) VALUES(product, quantity)`); err != nil {
+		t.Fatalf("MERGE ON FALSE: %v", err)
+	}
+
+	want := map[string]int64{
+		"microwave":    20, // seeded, untouched
+		"dryer":        20, // new
+		"oven":         30, // new
+		"refrigerator": 25, // new
+	}
+	rows, err := conn.QueryContext(ctx, "SELECT product, quantity FROM Inventory ORDER BY product")
+	if err != nil {
+		t.Fatalf("Query Inventory: %v", err)
+	}
+	defer rows.Close()
+	got := map[string]int64{}
+	for rows.Next() {
+		var p string
+		var q int64
+		if err := rows.Scan(&p, &q); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		got[p] = q
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+	if len(got) != len(want) {
+		t.Fatalf("row count = %d; want %d (got=%v)", len(got), len(want), got)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("%s = %d; want %d", k, got[k], v)
+		}
+	}
+}
+
+// TestMergeOnFalseNotMatchedBySourceDelete exercises the dual idiom:
+// `MERGE ... ON FALSE WHEN NOT MATCHED BY SOURCE THEN DELETE` empties
+// the target table because every target row is unmatched. WHEN MATCHED
+// is unreachable under ON FALSE and is silently dropped — verified by
+// running alongside an unreachable WHEN MATCHED clause that would
+// otherwise mutate the rows.
+// goccy/googlesqlite#16
+func TestMergeOnFalseNotMatchedBySourceDelete(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=merge_on_false_delete")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("Conn: %v", err)
+	}
+	defer conn.Close()
+
+	mustExec := func(q string) {
+		t.Helper()
+		if _, err := conn.ExecContext(ctx, q); err != nil {
+			t.Fatalf("exec %q: %v", q, err)
+		}
+	}
+
+	mustExec("CREATE TABLE NewArrivals (product STRING, quantity INT64)")
+	mustExec("CREATE TABLE Inventory (product STRING, quantity INT64)")
+	for _, r := range []struct {
+		p string
+		q int64
+	}{
+		{"dishwasher", 30},
+		{"microwave", 20},
+		{"oven", 5},
+	} {
+		if _, err := conn.ExecContext(ctx,
+			"INSERT INTO Inventory (product, quantity) VALUES (?, ?)", r.p, r.q); err != nil {
+			t.Fatalf("INSERT Inventory %s: %v", r.p, err)
+		}
+	}
+	// Source has rows but ON FALSE means they never match a target row.
+	if _, err := conn.ExecContext(ctx,
+		"INSERT INTO NewArrivals (product, quantity) VALUES (?, ?)", "dryer", 20); err != nil {
+		t.Fatalf("INSERT NewArrivals: %v", err)
+	}
+
+	if _, err := conn.ExecContext(ctx, `MERGE Inventory T
+USING NewArrivals S
+ON FALSE
+WHEN MATCHED THEN
+  UPDATE SET quantity = 999
+WHEN NOT MATCHED BY SOURCE THEN
+  DELETE`); err != nil {
+		t.Fatalf("MERGE ON FALSE: %v", err)
+	}
+
+	var n int
+	if err := conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM Inventory").Scan(&n); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("Inventory rows after DELETE = %d; want 0", n)
+	}
+}
+
+// TestMergeOnNonEqualityPredicate exercises an ON expression that is
+// not a simple `target.k = source.k` equality. The MERGE analyzer now
+// renders any boolean predicate verbatim — `S.value > T.threshold`
+// drives the LEFT JOIN that builds the matched staging set, and the
+// MATCHED clause then updates every target row that some source row
+// exceeded. goccy/googlesqlite#16
+func TestMergeOnNonEqualityPredicate(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=merge_non_equality")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("Conn: %v", err)
+	}
+	defer conn.Close()
+
+	mustExec := func(q string) {
+		t.Helper()
+		if _, err := conn.ExecContext(ctx, q); err != nil {
+			t.Fatalf("exec %q: %v", q, err)
+		}
+	}
+
+	mustExec("CREATE TABLE Threshold (label STRING, threshold INT64)")
+	mustExec("CREATE TABLE Reading (value INT64)")
+	for _, r := range []struct {
+		l string
+		t int64
+	}{{"low", 10}, {"high", 50}, {"unreachable", 1000}} {
+		if _, err := conn.ExecContext(ctx,
+			"INSERT INTO Threshold (label, threshold) VALUES (?, ?)", r.l, r.t); err != nil {
+			t.Fatalf("INSERT Threshold %s: %v", r.l, err)
+		}
+	}
+	for _, v := range []int64{5, 20, 60} {
+		if _, err := conn.ExecContext(ctx,
+			"INSERT INTO Reading (value) VALUES (?)", v); err != nil {
+			t.Fatalf("INSERT Reading %d: %v", v, err)
+		}
+	}
+
+	// ON S.value > T.threshold:
+	//   threshold 10  ← values 20, 60 → MATCHED
+	//   threshold 50  ← value 60      → MATCHED
+	//   threshold 1000 ← (no source)   → NOT MATCHED BY SOURCE → kept as-is
+	if _, err := conn.ExecContext(ctx, `MERGE Threshold T
+USING Reading S
+ON S.value > T.threshold
+WHEN MATCHED THEN
+  UPDATE SET label = 'TRIGGERED'`); err != nil {
+		t.Fatalf("MERGE: %v", err)
+	}
+
+	want := map[string]string{
+		"TRIGGERED":   "TRIGGERED", // two target rows got triggered; we only check by label
+		"unreachable": "unreachable",
+	}
+	rows, err := conn.QueryContext(ctx, "SELECT label, COUNT(*) FROM Threshold GROUP BY label ORDER BY label")
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	defer rows.Close()
+	got := map[string]int64{}
+	for rows.Next() {
+		var label string
+		var n int64
+		if err := rows.Scan(&label, &n); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		got[label] = n
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+	if got["TRIGGERED"] != 2 {
+		t.Errorf("TRIGGERED count = %d; want 2 (got=%v)", got["TRIGGERED"], got)
+	}
+	if got["unreachable"] != 1 {
+		t.Errorf("unreachable count = %d; want 1 (got=%v)", got["unreachable"], got)
+	}
+	if _, ok := want[""]; ok {
+		t.Fatalf("unexpected empty label")
+	}
+}
+
+// TestMergeOnTrue exercises `ON TRUE`, the other degenerate predicate:
+// every target row matches every source row. The WHEN MATCHED UPDATE
+// references both target and source columns, so the SET expression
+// passes through the staging table's per-side renamed columns.
+// goccy/googlesqlite#16
+func TestMergeOnTrue(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=merge_on_true")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("Conn: %v", err)
+	}
+	defer conn.Close()
+
+	mustExec := func(q string) {
+		t.Helper()
+		if _, err := conn.ExecContext(ctx, q); err != nil {
+			t.Fatalf("exec %q: %v", q, err)
+		}
+	}
+
+	mustExec("CREATE TABLE T (id INT64, n INT64)")
+	mustExec("CREATE TABLE S (multiplier INT64)")
+	for _, r := range []struct {
+		id, n int64
+	}{{1, 10}, {2, 20}} {
+		if _, err := conn.ExecContext(ctx,
+			"INSERT INTO T (id, n) VALUES (?, ?)", r.id, r.n); err != nil {
+			t.Fatalf("INSERT T: %v", err)
+		}
+	}
+	if _, err := conn.ExecContext(ctx,
+		"INSERT INTO S (multiplier) VALUES (?)", 3); err != nil {
+		t.Fatalf("INSERT S: %v", err)
+	}
+
+	if _, err := conn.ExecContext(ctx, `MERGE T USING S
+ON TRUE
+WHEN MATCHED THEN
+  UPDATE SET n = n * S.multiplier`); err != nil {
+		t.Fatalf("MERGE: %v", err)
+	}
+
+	want := map[int64]int64{1: 30, 2: 60}
+	rows, err := conn.QueryContext(ctx, "SELECT id, n FROM T ORDER BY id")
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	defer rows.Close()
+	got := map[int64]int64{}
+	for rows.Next() {
+		var id, n int64
+		if err := rows.Scan(&id, &n); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		got[id] = n
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("id=%d n=%d; want %d", k, got[k], v)
+		}
+	}
+}
+
 // TestTruncateTable exercises the TruncateStmtAction surface (TRUNCATE
 // TABLE rewriting to DELETE FROM). Authoritative source:
 // docs/third_party/googlesql-docs/data-manipulation-language.md "TRUNCATE
