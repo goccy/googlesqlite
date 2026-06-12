@@ -19,9 +19,14 @@ build: build/wasm build/assets build/page
 # (cmd/googlesqlite, the `js && wasm` build) to public/googlesqlite.wasm
 # and copies the matching Go wasm_exec.js loader next to it. Everything
 # under public/ is a generated artifact and is gitignored.
+#
+# -ldflags "-s -w" strips the Go symbol table and DWARF info from the
+# engine wasm; the deployed Playground reads only the compiled bytes
+# and never touches them, and dropping them noticeably reduces the
+# size of both the served .gz and the wasm the browser decompresses.
 build/wasm:
 	mkdir -p $(PUBLIC)
-	cd $(ROOT) && GOOS=js GOARCH=wasm go build \
+	cd $(ROOT) && GOOS=js GOARCH=wasm go build -ldflags="-s -w" \
 	  -o docs/playground/$(WASM) ./cmd/googlesqlite
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" $(PUBLIC)/wasm_exec.js
 
