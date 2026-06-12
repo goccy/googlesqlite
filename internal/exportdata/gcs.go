@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
-	"cloud.google.com/go/storage"
-	"google.golang.org/api/option"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 // init registers the built-in `gs://` writer. Drivers that want a different
@@ -19,23 +20,44 @@ func init() {
 	RegisterURIWriter("gs", openGCSWriter)
 }
 
+// gcsWriteScope is the OAuth 2.0 scope required to PUT objects into a GCS
+// bucket. Hard-coded here so the GCS writer can call into ADC
+// (`oauth2/google.DefaultTokenSource`) without dragging in the full
+// `cloud.google.com/go/storage` stack (grpc → envoyproxy →
+// opentelemetry, ~120 MB live in the linked binary) for the constant.
+const gcsWriteScope = "https://www.googleapis.com/auth/devstorage.read_write"
+
+// gcsProductionHost is the canonical public endpoint for the GCS JSON API.
+// Overridable through STORAGE_EMULATOR_HOST — the convention every Google
+// Cloud client follows for the fake-gcs-server / cloud emulators flow.
+const gcsProductionHost = "https://storage.googleapis.com"
+
 // openGCSWriter opens a write stream against a `gs://bucket/object` URI.
 //
 // When STORAGE_EMULATOR_HOST is set (the convention every Google Cloud Go
 // client follows for the standard fake-gcs-server / cloud emulators), the
-// client is rewired at that endpoint with authentication disabled. Without
-// it, the standard Application Default Credentials apply — i.e. the same
-// behaviour as a plain `storage.NewClient(ctx)`.
+// upload is rewired at that endpoint with no authentication. Without it,
+// the standard Application Default Credentials chain
+// (GOOGLE_APPLICATION_CREDENTIALS → gcloud config → GCE metadata server)
+// is consulted via `oauth2/google.DefaultTokenSource`.
 //
 // The `*` placeholder real BigQuery uses for shard numbers (a single export
 // can produce many objects, one per shard) is collapsed to the 12-digit
 // shard identifier BigQuery uses for the first shard, so a one-shard write
 // against `gs://b/out/*.csv` lands at `gs://b/out/000000000000.csv`.
 //
-// WriterOpts.Overwrite=false (the BigQuery default) is enforced by a
-// DoesNotExist precondition on the object; the write fails with HTTP 412
-// PreconditionFailed if the object already exists. Overwrite=true skips the
-// precondition so the object is replaced unconditionally.
+// WriterOpts.Overwrite=false (the BigQuery default) is enforced by an
+// `ifGenerationMatch=0` query parameter on the upload, which translates to
+// the JSON API's "create-only" precondition: the write fails with HTTP 412
+// PreconditionFailed if the object already exists. Overwrite=true skips
+// the precondition so the object is replaced unconditionally.
+//
+// Implementation note: we used to wrap `cloud.google.com/go/storage`, which
+// is the canonical client but pulls in grpc / envoyproxy / opentelemetry —
+// none of which the GCS JSON upload path actually needs. Talking JSON over
+// `net/http` directly drops ~120 MB of transitive deps from the binary
+// without losing any of the behaviour the emulator's EXPORT DATA flow
+// relies on.
 func openGCSWriter(ctx context.Context, uri string, opts WriterOpts) (io.WriteCloser, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
@@ -54,38 +76,101 @@ func openGCSWriter(ctx context.Context, uri string, opts WriterOpts) (io.WriteCl
 	// shard identifier BigQuery uses for the first shard.
 	object = strings.ReplaceAll(object, "*", "000000000000")
 
-	var clientOpts []option.ClientOption
-	if host := os.Getenv("STORAGE_EMULATOR_HOST"); host != "" {
-		clientOpts = append(clientOpts, option.WithEndpoint(host), option.WithoutAuthentication())
+	host := os.Getenv("STORAGE_EMULATOR_HOST")
+	noAuth := host != ""
+	if host == "" {
+		host = gcsProductionHost
 	}
-	client, err := storage.NewClient(ctx, clientOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("exportdata: open GCS client: %w", err)
+
+	// Build the simple-media upload URL. The JSON API's "simple" upload
+	// path streams a single PUT body (`uploadType=media`), which maps
+	// cleanly onto an io.Pipe — no resumable-session handshake needed.
+	q := url.Values{
+		"uploadType": {"media"},
+		"name":       {object},
 	}
-	obj := client.Bucket(bucket).Object(object)
 	if !opts.Overwrite {
-		// DoesNotExist makes the write atomic against concurrent
-		// creators and matches BigQuery's `overwrite = false` default
-		// (the statement must fail when the destination already exists
-		// instead of silently clobbering it).
-		obj = obj.If(storage.Conditions{DoesNotExist: true})
+		// ifGenerationMatch=0 enforces "object must not exist" — same
+		// semantics as cloud.google.com/go/storage's
+		// `If(Conditions{DoesNotExist: true})`. The server returns 412
+		// PreconditionFailed on overwrite.
+		q.Set("ifGenerationMatch", "0")
 	}
-	w := obj.NewWriter(ctx)
-	return &gcsObjectWriter{Writer: w, client: client}, nil
+	uploadURL := fmt.Sprintf("%s/upload/storage/v1/b/%s/o?%s",
+		strings.TrimRight(host, "/"),
+		url.PathEscape(bucket),
+		q.Encode())
+
+	// HTTP transport: against the production GCS endpoint we wrap the
+	// default transport with an oauth2 token source so every request
+	// carries a fresh bearer token. Against STORAGE_EMULATOR_HOST we use
+	// the unwrapped default transport — fake-gcs-server's HTTPS-disabled
+	// endpoint rejects an Authorization header.
+	client := http.DefaultClient
+	if !noAuth {
+		ts, err := google.DefaultTokenSource(ctx, gcsWriteScope)
+		if err != nil {
+			return nil, fmt.Errorf("exportdata: GCS DefaultTokenSource: %w", err)
+		}
+		client = oauth2.NewClient(ctx, ts)
+	}
+
+	// Stream the body through an io.Pipe. The caller writes to pw; a
+	// background goroutine consumes pr and feeds it to the HTTP PUT.
+	// Close() on the writer signals EOF to the goroutine and waits for
+	// the request's status, so an HTTP-side error (auth, precondition,
+	// network) surfaces synchronously to the EXPORT DATA statement.
+	pr, pw := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, pr)
+		if err != nil {
+			done <- fmt.Errorf("exportdata: build GCS upload request: %w", err)
+			// Drain the pipe so the writing goroutine does not block.
+			_, _ = io.Copy(io.Discard, pr)
+			return
+		}
+		req.Header.Set("Content-Type", "application/octet-stream")
+		resp, err := client.Do(req)
+		if err != nil {
+			done <- fmt.Errorf("exportdata: GCS upload: %w", err)
+			_, _ = io.Copy(io.Discard, pr)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 300 {
+			// Read up to 4 KiB of the error body so the failing
+			// EXPORT DATA statement sees the GCS error message.
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+			done <- fmt.Errorf("exportdata: GCS upload %s: %s",
+				resp.Status, strings.TrimSpace(string(body)))
+			return
+		}
+		// Drain any remaining body so the HTTP connection can be
+		// returned to the pool.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		done <- nil
+	}()
+	return &gcsObjectWriter{pw: pw, done: done}, nil
 }
 
-// gcsObjectWriter pairs the per-object storage.Writer with the underlying
-// storage.Client so closing the writer also releases the client.
+// gcsObjectWriter is an io.WriteCloser fronted by an io.Pipe; Close signals
+// EOF to the background uploader goroutine and waits for the HTTP request
+// to land so any non-2xx response surfaces synchronously.
 type gcsObjectWriter struct {
-	*storage.Writer
-	client *storage.Client
+	pw   *io.PipeWriter
+	done <-chan error
+}
+
+func (w *gcsObjectWriter) Write(p []byte) (int, error) {
+	return w.pw.Write(p)
 }
 
 func (w *gcsObjectWriter) Close() error {
-	werr := w.Writer.Close()
-	cerr := w.client.Close()
-	if werr != nil {
-		return werr
+	// Closing the writer end of the pipe signals EOF to the goroutine,
+	// which finishes reading and returns the request status on `done`.
+	if err := w.pw.Close(); err != nil {
+		return err
 	}
-	return cerr
+	return <-w.done
 }

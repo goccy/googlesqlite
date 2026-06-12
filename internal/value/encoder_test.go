@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/bigquery"
 	"github.com/goccy/go-json"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -99,7 +99,7 @@ func TestEncodeValue(t *testing.T) {
 			"dt":       value.DatetimeValue(time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)),
 			"time":     value.TimeValue(time.Date(0, 1, 1, 12, 0, 0, 0, time.UTC)),
 			"ts":       value.TimestampValue(time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)),
-			"interval": &value.IntervalValue{IntervalValue: &bigquery.IntervalValue{Days: 1}},
+			"interval": &value.IntervalValue{IntervalValue: &intervalvalue.IntervalValue{Days: 1}},
 			"json":     value.JsonValue(`{"x":1}`),
 		}
 		for name, v := range cases {

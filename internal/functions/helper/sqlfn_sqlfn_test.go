@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 
 	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
@@ -524,11 +524,11 @@ func TestWeekPartToOffsetAndQuarterStartMonths(t *testing.T) {
 // BucketFloor tests (DATE_BUCKET / DATETIME_BUCKET / TIMESTAMP_BUCKET)
 // --------------------------------------------------------------------
 
-// makeInterval mirrors the bigquery.IntervalValue shape we construct
+// makeInterval mirrors the intervalvalue.IntervalValue shape we construct
 // from analyzer-side INTERVAL literals.
 func makeInterval(y, m, d, h, mi, s, ns int32) *value.IntervalValue {
 	return &value.IntervalValue{
-		IntervalValue: &bigquery.IntervalValue{
+		IntervalValue: &intervalvalue.IntervalValue{
 			Years:          y,
 			Months:         m,
 			Days:           d,

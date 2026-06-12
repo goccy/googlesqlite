@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"time"
 
-	"cloud.google.com/go/bigquery"
+	"github.com/goccy/googlesqlite/internal/intervalvalue"
 )
 
 type DatetimeValue time.Time
@@ -46,7 +46,7 @@ func (d DatetimeValue) Sub(v Value) (Value, error) {
 		return nil, err
 	}
 	duration := src.Sub(dst)
-	return &IntervalValue{IntervalValue: bigquery.IntervalValueFromDuration(duration)}, nil
+	return &IntervalValue{IntervalValue: intervalvalue.IntervalValueFromDuration(duration)}, nil
 }
 
 func (d DatetimeValue) Mul(v Value) (Value, error) {
