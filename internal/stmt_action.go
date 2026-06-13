@@ -340,7 +340,8 @@ func (a *DropStmtAction) exec(ctx context.Context, conn *Conn) error {
 		}
 		conn.deleteTable(spec)
 	case "FUNCTION":
-		if _, exists := a.funcMap[a.name]; !exists && a.ifExists {
+		spec, exists := a.catalog.FunctionSpec(a.name)
+		if !exists && a.ifExists {
 			// DROP FUNCTION IF EXISTS on an unregistered function: no-op, as
 			// above, to avoid "failed to find function spec from map".
 			return nil
@@ -348,8 +349,8 @@ func (a *DropStmtAction) exec(ctx context.Context, conn *Conn) error {
 		if err := a.catalog.DeleteFunctionSpec(ctx, conn, a.name); err != nil {
 			return fmt.Errorf("failed to delete function spec: %w", err)
 		}
-		conn.deleteFunction(a.funcMap[a.name])
-		delete(a.funcMap, a.name)
+		conn.deleteFunction(spec)
+		delete(a.funcMap, spec.FuncName())
 	default:
 		return fmt.Errorf("currently unsupported DROP %s statement", a.objectType)
 	}

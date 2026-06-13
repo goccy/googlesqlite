@@ -894,6 +894,51 @@ func TestSetNamePathAndAddNamePath(t *testing.T) {
 	})
 }
 
+func TestDropFunctionIfExistsUsesCatalogWithNamePath(t *testing.T) {
+	db, err := sql.Open("googlesqlite", ":memory:?_test=drop_function_if_exists_name_path")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	sqlConn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("Conn: %v", err)
+	}
+	defer sqlConn.Close()
+
+	if _, err := sqlConn.ExecContext(ctx, "CREATE FUNCTION dataset.fn(x INT64) AS (x + 1)"); err != nil {
+		t.Fatalf("CREATE FUNCTION: %v", err)
+	}
+	withRawConn(t, sqlConn, func(c *googlesqlite.Conn) {
+		c.SetMaxNamePath(2)
+		if err := c.SetNamePath([]string{"other"}); err != nil {
+			t.Fatalf("SetNamePath: %v", err)
+		}
+	})
+
+	res, err := sqlConn.ExecContext(ctx, "DROP FUNCTION IF EXISTS dataset.fn")
+	if err != nil {
+		t.Fatalf("DROP FUNCTION IF EXISTS: %v", err)
+	}
+	cc, err := googlesqlite.ChangedCatalogFromResult(res)
+	if err != nil {
+		t.Fatalf("ChangedCatalogFromResult: %v", err)
+	}
+	if len(cc.Function.Deleted) != 1 {
+		t.Fatalf("Function.Deleted len = %d; want 1", len(cc.Function.Deleted))
+	}
+	if diff := cmp.Diff(cc.Function.Deleted[0].NamePath, []string{"dataset", "fn"}); diff != "" {
+		t.Errorf("Deleted NamePath (-want +got):\n%s", diff)
+	}
+
+	var got int64
+	if err := sqlConn.QueryRowContext(ctx, "SELECT dataset.fn(1)").Scan(&got); err == nil {
+		t.Fatalf("dropped function is still callable; got %d", got)
+	}
+}
+
 // TestExplainModeRunsExplainQueryPlan flips the connection's
 // explain-mode flag, then runs a SELECT. With explain mode on, the
 // QueryStmtAction.QueryContext branches into ExplainQueryPlan and

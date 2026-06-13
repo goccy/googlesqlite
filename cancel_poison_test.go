@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -96,6 +97,44 @@ func TestCancelledTxDoesNotPoisonPooledConn(t *testing.T) {
 	}
 	if poisoned > 0 {
 		t.Fatalf("%d probe(s) hit a poisoned connection after concurrent cancellations; the pool must never serve a conn whose inner handle was closed by a cancelled tx", poisoned)
+	}
+}
+
+func TestBeginTxHonorsContextWhileWaitingForLock(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "begin_tx_cancel.db")
+	db, err := sql.Open("googlesqlite", "file:"+dbPath+"?_pragma=busy_timeout(5000)")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(2)
+
+	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS begin_tx_cancel (id INT64)"); err != nil {
+		t.Fatalf("CREATE TABLE: %v", err)
+	}
+	holder, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		t.Fatalf("holder BeginTx: %v", err)
+	}
+	defer holder.Rollback()
+	if _, err := holder.Exec("INSERT INTO begin_tx_cancel (id) VALUES (1)"); err != nil {
+		t.Fatalf("holder INSERT: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	elapsed := time.Since(start)
+	if err == nil {
+		_ = tx.Rollback()
+		t.Fatalf("contended BeginTx succeeded; want context deadline")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("contended BeginTx error = %v; want context deadline", err)
+	}
+	if elapsed > 2*time.Second {
+		t.Fatalf("contended BeginTx took %s; want it to return on context deadline, not busy_timeout", elapsed)
 	}
 }
 
