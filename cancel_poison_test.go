@@ -116,7 +116,7 @@ func TestBeginTxHonorsContextWhileWaitingForLock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("holder BeginTx: %v", err)
 	}
-	defer holder.Rollback()
+	defer func() { _ = holder.Rollback() }()
 	if _, err := holder.Exec("INSERT INTO begin_tx_cancel (id) VALUES (1)"); err != nil {
 		t.Fatalf("holder INSERT: %v", err)
 	}
