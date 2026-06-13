@@ -307,6 +307,7 @@ func (a *CreateTableFunctionStmtAction) Cleanup(ctx context.Context, conn *Conn)
 type DropStmtAction struct {
 	name           string
 	objectType     string
+	ifExists       bool
 	funcMap        map[string]*FunctionSpec
 	catalog        *Catalog
 	query          string
@@ -320,17 +321,36 @@ func (a *DropStmtAction) exec(ctx context.Context, conn *Conn) error {
 		if _, err := conn.ExecContext(ctx, a.formattedQuery, a.args...); err != nil {
 			return fmt.Errorf("failed to exec %s: %w", a.query, err)
 		}
-		spec := a.catalog.tableMap[a.name]
+		spec, exists := a.catalog.tableMap[a.name]
+		if !exists {
+			// DROP TABLE/VIEW IF EXISTS on an object the catalog never
+			// registered: the SQLite-level statement above already ran as a
+			// no-op (it carries IF EXISTS), and there is no spec to remove.
+			// Honour IF EXISTS by returning success instead of failing in
+			// DeleteTableSpec with "failed to find table spec from map".
+			if a.ifExists {
+				return nil
+			}
+			// Without IF EXISTS the analyzer rejects an unknown object before
+			// we get here, so reaching this point means the spec really is
+			// missing; fall through so DeleteTableSpec surfaces the error.
+		}
 		if err := a.catalog.DeleteTableSpec(ctx, conn, a.name); err != nil {
 			return fmt.Errorf("failed to delete table spec: %w", err)
 		}
 		conn.deleteTable(spec)
 	case "FUNCTION":
+		spec, exists := a.catalog.FunctionSpec(a.name)
+		if !exists && a.ifExists {
+			// DROP FUNCTION IF EXISTS on an unregistered function: no-op, as
+			// above, to avoid "failed to find function spec from map".
+			return nil
+		}
 		if err := a.catalog.DeleteFunctionSpec(ctx, conn, a.name); err != nil {
 			return fmt.Errorf("failed to delete function spec: %w", err)
 		}
-		conn.deleteFunction(a.funcMap[a.name])
-		delete(a.funcMap, a.name)
+		conn.deleteFunction(spec)
+		delete(a.funcMap, spec.FuncName())
 	default:
 		return fmt.Errorf("currently unsupported DROP %s statement", a.objectType)
 	}

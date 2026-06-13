@@ -181,6 +181,7 @@ type connector struct {
 	catalog    *internal.Catalog
 	innerOwned bool
 	innerName  string
+	txLock     string
 }
 
 func (c *connector) Connect(_ context.Context) (dc driver.Conn, e error) {
@@ -189,6 +190,7 @@ func (c *connector) Connect(_ context.Context) (dc driver.Conn, e error) {
 	if err != nil {
 		return nil, err
 	}
+	conn.txLock = c.txLock
 	if c.driver.ConnectHook != nil {
 		if err := c.driver.ConnectHook(conn); err != nil {
 			return nil, err
@@ -213,6 +215,10 @@ func (d *Driver) OpenConnector(name string) (driver.Connector, error) {
 	if err := ensureGoogleSQLInit(); err != nil {
 		return nil, fmt.Errorf("googlesqlite: googlesql init: %w", err)
 	}
+	txLock, err := txLockFromDSN(name)
+	if err != nil {
+		return nil, err
+	}
 	if isPrivateInMemoryDSN(name) {
 		innerName := freshMemoryDSN(name)
 		inner, err := sql.Open(internalDriverName, innerName)
@@ -223,13 +229,38 @@ func (d *Driver) OpenConnector(name string) (driver.Connector, error) {
 		nameToValueMapMu.Lock()
 		nameToCatalogMap[innerName] = catalog
 		nameToValueMapMu.Unlock()
-		return &connector{driver: d, name: name, inner: inner, catalog: catalog, innerOwned: true, innerName: innerName}, nil
+		return &connector{driver: d, name: name, inner: inner, catalog: catalog, innerOwned: true, innerName: innerName, txLock: txLock}, nil
 	}
 	db, catalog, err := newDBAndCatalog(name)
 	if err != nil {
 		return nil, err
 	}
-	return &connector{driver: d, name: name, inner: db, catalog: catalog}, nil
+	return &connector{driver: d, name: name, inner: db, catalog: catalog, txLock: txLock}, nil
+}
+
+func txLockFromDSN(name string) (string, error) {
+	path, _ := dsnParts(name)
+	if !strings.HasPrefix(path, "file:") {
+		return "", nil
+	}
+	i := strings.IndexByte(path, '?')
+	if i < 0 {
+		return "", nil
+	}
+	var txLock string
+	for _, kv := range strings.Split(path[i+1:], "&") {
+		key, value, _ := strings.Cut(kv, "=")
+		if key == "_txlock" {
+			txLock = value
+			break
+		}
+	}
+	switch txLock {
+	case "", "deferred", "concurrent", "immediate", "exclusive":
+		return txLock, nil
+	default:
+		return "", fmt.Errorf("sqlite3: invalid _txlock: %s", txLock)
+	}
 }
 
 // isPrivateInMemoryDSN reports whether the DSN names a private in-memory
@@ -281,7 +312,9 @@ var _ driver.DriverContext = (*Driver)(nil)
 
 type Conn struct {
 	conn           *sql.Conn
-	tx             *sql.Tx
+	txActive       bool
+	txReset        string
+	txLock         string
 	analyzer       *internal.Analyzer
 	catalog        *internal.Catalog
 	systemVars     map[string]string
@@ -425,7 +458,7 @@ func recoverPanicAsError(e *error) {
 func (c *Conn) PrepareContext(ctx context.Context, query string) (s driver.Stmt, e error) {
 	defer func() { e = c.translateConnDone(e) }()
 	defer recoverPanicAsError(&e)
-	conn := internal.NewConnWithOptions(c.conn, c.tx, c.systemVars, c.scriptVars, c.materializeCTE)
+	conn := internal.NewConnWithOptions(c.conn, nil, c.systemVars, c.scriptVars, c.materializeCTE)
 	actionFuncs, err := c.analyzer.Analyze(ctx, conn, query, nil)
 	if err != nil {
 		return nil, err
@@ -448,7 +481,7 @@ func (c *Conn) PrepareContext(ctx context.Context, query string) (s driver.Stmt,
 func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (r driver.Result, e error) {
 	defer func() { e = c.translateConnDone(e) }()
 	defer recoverPanicAsError(&e)
-	conn := internal.NewConnWithOptions(c.conn, c.tx, c.systemVars, c.scriptVars, c.materializeCTE)
+	conn := internal.NewConnWithOptions(c.conn, nil, c.systemVars, c.scriptVars, c.materializeCTE)
 	actionFuncs, err := c.analyzer.Analyze(ctx, conn, query, args)
 	if err != nil {
 		return nil, err
@@ -484,7 +517,7 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (r driver.Rows, e error) {
 	defer func() { e = c.translateConnDone(e) }()
 	defer recoverPanicAsError(&e)
-	conn := internal.NewConnWithOptions(c.conn, c.tx, c.systemVars, c.scriptVars, c.materializeCTE)
+	conn := internal.NewConnWithOptions(c.conn, nil, c.systemVars, c.scriptVars, c.materializeCTE)
 	actionFuncs, err := c.analyzer.Analyze(ctx, conn, query, args)
 	if err != nil {
 		return nil, err
@@ -523,48 +556,112 @@ func (c *Conn) Close() error {
 
 func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (t driver.Tx, e error) {
 	defer func() { e = c.translateConnDone(e) }()
-	tx, err := c.conn.BeginTx(ctx, &sql.TxOptions{
-		Isolation: sql.IsolationLevel(opts.Isolation),
-		ReadOnly:  opts.ReadOnly,
-	})
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	txReset, err := c.beginExplicitTx(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
-	c.tx = tx
+	c.txActive = true
+	c.txReset = txReset
 	return &Tx{
-		tx:   tx,
 		conn: c,
 	}, nil
 }
 
 func (c *Conn) Begin() (t driver.Tx, e error) {
 	defer func() { e = c.translateConnDone(e) }()
-	tx, err := c.conn.BeginTx(context.Background(), nil)
+	txReset, err := c.beginExplicitTx(context.Background(), driver.TxOptions{})
 	if err != nil {
 		return nil, err
 	}
-	c.tx = tx
+	c.txActive = true
+	c.txReset = txReset
 	return &Tx{
-		tx:   tx,
 		conn: c,
 	}, nil
 }
 
+// beginExplicitTx uses the request context only while running BEGIN.
+// It deliberately avoids creating an inner *sql.Tx, whose cancel
+// watcher can close the inner *sql.Conn asynchronously after statement
+// cancellation and leave the outer driver Conn poisoned.
+func (c *Conn) beginExplicitTx(ctx context.Context, opts driver.TxOptions) (string, error) {
+	var txLock string
+	switch sql.IsolationLevel(opts.Isolation) {
+	default:
+		return "", errors.New("sqlite3: unsupported isolation level")
+	case sql.LevelLinearizable:
+		txLock = "exclusive"
+	case sql.LevelSerializable:
+		txLock = "immediate"
+	case sql.LevelDefault:
+		if !opts.ReadOnly {
+			txLock = c.txLock
+		}
+	}
+
+	txBegin := "BEGIN"
+	if txLock != "" {
+		txBegin += " " + txLock
+	}
+	txReset := ""
+	if opts.ReadOnly {
+		var queryOnly int
+		if err := c.conn.QueryRowContext(ctx, "PRAGMA query_only").Scan(&queryOnly); err != nil {
+			return "", err
+		}
+		if queryOnly == 0 {
+			txBegin += "; PRAGMA query_only=on"
+			txReset = "PRAGMA query_only=off"
+		}
+	}
+
+	if _, err := c.conn.ExecContext(ctx, txBegin); err != nil {
+		if opts.ReadOnly {
+			_, _ = c.conn.ExecContext(context.Background(), "ROLLBACK")
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return "", ctxErr
+		}
+		return "", err
+	}
+	return txReset, nil
+}
+
 type Tx struct {
-	tx   *sql.Tx
 	conn *Conn
 }
 
 func (tx *Tx) Commit() error {
 	defer func() {
-		tx.conn.tx = nil
+		tx.conn.txActive = false
+		tx.conn.txReset = ""
 	}()
-	return tx.tx.Commit()
+	err := tx.conn.execTxEnd("COMMIT")
+	if err != nil {
+		_ = tx.conn.execTxEnd("ROLLBACK")
+	}
+	return err
 }
 
 func (tx *Tx) Rollback() error {
 	defer func() {
-		tx.conn.tx = nil
+		tx.conn.txActive = false
+		tx.conn.txReset = ""
 	}()
-	return tx.tx.Rollback()
+	return tx.conn.execTxEnd("ROLLBACK")
+}
+
+func (c *Conn) execTxEnd(command string) error {
+	if !c.txActive {
+		return sql.ErrTxDone
+	}
+	query := command
+	if c.txReset != "" {
+		query += "; " + c.txReset
+	}
+	_, err := c.conn.ExecContext(context.Background(), query)
+	return err
 }
