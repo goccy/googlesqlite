@@ -523,7 +523,26 @@ func (c *Conn) Close() error {
 
 func (c *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (t driver.Tx, e error) {
 	defer func() { e = c.translateConnDone(e) }()
-	tx, err := c.conn.BeginTx(ctx, &sql.TxOptions{
+	// Honour an already-cancelled request context for the BEGIN itself…
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	// …but deliberately do NOT hand the request context to the inner
+	// transaction. database/sql starts a watcher goroutine for any tx
+	// whose context can be cancelled, and on cancellation it runs
+	// Rollback(discardConn=true), which closes the inner *sql.Conn we
+	// hold. That close happens asynchronously, after our own operation
+	// has already returned the caller's ctx error (context.Canceled, not
+	// sql.ErrConnDone) — so translateConnDone never marks us dead and the
+	// outer pool hands this now-poisoned Conn to the next caller, which
+	// then fails with "connection is already closed" / driver.ErrBadConn
+	// (bigquery-emulator #478). Binding the inner tx to a context the
+	// request cannot cancel removes that asynchronous close entirely; the
+	// inner transaction is instead torn down deterministically by our own
+	// Commit/Rollback. Per-statement cancellation is unaffected because
+	// ExecContext/QueryContext still receive and honour the request ctx,
+	// so an in-flight query is still interrupted on cancel.
+	tx, err := c.conn.BeginTx(context.Background(), &sql.TxOptions{
 		Isolation: sql.IsolationLevel(opts.Isolation),
 		ReadOnly:  opts.ReadOnly,
 	})
