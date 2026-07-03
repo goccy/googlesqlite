@@ -2,6 +2,7 @@ package spanner
 
 import (
 	"math"
+	"sync"
 	"testing"
 	"time"
 
@@ -267,5 +268,59 @@ func TestBindGetNextSequenceValue(t *testing.T) {
 	}
 	if _, err := BindGetInternalSequenceState(); err == nil {
 		t.Fatal("expected arg count error")
+	}
+}
+
+// TestBindSequenceFunctionsConcurrent locks in the sequenceCounters
+// synchronisation: GET_NEXT_SEQUENCE_VALUE and
+// GET_INTERNAL_SEQUENCE_STATE are invoked as SQL function callbacks
+// from concurrently running statements (parallel spec runs hit this),
+// so the shared counter map must tolerate concurrent readers and
+// writers. Run under -race this test reproduced the original crash
+// deterministically before the mutex was added. It also checks the
+// counter never skips or repeats: N goroutines × M increments on one
+// sequence must end exactly at N*M.
+func TestBindSequenceFunctionsConcurrent(t *testing.T) {
+	t.Parallel()
+
+	const (
+		goroutines = 8
+		increments = 200
+	)
+	name := value.StringValue("test-seq-concurrent")
+
+	// The counter map is package-level and survives across -count=N
+	// reruns in one process, so assert the delta, not the absolute.
+	before, err := BindGetInternalSequenceState(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := mustInt64(t, before)
+
+	var wg sync.WaitGroup
+	for g := 0; g < goroutines; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < increments; i++ {
+				if _, err := BindGetNextSequenceValue(name); err != nil {
+					t.Error(err)
+					return
+				}
+				if _, err := BindGetInternalSequenceState(name); err != nil {
+					t.Error(err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	state, err := BindGetInternalSequenceState(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := mustInt64(t, state) - start; got != goroutines*increments {
+		t.Fatalf("counter lost updates: got %d, want %d", got, goroutines*increments)
 	}
 }
