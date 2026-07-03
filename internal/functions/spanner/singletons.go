@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"sync"
 	gotime "time"
 
 	"github.com/klauspost/compress/zstd"
@@ -266,7 +267,10 @@ func BindZstdDecompressToString(args ...value.Value) (value.Value, error) {
 // sequence. Spanner sequences are not yet modelled by googlesqlite —
 // this implementation returns a monotonically increasing INT64 per
 // (process, sequence-name) pair.
-var sequenceCounters = map[string]int64{}
+var (
+	sequenceCounters   = map[string]int64{}
+	sequenceCountersMu sync.Mutex
+)
 
 func BindGetNextSequenceValue(args ...value.Value) (value.Value, error) {
 	if len(args) != 1 {
@@ -279,8 +283,11 @@ func BindGetNextSequenceValue(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
+	sequenceCountersMu.Lock()
 	sequenceCounters[name]++
-	return value.IntValue(sequenceCounters[name]), nil
+	next := sequenceCounters[name]
+	sequenceCountersMu.Unlock()
+	return value.IntValue(next), nil
 }
 
 // BindGetInternalSequenceState returns the internal counter for a
@@ -296,5 +303,8 @@ func BindGetInternalSequenceState(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return value.IntValue(sequenceCounters[name]), nil
+	sequenceCountersMu.Lock()
+	cur := sequenceCounters[name]
+	sequenceCountersMu.Unlock()
+	return value.IntValue(cur), nil
 }
