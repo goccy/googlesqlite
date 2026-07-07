@@ -1374,7 +1374,7 @@ func combinationPatternInfo(format []rune) (*CombinationFormatTimeInfo, int, err
 					FormatTypeTimestamp,
 				},
 				Parse: func(target []rune, ret *time.Time) (int, error) {
-					return timePrecisionParser(6, target, ret)
+					return timePrecisionParser(timePrecisionStar, target, ret)
 				},
 				Format: func(t *time.Time) ([]rune, error) {
 					return timePrecisionFormatter(6, t)
@@ -1454,8 +1454,16 @@ func timeZoneRFC3339Formatter(t *time.Time) ([]rune, error) {
 
 var timePrecisionMatcher = regexp.MustCompile(`\d{2}\.?\d*`)
 
+// timePrecisionStar is the precision sentinel for %E*S, which matches a
+// variable number of fractional-second digits rather than a fixed
+// count.
+const timePrecisionStar = -1
+
 func timePrecisionParser(precision int, text []rune, t *time.Time) (int, error) {
-	const maxNanosecondsLength = 9
+	const (
+		maxNanosecondsLength = 9
+		microsecondDigits    = 6
+	)
 	extracted := timePrecisionMatcher.FindString(string(text))
 	if extracted == "" {
 		return 0, fmt.Errorf("failed to parse seconds.nanoseconds for %s", string(text))
@@ -1466,8 +1474,15 @@ func timePrecisionParser(precision int, text []rune, t *time.Time) (int, error) 
 	nanoseconds := strconv.Itoa(t.Nanosecond())
 	if len(splitted) == 2 {
 		nanoseconds = splitted[1]
-		if len(nanoseconds) > precision {
-			nanoseconds = nanoseconds[:precision]
+		if precision == timePrecisionStar {
+			// %E*S keeps microsecond precision, truncating a longer run.
+			if len(nanoseconds) > microsecondDigits {
+				nanoseconds = nanoseconds[:microsecondDigits]
+			}
+		} else if len(nanoseconds) > precision {
+			// %E<n>S matches AT MOST n digits; a longer run is a parse
+			// failure in BigQuery / abseil ParseTime (SAFE.PARSE_* -> NULL).
+			return 0, fmt.Errorf("more than %d fractional second digits in %q", precision, string(text))
 		}
 		nanoseconds += strings.Repeat("0", maxNanosecondsLength-len(nanoseconds))
 	}
