@@ -1277,7 +1277,10 @@ func FormatTime(formatStr string, t *time.Time, typ TimeFormatType) (string, err
 					return "", err
 				}
 				ret = append(ret, formatted...)
-				i += formatProgress
+				// -1 because the loop's post-increment advances the
+				// final rune; using formatProgress would skip the
+				// character after the token (e.g. 'Z' in "%E3SZ").
+				i += formatProgress - 1
 				continue
 			}
 			info := formatPatternMap[c]

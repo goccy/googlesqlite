@@ -127,6 +127,53 @@ func TestFormatTimeCombinedSpecifiers(t *testing.T) {
 	}
 }
 
+// TestFormatTimeLiteralAfterCombination pins that literal characters
+// and further format elements following a %E-prefixed combination
+// token (%E<n>S, %E*S, %Ez, %E4Y) are emitted, not swallowed.
+//
+// Every element renders independently and literal characters in the
+// format string are copied verbatim (format-elements reference:
+// FORMAT_TIMESTAMP("%b %Y %Ez", ...) -> "Dec 2008 +00:00" keeps the
+// spaces around %Ez). The expected strings below are the documented
+// per-element renderings composed left-to-right for referenceTime
+// (2026-05-15 03:04:05.123456789 UTC).
+func TestFormatTimeLiteralAfterCombination(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		format string
+		typ    TimeFormatType
+		want   string
+	}{
+		// Trailing literal 'Z' after %E3S (the ISO "...%E3SZ" idiom).
+		{"E3S_then_Z", "%E3SZ", FormatTypeTime, "05.123Z"},
+		// Trailing literal after %E*S.
+		{"EstarS_then_Z", "%E*SZ", FormatTypeTime, "05.123456Z"},
+		// %E4Y followed by a '-' literal and another element.
+		{"E4Y_then_dash_month", "%E4Y-%m", FormatTypeDate, "2026-05"},
+		// %Ez followed by a literal character.
+		{"Ez_then_literal", "%Ez!", FormatTypeTimestamp, "+00:00!"},
+		// %Ez followed by a space and a further element.
+		{"Ez_then_space_month", "%Ez %b", FormatTypeTimestamp, "+00:00 May"},
+		// Combination token in the middle, element on both sides.
+		{"month_E3S_year", "%b %E3S %Y", FormatTypeTimestamp, "May 05.123 2026"},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := FormatTime(c.format, &referenceTime, c.typ)
+			if err != nil {
+				t.Fatalf("FormatTime(%q): %v", c.format, err)
+			}
+			if got != c.want {
+				t.Fatalf("FormatTime(%q) = %q, want %q", c.format, got, c.want)
+			}
+		})
+	}
+}
+
 // TestFormatTimeErrors covers the FormatTime error paths.
 func TestFormatTimeErrors(t *testing.T) {
 	t.Parallel()
