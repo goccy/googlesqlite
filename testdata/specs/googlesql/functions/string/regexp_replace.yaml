@@ -6,3 +6,65 @@ cases:
     expected:
       rows:
         - ["aXbXcX"]
+  # Upstream Example (string_functions.md#regexp_replace): a group
+  # backreference in the middle of the replacement.
+  - desc: group backreference (upstream heading example)
+    sql: |
+      SELECT REGEXP_REPLACE("# Heading", r"^# ([a-zA-Z0-9\s]+$)", r"<h1>\1</h1>")
+    expected:
+      rows:
+        - ["<h1>Heading</h1>"]
+  # Upstream Description example: "REGEXP_REPLACE('abc', 'b(.)', 'X\1')
+  # returns aXc". The backreference \1 is the final token of the
+  # replacement -- it must still resolve to group 1, not leak literally.
+  - desc: trailing group backreference
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"b(.)", r"X\1")
+    expected:
+      rows:
+        - ["aXc"]
+  # \0 refers to the entire matching text (string_functions.md: "Use \0
+  # to refer to the entire matching text.").
+  - desc: whole-match backreference with \0
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"b(.)", r"[\0]")
+    expected:
+      rows:
+        - ["a[bc]"]
+  # Backreferences are a single digit: \10 is group 1 followed by a
+  # literal '0', not group 10.
+  - desc: single-digit backreference then literal digit
+    sql: |
+      SELECT REGEXP_REPLACE("abcdefghijk", r"(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)", r"\10")
+    expected:
+      rows:
+        - ["a0k"]
+  # A literal backslash is written as \\ and produces one backslash.
+  - desc: escaped literal backslash
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"(b)", r"\\")
+    expected:
+      rows:
+        - ["a\\c"]
+  # '$' is an ordinary literal in a BigQuery replacement (unlike RE2's
+  # own Expand syntax, where '$' is the group sigil).
+  - desc: literal dollar sign in replacement
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"(b)", r"p$q")
+    expected:
+      rows:
+        - ["ap$qc"]
+  - desc: literal ${1} in replacement is not a group reference
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"(b)", r"${1}")
+    expected:
+      rows:
+        - ["a${1}c"]
+  # A backslash must be followed by a digit or another backslash;
+  # anything else is an error.
+  - desc: backslash followed by a non-digit is an error
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"(b)", r"\q")
+    expected:
+      error:
+        contains: "must be followed by a digit"

@@ -1252,20 +1252,62 @@ func TestBase32RoundTrip(t *testing.T) {
 
 // ----- REGEXP_REPLACE backreferences ---------------------------
 
+// TestRegexpReplaceBackreferences pins the BigQuery replacement grammar
+// (string_functions.md#regexp_replace): \0..\9 are single-digit group
+// references (\0 = the whole match), \\ is a literal backslash, '$' is
+// an ordinary literal, and any other escape is an error. Expected
+// values are the upstream Description/Examples plus the documented
+// single-digit and literal-backslash rules.
 func TestRegexpReplaceBackreferences(t *testing.T) {
 	t.Parallel()
-	// BQ docs Example: REGEXP_REPLACE('# Heading',
-	// '^# ([a-zA-Z0-9\\s]+$)', '<h1>\\1</h1>') -> '<h1>Heading</h1>'.
-	got, err := strfn.REGEXP_REPLACE(
-		value.StringValue("# Heading"),
-		value.StringValue(`^# ([a-zA-Z0-9\s]+$)`),
-		value.StringValue(`<h1>\1</h1>`),
-	)
-	if err != nil {
-		t.Fatalf("REGEXP_REPLACE: %v", err)
+
+	cases := []struct {
+		desc    string
+		input   string
+		expr    string
+		repl    string
+		want    string
+		wantErr bool
+	}{
+		// BQ docs Example: REGEXP_REPLACE('# Heading',
+		// '^# ([a-zA-Z0-9\s]+$)', '<h1>\1</h1>') -> '<h1>Heading</h1>'.
+		{"heading_example", "# Heading", `^# ([a-zA-Z0-9\s]+$)`, `<h1>\1</h1>`, "<h1>Heading</h1>", false},
+		// Description example: REGEXP_REPLACE('abc','b(.)','X\1') -> aXc.
+		// The backreference is the final token of the replacement.
+		{"trailing_ref", "abc", "b(.)", `X\1`, "aXc", false},
+		// \0 is the entire match.
+		{"whole_match", "abc", "b(.)", `[\0]`, "a[bc]", false},
+		// Single-digit index: \10 is group 1 then a literal '0'.
+		{"single_digit", "abcdefghijk", "(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)", `\10`, "a0k", false},
+		// Consecutive references.
+		{"double_ref", "xyz", "(y)", `\1\1`, "xyyz", false},
+		// \\ -> one literal backslash.
+		{"literal_backslash", "abc", "(b)", `\\`, `a\c`, false},
+		// '$' is a literal, not the Expand sigil.
+		{"literal_dollar", "abc", "(b)", `p$q`, "ap$qc", false},
+		{"literal_dollar_brace", "abc", "(b)", `${1}`, "a${1}c", false},
+		// Invalid escapes: '\' must be followed by a digit or '\'.
+		{"backslash_nondigit", "abc", "(b)", `\q`, "", true},
+		{"trailing_backslash", "abc", "(b)", `x\`, "", true},
 	}
-	if !equalString(got, "<h1>Heading</h1>") {
-		t.Fatalf("REGEXP_REPLACE backref: got %v", got)
+	for _, c := range cases {
+		c := c
+		t.Run(c.desc, func(t *testing.T) {
+			t.Parallel()
+			got, err := strfn.REGEXP_REPLACE(value.StringValue(c.input), value.StringValue(c.expr), value.StringValue(c.repl))
+			if c.wantErr {
+				if err == nil {
+					t.Fatalf("REGEXP_REPLACE(%q,%q,%q): expected error, got %v", c.input, c.expr, c.repl, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("REGEXP_REPLACE(%q,%q,%q): %v", c.input, c.expr, c.repl, err)
+			}
+			if !equalString(got, c.want) {
+				t.Fatalf("REGEXP_REPLACE(%q,%q,%q) = %v, want %q", c.input, c.expr, c.repl, got, c.want)
+			}
+		})
 	}
 }
 

@@ -9,35 +9,49 @@ func isDelim(v rune, delimiters []rune) bool {
 	return slices.Contains(delimiters, v)
 }
 
-func normalizeReplacement(repl string) string {
+// normalizeReplacement rewrites a BigQuery / GoogleSQL REGEXP_REPLACE
+// replacement string into the template syntax consumed by Go's
+// regexp.Expand (ReplaceAllString / ReplaceAll).
+//
+// The BigQuery replacement grammar (string_functions.md#regexp_replace)
+// is:
+//
+//   - \0 .. \9  insert the text captured by the corresponding group,
+//     where \0 is the entire match. The index is a SINGLE digit; a
+//     following digit is a literal (e.g. \10 is group 1 then "0").
+//   - \\        a literal backslash.
+//   - \ + other an error: "'\' must be followed by a digit or '\'".
+//   - every other byte, INCLUDING '$', is a literal.
+//
+// Go's Expand template instead spells group references "${d}" and uses
+// '$' as its sigil, so a literal '$' must be doubled to "$$".
+func normalizeReplacement(repl string) (string, error) {
 	var normalized []byte
 	for i := 0; i < len(repl); i++ {
-		switch repl[i] {
+		switch c := repl[i]; c {
 		case '\\':
-			i++
-			var tmp []byte
-			switch repl[i] {
-			case '1', '2', '3', '4', '5', '6', '7', '8', '9':
-				tmp = []byte{'$', '{', repl[i]}
-				for j := i + 1; j < len(repl); j++ {
-					switch repl[j] {
-					case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-						tmp = append(tmp, repl[j])
-						continue
-					}
-					tmp = append(tmp, '}')
-					i = j - 1
-					break
-				}
-			default:
-				tmp = []byte{'\\', repl[i]}
+			if i+1 >= len(repl) {
+				return "", fmt.Errorf("REGEXP_REPLACE: '\\' must be followed by a digit or '\\'")
 			}
-			normalized = append(normalized, tmp...)
+			next := repl[i+1]
+			switch {
+			case next >= '0' && next <= '9':
+				normalized = append(normalized, '$', '{', next, '}')
+			case next == '\\':
+				normalized = append(normalized, '\\')
+			default:
+				return "", fmt.Errorf("REGEXP_REPLACE: '\\' must be followed by a digit or '\\'")
+			}
+			i++
+		case '$':
+			// '$' is an ordinary literal in a BigQuery replacement, but
+			// the group sigil in Go's Expand template; escape it.
+			normalized = append(normalized, '$', '$')
 		default:
-			normalized = append(normalized, repl[i])
+			normalized = append(normalized, c)
 		}
 	}
-	return string(normalized)
+	return string(normalized), nil
 }
 
 var soundexMap = map[byte]byte{
