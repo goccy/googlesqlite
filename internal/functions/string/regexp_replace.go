@@ -26,7 +26,11 @@ func REGEXP_REPLACE(val, exprValue, replacementValue value.Value) (value.Value, 
 		if err != nil {
 			return nil, err
 		}
-		return value.StringValue(re.ReplaceAllString(v, normalizeReplacement(replacement))), nil
+		normalized, err := normalizeReplacement(replacement)
+		if err != nil {
+			return nil, err
+		}
+		return value.StringValue(re.ReplaceAllString(v, normalized)), nil
 	case value.BytesValue:
 		v, err := val.ToBytes()
 		if err != nil {
@@ -44,7 +48,11 @@ func REGEXP_REPLACE(val, exprValue, replacementValue value.Value) (value.Value, 
 		if err != nil {
 			return nil, err
 		}
-		return value.BytesValue(re.ReplaceAll(v, []byte(normalizeReplacement(string(replacement))))), nil
+		normalized, err := normalizeReplacement(string(replacement))
+		if err != nil {
+			return nil, err
+		}
+		return value.BytesValue(re.ReplaceAll(v, []byte(normalized))), nil
 	}
 	return nil, fmt.Errorf("REGEXP_REPLACE: val must be STRING or BYTES, %s", val)
 }
