@@ -10,7 +10,7 @@ require (
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
 	github.com/fatih/color v1.19.0
 	github.com/fsouza/fake-gcs-server v1.54.0
-	github.com/goccy/go-googlesql v0.3.0
+	github.com/goccy/go-googlesql v0.4.0
 	github.com/goccy/go-json v0.10.6
 	github.com/goccy/go-yaml v1.11.0
 	github.com/golang/geo v0.0.0-20260505155700-1c5af9662e82
@@ -55,7 +55,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
-	github.com/goccy/googlesqlwasm2go v0.1.0 // indirect
+	github.com/goccy/googlesqlwasm2go v0.2.0 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/google/renameio/v2 v2.0.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect

@@ -16,9 +16,9 @@ require (
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
-	github.com/goccy/go-googlesql v0.3.0 // indirect
+	github.com/goccy/go-googlesql v0.4.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
-	github.com/goccy/googlesqlwasm2go v0.1.0 // indirect
+	github.com/goccy/googlesqlwasm2go v0.2.0 // indirect
 	github.com/golang/geo v0.0.0-20260505155700-1c5af9662e82 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/google/uuid v1.6.0 // indirect
