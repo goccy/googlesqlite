@@ -7,3 +7,27 @@ cases:
     expected:
       rows:
         - [1710505845]
+  # %E3S matches up to three fractional-second digits; ".123" is within
+  # precision and parses to 123000 microseconds past the second.
+  - desc: fractional seconds within %E3S precision
+    sql: |
+      SELECT UNIX_MICROS(PARSE_TIMESTAMP("%Y-%m-%d %H:%M:%E3S%Ez", "2024-03-15 12:30:45.123+00:00"))
+    expected:
+      rows:
+        - [1710505845123000]
+  # A fractional run longer than %E3S allows (four digits here) is a
+  # parse failure -- BigQuery returns "Failed to parse input string".
+  - desc: fractional run longer than %E3S fails
+    sql: |
+      SELECT PARSE_TIMESTAMP("%Y-%m-%d %H:%M:%E3S%Ez", "2024-03-15 12:30:45.1234+00:00")
+    expected:
+      error:
+        contains: "fractional second digits"
+  # %E*S matches a variable number of fractional digits and keeps
+  # microsecond precision, so nine digits truncate to 123456 us.
+  - desc: "%E*S keeps microsecond precision"
+    sql: |
+      SELECT UNIX_MICROS(PARSE_TIMESTAMP("%Y-%m-%d %H:%M:%E*S%Ez", "2024-03-15 12:30:45.123456789+00:00"))
+    expected:
+      rows:
+        - [1710505845123456]

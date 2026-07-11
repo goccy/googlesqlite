@@ -277,6 +277,66 @@ func TestParseTimeFormatRoundtrip(t *testing.T) {
 	}
 }
 
+// TestParseTimeFormatFractionalPrecision pins the parse-side matching
+// rule for the fractional-second combination tokens:
+//
+//   - %E<n>S matches AT MOST n fractional digits. A longer run of
+//     fractional digits is a parse failure (e.g. PARSE_TIMESTAMP with
+//     %E3S over "...00.1234567Z" returns NULL in BigQuery), while
+//     fewer than n digits (or none) parse fine.
+//   - %E*S matches a variable number of fractional digits and keeps
+//     microsecond precision.
+//
+// Anchored to the format-elements reference ("%E<number>S: Seconds
+// with <number> digits of fractional precision") and the abseil
+// ParseTime semantics GoogleSQL/BigQuery inherit.
+func TestParseTimeFormatFractionalPrecision(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		format    string
+		target    string
+		wantErr   bool
+		wantSec   int
+		wantNanos int
+	}{
+		// %E3S: 0..3 fractional digits accepted.
+		{name: "E3S_zero", format: "%E3S", target: "05", wantSec: 5, wantNanos: 0},
+		{name: "E3S_two", format: "%E3S", target: "05.12", wantSec: 5, wantNanos: 120_000_000},
+		{name: "E3S_three", format: "%E3S", target: "05.123", wantSec: 5, wantNanos: 123_000_000},
+		// %E3S: 4+ fractional digits must fail.
+		{name: "E3S_four", format: "%E3S", target: "05.1234", wantErr: true},
+		{name: "E3S_seven", format: "%E3S", target: "05.1234567", wantErr: true},
+		// %E6S: 6 digits ok, 7 fails.
+		{name: "E6S_six", format: "%E6S", target: "05.123456", wantSec: 5, wantNanos: 123_456_000},
+		{name: "E6S_seven", format: "%E6S", target: "05.1234567", wantErr: true},
+		// %E*S: variable count, truncated to microseconds.
+		{name: "Estar_seven", format: "%E*S", target: "05.1234567", wantSec: 5, wantNanos: 123_456_000},
+		{name: "Estar_nine", format: "%E*S", target: "05.123456789", wantSec: 5, wantNanos: 123_456_000},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ParseTimeFormat(c.format, c.target, FormatTypeTime)
+			if c.wantErr {
+				if err == nil {
+					t.Fatalf("ParseTimeFormat(%q, %q): expected error, got %v", c.format, c.target, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseTimeFormat(%q, %q): %v", c.format, c.target, err)
+			}
+			if got.Second() != c.wantSec || got.Nanosecond() != c.wantNanos {
+				t.Fatalf("ParseTimeFormat(%q, %q) = sec %d nanos %d, want sec %d nanos %d",
+					c.format, c.target, got.Second(), got.Nanosecond(), c.wantSec, c.wantNanos)
+			}
+		})
+	}
+}
+
 // TestParseTimeFormatPostProcessPM exercises the AM/PM
 // post-processor: a 12-hour-clock %I plus a %p of "PM" promotes the
 // hour into the 13-23 range.
