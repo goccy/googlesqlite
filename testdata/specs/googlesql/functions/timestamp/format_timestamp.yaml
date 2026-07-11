@@ -7,3 +7,21 @@ cases:
     expected:
       rows:
         - ["2024-03-15T12:30:45"]
+  # A literal that follows a %E-prefixed combination token (%E*S here)
+  # must be emitted verbatim. %E*S renders seconds with full fractional
+  # precision ("45.123456"), and the trailing literal 'Z' is copied
+  # through -- it is not a format element (that would be %Z).
+  - desc: literal Z after %E*S combination token
+    sql: |
+      SELECT FORMAT_TIMESTAMP("%Y-%m-%dT%H:%M:%E*SZ", TIMESTAMP "2024-03-15 12:30:45.123456+00", "UTC")
+    expected:
+      rows:
+        - ["2024-03-15T12:30:45.123456Z"]
+  # %E4Y (four-character year) followed by a '-' literal and a further
+  # element; the '-' between the year and the month must survive.
+  - desc: literal dash after %E4Y combination token
+    sql: |
+      SELECT FORMAT_TIMESTAMP("%E4Y-%m", TIMESTAMP "2024-03-15 12:30:45+00", "UTC")
+    expected:
+      rows:
+        - ["2024-03"]
