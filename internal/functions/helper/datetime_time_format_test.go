@@ -485,6 +485,43 @@ func TestParseTimeFormatLiteralAndWhitespace(t *testing.T) {
 	}
 }
 
+// TestParseTimeFormatLiteralMatch pins that a format literal must be
+// matched in the target: a missing or mismatched character is a clean
+// parse failure, not a panic (the ISO "%E3SZ" idiom fed a Z-less input).
+func TestParseTimeFormatLiteralMatch(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		format string
+		target string
+	}{
+		// Trailing literal 'Z' with the target one character short.
+		{"missing_trailing_literal", "%Y-%m-%dT%H:%M:%E3SZ", "2024-01-05T12:30:00.123"},
+		// Trailing literal present but wrong ('X' instead of 'Z').
+		{"wrong_trailing_literal", "%Y-%m-%dT%H:%M:%E3SZ", "2024-01-05T12:30:00.123X"},
+		// Literal '-' with the target exhausted just before it.
+		{"missing_mid_literal", "%Y-%m", "2024"},
+		// Literal '-' present but wrong.
+		{"wrong_mid_literal", "%Y/%m", "2024-05"},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			// Must return an error and must not panic.
+			if _, err := ParseTimeFormat(c.format, c.target, FormatTypeTimestamp); err == nil {
+				t.Fatalf("ParseTimeFormat(%q, %q): expected error, got nil", c.format, c.target)
+			}
+		})
+	}
+
+	// Control: the matching literal still parses.
+	if _, err := ParseTimeFormat("%Y-%m-%dT%H:%M:%E3SZ", "2024-01-05T12:30:00.123Z", FormatTypeTimestamp); err != nil {
+		t.Fatalf("matching trailing literal must parse: %v", err)
+	}
+}
+
 // TestTimeFormatTypeString covers the TimeFormatType.String branch
 // matrix including the unknown fallback.
 func TestTimeFormatTypeString(t *testing.T) {
