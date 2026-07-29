@@ -458,6 +458,18 @@ func structHasMatchingNames(s *value.StructValue, fields []*googlesql.StructFiel
 	return false
 }
 
+// toTemporal converts v for a DATE / DATETIME / TIME target. A STRING
+// source must hold the canonical literal of that target -- unlike
+// Value.ToTime(), which accepts every temporal shape and would let a
+// timestamp string be truncated into a date. Other sources keep their
+// documented truncating semantics (TIMESTAMP -> DATE and friends).
+func toTemporal(v value.Value, parseLiteral func(string) (time.Time, error)) (time.Time, error) {
+	if s, ok := v.(value.StringValue); ok {
+		return parseLiteral(string(s))
+	}
+	return v.ToTime()
+}
+
 func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, error) {
 	if v == nil {
 		return nil, nil
@@ -502,19 +514,19 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 		}
 		return value.BytesValue(b), nil
 	case googlesql.TypeKindTypeDate:
-		t, err := v.ToTime()
+		t, err := toTemporal(v, value.ParseDateLiteral)
 		if err != nil {
 			return nil, err
 		}
 		return value.DateValue(t), nil
 	case googlesql.TypeKindTypeDatetime:
-		t, err := v.ToTime()
+		t, err := toTemporal(v, value.ParseDatetimeLiteral)
 		if err != nil {
 			return nil, err
 		}
 		return value.DatetimeValue(t), nil
 	case googlesql.TypeKindTypeTime:
-		t, err := v.ToTime()
+		t, err := toTemporal(v, value.ParseTimeLiteral)
 		if err != nil {
 			return nil, err
 		}

@@ -12,12 +12,15 @@ func ParseTime(s string) (time.Time, error)     { return parseTime(s) }
 func ParseTimestamp(s string, loc *time.Location) (time.Time, error) {
 	return parseTimestamp(s, loc)
 }
-func ParseInterval(s string) (*IntervalValue, error) { return parseInterval(s) }
-func IsDate(s string) bool                           { return isDate(s) }
-func IsDatetime(s string) bool                       { return isDatetime(s) }
-func IsTime(s string) bool                           { return isTime(s) }
-func IsTimestamp(s string) bool                      { return isTimestamp(s) }
-func IsNullValue(v any) bool                         { return isNullValue(v) }
+func ParseDateLiteral(s string) (time.Time, error)     { return parseDateLiteral(s) }
+func ParseDatetimeLiteral(s string) (time.Time, error) { return parseDatetimeLiteral(s) }
+func ParseTimeLiteral(s string) (time.Time, error)     { return parseTimeLiteral(s) }
+func ParseInterval(s string) (*IntervalValue, error)   { return parseInterval(s) }
+func IsDate(s string) bool                             { return isDate(s) }
+func IsDatetime(s string) bool                         { return isDatetime(s) }
+func IsTime(s string) bool                             { return isTime(s) }
+func IsTimestamp(s string) bool                        { return isTimestamp(s) }
+func IsNullValue(v any) bool                           { return isNullValue(v) }
 
 func ToLocation(timeZone string) (*time.Location, error) { return toLocation(timeZone) }
 func ModifyTimeZone(t time.Time, loc *time.Location) (time.Time, error) {
