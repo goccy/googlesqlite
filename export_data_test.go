@@ -5,15 +5,20 @@ import (
 	"compress/gzip"
 	"context"
 	"database/sql"
+	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"net/url"
 	"path"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/goccy/googlesqlite"
+	"github.com/parquet-go/parquet-go"
+	parquetformat "github.com/parquet-go/parquet-go/format"
 )
 
 // memCapture is the test-local store the test-only mem writer commits to
@@ -102,7 +107,7 @@ func (w *memWriteCloser) Close() error {
 // EXPORT DATA action tries to open a writer, so they run anywhere
 // (including under the race detector).
 func TestExportDataErrorPaths(t *testing.T) {
-	scheme, _ := registerMemScheme(t)
+	scheme, capture := registerMemScheme(t)
 
 	ctx := context.Background()
 	db, err := sql.Open("googlesqlite", ":memory:?_test=exportdataerr")
@@ -207,6 +212,12 @@ func TestExportDataErrorPaths(t *testing.T) {
              AS SELECT 1 AS id`, scheme), "field_delimiter")
 	})
 
+	t.Run("empty field_delimiter on Parquet is still rejected", func(t *testing.T) {
+		expectErr(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(uri = '%s://x/y', format = 'PARQUET', field_delimiter = '')
+			 AS SELECT 1 AS id`, scheme), "field_delimiter")
+	})
+
 	t.Run("incompatible compression for format is rejected", func(t *testing.T) {
 		// SNAPPY is documented for AVRO/PARQUET, not CSV. The encoder
 		// would happily write uncompressed bytes if we dropped the value
@@ -215,6 +226,23 @@ func TestExportDataErrorPaths(t *testing.T) {
 		expectErr(t, fmt.Sprintf(
 			`EXPORT DATA OPTIONS(uri = '%s://x/y', format = 'CSV', compression = 'SNAPPY')
              AS SELECT 1 AS id`, scheme), "snappy")
+	})
+
+	for _, codec := range []string{"DEFLATE", "LZ4"} {
+		t.Run("Parquet rejects "+codec, func(t *testing.T) {
+			expectErr(t, fmt.Sprintf(
+				`EXPORT DATA OPTIONS(uri = '%s://x/%s.parquet', format = 'PARQUET', compression = '%s')
+				 AS SELECT 1 AS id`, scheme, strings.ToLower(codec), codec), codec)
+		})
+	}
+
+	t.Run("Parquet rejects undocumented output type before opening destination", func(t *testing.T) {
+		expectErr(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(uri = '%s://x/unsupported.parquet', format = 'PARQUET')
+			 AS SELECT JSON '{"a":1}' AS payload`, scheme), "no documented Parquet mapping")
+		if _, ok := capture.get("x/unsupported.parquet"); ok {
+			t.Fatal("unsupported Parquet type created a destination object")
+		}
 	})
 
 	t.Run("use_avro_logical_types names AVRO format gap", func(t *testing.T) {
@@ -402,6 +430,132 @@ func TestExportDataMemRoundTrip(t *testing.T) {
 	}
 }
 
+func TestExportDataParquetRoundTrip(t *testing.T) {
+	scheme, capture := registerMemScheme(t)
+	ctx := context.Background()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=exportdataparquet")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	rows, err := conn.QueryContext(ctx, fmt.Sprintf(
+		`EXPORT DATA OPTIONS(
+			uri = '%s://target/out.parquet',
+			format = 'PARQUET', compression = 'SNAPPY', overwrite = true
+		) AS SELECT
+			7 AS z_id,
+			STRUCT('alice' AS name, [1, 2] AS scores) AS record,
+			CAST(NULL AS STRING) AS nullable,
+			ST_GEOGFROMTEXT('POINT(1 2)') AS location`,
+		scheme,
+	))
+	if err != nil {
+		t.Fatalf("exec: %v", err)
+	}
+	rows.Close()
+	raw, ok := capture.get("target/out.parquet")
+	if !ok {
+		t.Fatalf("captured no Parquet output (have %v)", capture.keys())
+	}
+	file, err := parquet.OpenFile(bytes.NewReader(raw), int64(len(raw)))
+	if err != nil {
+		t.Fatalf("open Parquet output: %v", err)
+	}
+	fields := file.Schema().Fields()
+	gotNames := make([]string, len(fields))
+	for i := range fields {
+		gotNames[i] = fields[i].Name()
+	}
+	if got, want := strings.Join(gotNames, ","), "z_id,record,nullable,location"; got != want {
+		t.Fatalf("Parquet columns = %s; want %s", got, want)
+	}
+	reader := parquet.NewGenericReader[any](bytes.NewReader(raw))
+	defer reader.Close()
+	decoded := make([]any, 1)
+	if n, err := reader.Read(decoded); n != 1 || err != nil && err != io.EOF {
+		t.Fatalf("read Parquet output = %d rows, %v", n, err)
+	}
+	row, ok := decoded[0].(map[string]any)
+	if !ok {
+		t.Fatalf("decoded Parquet row type = %T", decoded[0])
+	}
+	if row["z_id"] != int64(7) || row["nullable"] != nil {
+		t.Fatalf("decoded Parquet row = %#v", row)
+	}
+	record, ok := row["record"].(map[string]any)
+	if !ok || record["name"] != "alice" {
+		t.Fatalf("decoded nested record = %#v", row["record"])
+	}
+	scores, ok := record["scores"].([]any)
+	if !ok || len(scores) != 2 || scores[0] != int64(1) || scores[1] != int64(2) {
+		t.Fatalf("decoded nested scores = %#v", record["scores"])
+	}
+	geo, ok := row["location"].(string)
+	if !ok || len(geo) != 21 || geo[0] != 1 || binary.LittleEndian.Uint32([]byte(geo[1:5])) != 1 ||
+		math.Float64frombits(binary.LittleEndian.Uint64([]byte(geo[5:13]))) != 1 ||
+		math.Float64frombits(binary.LittleEndian.Uint64([]byte(geo[13:21]))) != 2 {
+		t.Fatalf("decoded geography WKB = %#v", row["location"])
+	}
+	if metadata, ok := file.Lookup("geo"); !ok || !strings.Contains(metadata, `"edges":"spherical"`) {
+		t.Fatalf("GeoParquet metadata = %q, %v", metadata, ok)
+	}
+}
+
+func TestExportDataParquetCompressionOptions(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		option string
+		want   parquetformat.CompressionCodec
+	}{
+		{name: "default", want: parquetformat.Uncompressed},
+		{name: "none", option: ", compression = 'NONE'", want: parquetformat.Uncompressed},
+		{name: "snappy", option: ", compression = 'SNAPPY'", want: parquetformat.Snappy},
+		{name: "gzip", option: ", compression = 'GZIP'", want: parquetformat.Gzip},
+		{name: "zstd", option: ", compression = 'ZSTD'", want: parquetformat.Zstd},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme, capture := registerMemScheme(t)
+			ctx := context.Background()
+			db, err := sql.Open("googlesqlite", ":memory:?_test=exportdataparquetcompression")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+
+			rows, err := db.QueryContext(ctx, fmt.Sprintf(
+				`EXPORT DATA OPTIONS(
+					uri = '%s://target/out.parquet', format = 'PARQUET'%s
+				) AS SELECT 1 AS id, 'value' AS name`, scheme, tc.option,
+			))
+			if err != nil {
+				t.Fatalf("exec: %v", err)
+			}
+			if err := rows.Close(); err != nil {
+				t.Fatalf("close rows: %v", err)
+			}
+
+			raw, ok := capture.get("target/out.parquet")
+			if !ok {
+				t.Fatalf("captured no Parquet output (have %v)", capture.keys())
+			}
+			if !bytes.HasPrefix(raw, []byte("PAR1")) {
+				t.Fatalf("output starts with %x; want Parquet magic without outer compression", raw[:min(4, len(raw))])
+			}
+			file, err := parquet.OpenFile(bytes.NewReader(raw), int64(len(raw)))
+			if err != nil {
+				t.Fatalf("open Parquet output: %v", err)
+			}
+			assertParquetCompression(t, file.Root(), tc.want)
+		})
+	}
+}
+
 // TestExportDataOverwriteOption checks that the `overwrite` option
 // reaches the URIWriter via ExportWriterOpts. The mem writer here
 // refuses a second open at the same key unless opts.Overwrite is
@@ -413,8 +567,9 @@ func TestExportDataMemRoundTrip(t *testing.T) {
 func TestExportDataOverwriteOption(t *testing.T) {
 	scheme := "mem-overwrite"
 	var (
-		mu     sync.Mutex
-		exists = map[string]bool{}
+		mu       sync.Mutex
+		exists   = map[string]bool{}
+		observed = map[string][]bool{}
 	)
 	googlesqlite.RegisterExportURIWriter(scheme, func(_ context.Context, uri string, opts googlesqlite.ExportWriterOpts) (io.WriteCloser, error) {
 		u, err := url.Parse(uri)
@@ -424,6 +579,7 @@ func TestExportDataOverwriteOption(t *testing.T) {
 		key := path.Join(u.Host, u.Path)
 		mu.Lock()
 		defer mu.Unlock()
+		observed[key] = append(observed[key], opts.Overwrite)
 		if exists[key] && !opts.Overwrite {
 			return nil, fmt.Errorf("destination %s exists and overwrite=false", key)
 		}
@@ -444,39 +600,67 @@ func TestExportDataOverwriteOption(t *testing.T) {
 	}
 	defer conn.Close()
 
-	stmt := fmt.Sprintf(
-		`EXPORT DATA OPTIONS(uri = '%s://b/out.csv', format = 'CSV', overwrite = %%s)
-         AS SELECT 1 AS id`, scheme)
+	for _, tc := range []struct {
+		name   string
+		format string
+		key    string
+	}{
+		{name: "CSV", format: "CSV", key: "out.csv"},
+		{name: "Parquet", format: "PARQUET", key: "out.parquet"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			query := func(overwriteOption string) (*sql.Rows, error) {
+				return conn.QueryContext(ctx, fmt.Sprintf(
+					`EXPORT DATA OPTIONS(uri = '%s://b/%s', format = '%s'%s)
+					 AS SELECT 1 AS id`, scheme, tc.key, tc.format, overwriteOption,
+				))
+			}
 
-	// First write — fresh destination; should succeed regardless of
-	// the overwrite flag.
-	r1, err := conn.QueryContext(ctx, fmt.Sprintf(stmt, "false"))
-	if err != nil {
-		t.Fatalf("first export: %v", err)
-	}
-	r1.Close()
+			// Omitted overwrite defaults to false, but succeeds for a new object.
+			r1, err := query("")
+			if err != nil {
+				t.Fatalf("first export: %v", err)
+			}
+			r1.Close()
 
-	// Second write at the same URI with overwrite=false — the writer
-	// is supposed to refuse. If the option is silently dropped the
-	// writer would see opts.Overwrite=false but already-exists=true
-	// and the inner refusal still fires, so this also fails. The bug
-	// we are guarding against is the opposite: an opts.Overwrite=true
-	// value silently being downgraded to false (or vice versa). Cover
-	// both directions below.
-	r2, err := conn.QueryContext(ctx, fmt.Sprintf(stmt, "false"))
-	if r2 != nil {
-		r2.Close()
-	}
-	if err == nil {
-		t.Fatal("second EXPORT DATA with overwrite=false should fail; URIWriter returned no error so the option must have been silently flipped to true")
-	}
+			// An explicit false refuses to replace the object.
+			r2, err := query(", overwrite = false")
+			if r2 != nil {
+				r2.Close()
+			}
+			if err == nil {
+				t.Fatal("second EXPORT DATA with overwrite=false should fail")
+			}
 
-	// Same destination, this time with overwrite=true — must succeed.
-	r3, err := conn.QueryContext(ctx, fmt.Sprintf(stmt, "true"))
-	if err != nil {
-		t.Fatalf("EXPORT DATA with overwrite=true should succeed: %v", err)
+			// Explicit true replaces it.
+			r3, err := query(", overwrite = true")
+			if err != nil {
+				t.Fatalf("EXPORT DATA with overwrite=true should succeed: %v", err)
+			}
+			r3.Close()
+
+			key := path.Join("b", tc.key)
+			mu.Lock()
+			got := append([]bool(nil), observed[key]...)
+			mu.Unlock()
+			if want := []bool{false, false, true}; !reflect.DeepEqual(got, want) {
+				t.Fatalf("writer overwrite options = %v; want %v", got, want)
+			}
+		})
 	}
-	r3.Close()
+}
+
+func assertParquetCompression(t *testing.T, column *parquet.Column, want parquetformat.CompressionCodec) {
+	t.Helper()
+	if column.Leaf() {
+		if got := column.Compression().CompressionCodec(); got != want {
+			t.Errorf("column %v compression = %v; want %v", column.Path(), got, want)
+		}
+		return
+	}
+	for _, child := range column.Columns() {
+		assertParquetCompression(t, child, want)
+	}
 }
 
 func gunzip(t *testing.T, raw []byte) []byte {

@@ -2418,11 +2418,12 @@ type ResolvedExportDataOptions struct {
 func readExportDataOptions(opts []*googlesql.ResolvedOption) (*ResolvedExportDataOptions, error) {
 	out := &ResolvedExportDataOptions{}
 	var (
-		formatStr   string
-		compressStr string
-		headerSet   bool
-		headerValue bool
-		uriSet      bool
+		formatStr         string
+		compressStr       string
+		headerSet         bool
+		headerValue       bool
+		fieldDelimiterSet bool
+		uriSet            bool
 	)
 	for _, opt := range opts {
 		name, _ := opt.Name()
@@ -2443,6 +2444,7 @@ func readExportDataOptions(opts []*googlesql.ResolvedOption) (*ResolvedExportDat
 				compressStr = val
 			case "field_delimiter":
 				out.CSV.FieldDelimiter = val
+				fieldDelimiterSet = true
 			}
 		case "overwrite":
 			b, err := readExportDataBoolOption(opt)
@@ -2520,7 +2522,7 @@ func readExportDataOptions(opts []*googlesql.ResolvedOption) (*ResolvedExportDat
 		}
 		out.CSV.Header = &headerValue
 	}
-	if out.CSV.FieldDelimiter != "" && format != exportdata.FormatCSV {
+	if fieldDelimiterSet && format != exportdata.FormatCSV {
 		return nil, fmt.Errorf("EXPORT DATA: option `field_delimiter` is only valid with format = 'CSV'")
 	}
 	return out, nil

@@ -12,16 +12,18 @@ import (
 type Compression string
 
 const (
-	CompressionNone Compression = "NONE"
-	CompressionGZIP Compression = "GZIP"
+	CompressionNone   Compression = "NONE"
+	CompressionGZIP   Compression = "GZIP"
+	CompressionSnappy Compression = "SNAPPY"
+	CompressionZSTD   Compression = "ZSTD"
 )
 
 // ParseCompression normalizes the `compression` option value against the
 // chosen format. An empty string maps to NONE. Real BigQuery only documents
-// NONE and GZIP for CSV / JSON exports; the format-incompatible codecs
-// (SNAPPY / DEFLATE / ZSTD / LZ4 are AVRO- or PARQUET-only) and unknown
-// values surface as a descriptive error rather than silently writing
-// uncompressed bytes.
+// NONE and GZIP for CSV / JSON exports.
+// Parquet additionally accepts SNAPPY and ZSTD, with all codecs applied internally by the Parquet writer.
+// Format-incompatible and unknown values surface as descriptive errors rather
+// than silently writing uncompressed bytes.
 func ParseCompression(s string, format Format) (Compression, error) {
 	c := Compression(strings.ToUpper(strings.TrimSpace(s)))
 	if c == "" {
@@ -32,12 +34,17 @@ func ParseCompression(s string, format Format) (Compression, error) {
 		return CompressionNone, nil
 	case CompressionGZIP:
 		switch format {
-		case FormatCSV, FormatNDJSON:
+		case FormatCSV, FormatNDJSON, FormatParquet:
 			return CompressionGZIP, nil
 		}
 		return "", fmt.Errorf("EXPORT DATA: compression GZIP is not valid for format %s", format)
-	case "SNAPPY", "DEFLATE", "ZSTD", "LZ4":
-		return "", fmt.Errorf("EXPORT DATA: compression %s is not supported by googlesqlite", c)
+	case CompressionSnappy, CompressionZSTD:
+		if format == FormatParquet {
+			return c, nil
+		}
+		return "", fmt.Errorf("EXPORT DATA: compression %s is only valid for format PARQUET", c)
+	case "DEFLATE", "LZ4":
+		return "", fmt.Errorf("EXPORT DATA: compression %s is not valid for format %s", c, format)
 	default:
 		return "", fmt.Errorf("EXPORT DATA: unknown compression %q", s)
 	}
