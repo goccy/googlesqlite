@@ -1,5 +1,9 @@
 spec: docs/specs/googlesql/functions/string/repeat.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md (REPEAT
+# section, lines 3554-3603) — every upstream Example plus the
+# documented error condition ("This function returns an error if the
+# repetitions value is negative").
 cases:
   - desc: repeat thrice
     sql: SELECT REPEAT('ab', 3)
@@ -8,6 +12,46 @@ cases:
         - ['ababab']
   - desc: zero repetitions
     sql: SELECT REPEAT('ab', 0)
+    expected:
+      rows:
+        - ['']
+  - desc: upstream example — repeat thrice
+    sql: SELECT REPEAT('abc', 3)
+    expected:
+      rows:
+        - ['abcabcabc']
+  - desc: upstream example — NULL repetitions
+    sql: SELECT REPEAT('abc', NULL)
+    expected:
+      rows:
+        - [null]
+  - desc: upstream example — NULL value
+    sql: SELECT REPEAT(CAST(NULL AS STRING), 3)
+    expected:
+      rows:
+        - [null]
+  # NULL is propagated before the range check, so a NULL value with a
+  # negative count is NULL rather than an error.
+  - desc: NULL value with a negative count propagates
+    sql: SELECT REPEAT(CAST(NULL AS STRING), -1)
+    expected:
+      rows:
+        - [null]
+  - desc: negative repetitions is an error
+    sql: SELECT REPEAT('ab', -1)
+    expected:
+      error:
+        contains: cannot be negative
+  - desc: negative repetitions on BYTES is an error
+    sql: SELECT REPEAT(b'ab', -1)
+    expected:
+      error:
+        contains: cannot be negative
+  # Source: reference implementation `string.cc:1631` (`1f8aa33`) — an
+  # empty value produces an empty result whatever the count is, so the
+  # count is never sized. Compliance fixture REPEAT("", 2147483648).
+  - desc: an empty value repeats to empty for any count
+    sql: SELECT REPEAT('', 2147483648)
     expected:
       rows:
         - ['']
