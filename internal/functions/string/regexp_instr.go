@@ -15,6 +15,9 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 	if occurrence <= 0 {
 		return nil, fmt.Errorf("REGEXP_INSTR: unexpected occurrence number. occurrence must be positive number")
 	}
+	if occurrencePos != 0 && occurrencePos != 1 {
+		return nil, fmt.Errorf("REGEXP_INSTR: invalid return_position_after_match: must be 0 or 1")
+	}
 	posInt, err := helper.SafeInt(position)
 	if err != nil {
 		return nil, err

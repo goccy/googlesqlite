@@ -1,8 +1,80 @@
 spec: docs/specs/googlesql/functions/string/regexp_instr.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md
+# (REGEXP_INSTR section, lines 3306-3413) — every upstream Example plus
+# the documented error conditions ("Returns an error if: + position is
+# 0 or negative. + occurrence is 0 or negative. + occurrence_position
+# is neither 0 nor 1.").
 cases:
   - desc: regexp_instr basic behaviour
     sql: SELECT REGEXP_INSTR("hello", "l")
     expected:
       rows:
         - [3]
+  - desc: upstream example — default position and occurrence
+    sql: |-
+      SELECT
+        REGEXP_INSTR('ab@cd-ef',  '@[^-]*') AS instr_a,
+        REGEXP_INSTR('ab@d-ef',   '@[^-]*') AS instr_b,
+        REGEXP_INSTR('abc@cd-ef', '@[^-]*') AS instr_c,
+        REGEXP_INSTR('abc-ef',    '@[^-]*') AS instr_d
+    expected:
+      rows:
+        - [3, 3, 4, 0]
+  - desc: upstream example — explicit position
+    sql: |-
+      SELECT
+        REGEXP_INSTR('a@cd-ef b@cd-ef', '@[^-]*', 1) AS instr_a,
+        REGEXP_INSTR('a@cd-ef b@cd-ef', '@[^-]*', 2) AS instr_b,
+        REGEXP_INSTR('a@cd-ef b@cd-ef', '@[^-]*', 3) AS instr_c,
+        REGEXP_INSTR('a@cd-ef b@cd-ef', '@[^-]*', 4) AS instr_d
+    expected:
+      rows:
+        - [2, 2, 10, 10]
+  - desc: upstream example — explicit occurrence
+    sql: |-
+      SELECT
+        REGEXP_INSTR('a@cd-ef b@cd-ef c@cd-ef', '@[^-]*', 1, 1) AS instr_a,
+        REGEXP_INSTR('a@cd-ef b@cd-ef c@cd-ef', '@[^-]*', 1, 2) AS instr_b,
+        REGEXP_INSTR('a@cd-ef b@cd-ef c@cd-ef', '@[^-]*', 1, 3) AS instr_c
+    expected:
+      rows:
+        - [2, 10, 18]
+  - desc: upstream example — occurrence_position selects start or end+1
+    sql: |-
+      SELECT
+        REGEXP_INSTR('a@cd-ef', '@[^-]*', 1, 1, 0) AS instr_a,
+        REGEXP_INSTR('a@cd-ef', '@[^-]*', 1, 1, 1) AS instr_b
+    expected:
+      rows:
+        - [2, 5]
+  - desc: no match returns 0
+    sql: SELECT REGEXP_INSTR('abc', 'z')
+    expected:
+      rows:
+        - [0]
+  - desc: NULL position propagates
+    sql: SELECT REGEXP_INSTR('abc', 'b', CAST(NULL AS INT64))
+    expected:
+      rows:
+        - [null]
+  - desc: position 0 is an error
+    sql: SELECT REGEXP_INSTR('abc', 'b', 0)
+    expected:
+      error:
+        contains: position
+  - desc: occurrence 0 is an error
+    sql: SELECT REGEXP_INSTR('abc', 'b', 1, 0)
+    expected:
+      error:
+        contains: occurrence
+  - desc: negative occurrence_position is an error
+    sql: SELECT REGEXP_INSTR('abc', 'b', 1, 1, -1)
+    expected:
+      error:
+        contains: return_position_after_match
+  - desc: occurrence_position other than 0 or 1 is an error
+    sql: SELECT REGEXP_INSTR('abc', 'b', 1, 1, 2)
+    expected:
+      error:
+        contains: return_position_after_match
