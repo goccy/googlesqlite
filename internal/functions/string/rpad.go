@@ -11,7 +11,7 @@ import (
 
 func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (value.Value, error) {
 	if returnLength < 0 {
-		return nil, fmt.Errorf("RPAD: unexpected returnLength value. returnLength must be positive number")
+		return nil, fmt.Errorf("RPAD: second argument (output size) cannot be negative")
 	}
 	retLen, err := helper.SafeInt(returnLength)
 	if err != nil {
@@ -23,6 +23,16 @@ func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 		if err != nil {
 			return nil, err
 		}
+		var p string
+		if pattern != nil {
+			p, err = pattern.ToString()
+			if err != nil {
+				return nil, err
+			}
+			if p == "" {
+				return nil, fmt.Errorf("RPAD: third argument (pad pattern) cannot be empty")
+			}
+		}
 		runes := []rune(v)
 		if len(runes) >= retLen {
 			return value.StringValue(string(runes[:retLen])), nil
@@ -32,10 +42,6 @@ func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 		if pattern == nil {
 			pat = []rune(strings.Repeat(" ", remainLen))
 		} else {
-			p, err := pattern.ToString()
-			if err != nil {
-				return nil, err
-			}
 			pat = []rune(p)
 			if remainLen-len(pat) > 0 {
 				// needs to repeat pattern
@@ -49,6 +55,16 @@ func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 		if err != nil {
 			return nil, err
 		}
+		var p []byte
+		if pattern != nil {
+			p, err = pattern.ToBytes()
+			if err != nil {
+				return nil, err
+			}
+			if len(p) == 0 {
+				return nil, fmt.Errorf("RPAD: third argument (pad pattern) cannot be empty")
+			}
+		}
 		if len(v) >= retLen {
 			return value.BytesValue(v[:retLen]), nil
 		}
@@ -57,17 +73,16 @@ func RPAD(originalValue value.Value, returnLength int64, pattern value.Value) (v
 		if pattern == nil {
 			pat = bytes.Repeat([]byte{' '}, remainLen)
 		} else {
-			p, err := pattern.ToBytes()
-			if err != nil {
-				return nil, err
-			}
+			pat = p
 			if remainLen-len(p) > 0 {
 				// needs to repeat pattern
 				repeatNum := ((remainLen - len(p)) / len(p)) + 2
 				pat = bytes.Repeat(p, repeatNum)
 			}
 		}
-		return value.BytesValue(append(v, pat[:remainLen]...)), nil
+		out := make([]byte, 0, retLen)
+		out = append(out, v...)
+		return value.BytesValue(append(out, pat[:remainLen]...)), nil
 	}
 	return nil, fmt.Errorf("RPAD: originalValue must be STRING or BYTES")
 }
