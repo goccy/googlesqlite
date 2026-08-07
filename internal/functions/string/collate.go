@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/goccy/googlesqlite/internal/value"
-	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
 
@@ -14,10 +13,20 @@ func COLLATE(v, spec string) (value.Value, error) {
 		return value.StringValue(v), nil
 	}
 	splitted := strings.SplitN(spec, ":", 2)
-	if len(splitted) == 0 {
-		return nil, fmt.Errorf("COLLATE: unexpected spec literal %s", spec)
+	// `binary` and `unicode` are collation names rather than locales, so
+	// they never reach the BCP 47 parser. The binary specification is a
+	// bare language tag, so it takes no attribute.
+	if splitted[0] == "binary" {
+		if len(splitted) == 2 {
+			return nil, fmt.Errorf("COLLATE: collation '%s' is not valid: binary cannot be combined with a suffix", spec)
+		}
+		return value.StringValue(v), nil
 	}
-	tag := language.Make(splitted[0])
+	if splitted[0] != "unicode" {
+		if _, err := language.Parse(splitted[0]); err != nil {
+			return nil, fmt.Errorf("COLLATE: collation '%s' is not valid", spec)
+		}
+	}
 	caseInsensitive := false
 	if len(splitted) == 2 {
 		switch splitted[1] {
@@ -38,8 +47,6 @@ func COLLATE(v, spec string) (value.Value, error) {
 	// language tags reuse the same fold which is acceptable for
 	// the upstream Examples that exercise plain ASCII / Latin.
 	if caseInsensitive {
-		var buf collate.Buffer
-		_ = collate.New(tag, collate.IgnoreCase).KeyFromString(&buf, v)
 		return value.StringValue(strings.ToLower(v)), nil
 	}
 	return value.StringValue(v), nil
