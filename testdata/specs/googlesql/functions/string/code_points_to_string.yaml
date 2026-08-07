@@ -1,8 +1,67 @@
 spec: docs/specs/googlesql/functions/string/code_points_to_string.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md
+# (CODE_POINTS_TO_STRING section, lines 832-914) — every upstream
+# Example. The code-point range is the one CHR documents (lines
+# 729-733): [0, 0xD7FF] and [0xE000, 0x10FFFF], anything else is an
+# error.
 cases:
   - desc: code_points_to_string basic behaviour
     sql: SELECT CODE_POINTS_TO_STRING([72, 101])
     expected:
       rows:
         - ['He']
+  - desc: upstream example — Latin-1 and Cyrillic code points
+    sql: SELECT CODE_POINTS_TO_STRING([65, 255, 513, 1024])
+    expected:
+      rows:
+        - ['AÿȁЀ']
+  - desc: upstream example — code point 0 contributes nothing
+    sql: SELECT CODE_POINTS_TO_STRING([97, 0, 0xF9B5])
+    expected:
+      rows:
+        - ['a例']
+  - desc: upstream example — a NULL element makes the result NULL
+    sql: SELECT CODE_POINTS_TO_STRING([65, 255, NULL, 1024])
+    expected:
+      rows:
+        - [null]
+  - desc: upstream example — letter frequency
+    sql: |-
+      WITH Words AS (
+        SELECT word
+        FROM UNNEST(['foo', 'bar', 'baz', 'giraffe', 'llama']) AS word
+      )
+      SELECT
+        CODE_POINTS_TO_STRING([code_point]) AS letter,
+        COUNT(*) AS letter_count
+      FROM Words,
+        UNNEST(TO_CODE_POINTS(word)) AS code_point
+      GROUP BY 1
+      ORDER BY 2 DESC
+    expected:
+      # ORDER BY letter_count alone leaves the letters within one count
+      # group in an unspecified order.
+      unordered: true
+      rows:
+        - ['a', 5]
+        - ['f', 3]
+        - ['r', 2]
+        - ['b', 2]
+        - ['l', 2]
+        - ['o', 2]
+        - ['g', 1]
+        - ['z', 1]
+        - ['e', 1]
+        - ['m', 1]
+        - ['i', 1]
+  - desc: negative code point is an error
+    sql: SELECT CODE_POINTS_TO_STRING([-1])
+    expected:
+      error:
+        contains: Invalid codepoint
+  - desc: code point above the Unicode maximum is an error
+    sql: SELECT CODE_POINTS_TO_STRING([1114112])
+    expected:
+      error:
+        contains: Invalid codepoint

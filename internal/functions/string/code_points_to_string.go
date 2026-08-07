@@ -1,6 +1,8 @@
 package string
 
 import (
+	"fmt"
+
 	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
@@ -18,11 +20,10 @@ func CODE_POINTS_TO_STRING(v *value.ArrayValue) (value.Value, error) {
 		if i64 == 0 {
 			continue
 		}
-		r, err := helper.SafeInt32(i64)
-		if err != nil {
-			return nil, err
+		if !validCodePoint(i64) {
+			return nil, fmt.Errorf("CODE_POINTS_TO_STRING: Invalid codepoint %d", i64)
 		}
-		runes = append(runes, rune(r))
+		runes = append(runes, rune(i64))
 	}
 	return value.StringValue(string(runes)), nil
 }

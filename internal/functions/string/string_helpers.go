@@ -3,6 +3,7 @@ package string
 import (
 	"fmt"
 	"slices"
+	"unicode"
 )
 
 func isDelim(v rune, delimiters []rune) bool {
@@ -52,6 +53,13 @@ func normalizeReplacement(repl string) (string, error) {
 		}
 	}
 	return string(normalized), nil
+}
+
+// validCodePoint reports whether v is a code point CHR and
+// CODE_POINTS_TO_STRING accept: [0, 0xD7FF] or [0xE000, 0x10FFFF].
+// Everything else, surrogates included, is an error.
+func validCodePoint(v int64) bool {
+	return (v >= 0 && v <= 0xD7FF) || (v >= 0xE000 && v <= unicode.MaxRune)
 }
 
 var soundexMap = map[byte]byte{
