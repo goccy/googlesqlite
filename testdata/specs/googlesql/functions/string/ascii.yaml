@@ -1,5 +1,11 @@
 spec: docs/specs/googlesql/functions/string/ascii.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md (ASCII
+# section, lines 600-626) for the Example. The STRING arm rejects input
+# whose first character is not ASCII while the BYTES arm accepts any
+# byte; those rows come from the GoogleSQL compliance fixtures
+# (`ascii` string/bytes cases, e.g. ASCII('ЖЩФ') is out of range and
+# ASCII(b'nbca\0\1cde') is 110).
 cases:
   - desc: uppercase letter
     sql: SELECT ASCII('A')
@@ -16,3 +22,28 @@ cases:
     expected:
       rows:
         - [0]
+  - desc: upstream example — first character, empty string and NULL
+    sql: SELECT ASCII('abcd') AS a, ASCII('a') AS b, ASCII('') AS c, ASCII(NULL) AS d
+    expected:
+      rows:
+        - [97, 97, 0, null]
+  - desc: leading space
+    sql: SELECT ASCII(' A')
+    expected:
+      rows:
+        - [32]
+  - desc: first character ASCII, remainder non-ASCII
+    sql: SELECT ASCII('nЖЩФ')
+    expected:
+      rows:
+        - [110]
+  - desc: BYTES accepts a non-ASCII byte
+    sql: SELECT ASCII(b'\xff')
+    expected:
+      rows:
+        - [255]
+  - desc: non-ASCII first character is an error
+    sql: SELECT ASCII('ЖЩФ')
+    expected:
+      error:
+        contains: not a structurally valid ASCII string
