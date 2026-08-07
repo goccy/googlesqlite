@@ -37,12 +37,19 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if pos >= len([]rune(v)) {
 			return nil, nil
 		}
-		matches := re.FindAllStringSubmatch(v[pos:], occ)
+		if err := checkCapturingGroups(re); err != nil {
+			return nil, err
+		}
+		rest := v[pos:]
+		matches := re.FindAllStringSubmatchIndex(rest, occ)
 		if len(matches) < occ {
 			return nil, nil
 		}
-		match := matches[occ-1]
-		return value.StringValue(match[len(match)-1]), nil
+		start, end := extractedSpan(re, matches[occ-1])
+		if start < 0 {
+			return nil, nil
+		}
+		return value.StringValue(rest[start:end]), nil
 	case value.BytesValue:
 		v, err := val.ToBytes()
 		if err != nil {
@@ -51,14 +58,44 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if pos >= len(v) {
 			return nil, nil
 		}
-		matches := re.FindAllSubmatch(v[pos:], occ)
+		if err := checkCapturingGroups(re); err != nil {
+			return nil, err
+		}
+		rest := v[pos:]
+		matches := re.FindAllSubmatchIndex(rest, occ)
 		if len(matches) < occ {
 			return nil, nil
 		}
-		match := matches[occ-1]
-		return value.BytesValue(match[len(match)-1]), nil
+		start, end := extractedSpan(re, matches[occ-1])
+		if start < 0 {
+			return nil, nil
+		}
+		return value.BytesValue(rest[start:end]), nil
 	}
 	return nil, fmt.Errorf("REGEXP_EXTRACT: val argument must be STRING or BYTES")
+}
+
+// checkCapturingGroups rejects a pattern this function cannot use: it
+// returns one span per match, so at most one capturing group may decide
+// which span that is. The reference implementation reaches this check
+// only once it is about to match, so a value that yields no result at
+// all never gets here.
+func checkCapturingGroups(re *regexp.Regexp) error {
+	if re.NumSubexp() > 1 {
+		return fmt.Errorf("REGEXP_EXTRACT: regular expressions passed into extraction functions must not have more than 1 capturing group")
+	}
+	return nil
+}
+
+// extractedSpan picks the span REGEXP_EXTRACT returns for one match:
+// the capturing group when the pattern has one, the whole match
+// otherwise. A group that did not participate in the match has a
+// negative start, which the callers turn into NULL.
+func extractedSpan(re *regexp.Regexp, match []int) (int, int) {
+	if re.NumSubexp() == 1 {
+		return match[2], match[3]
+	}
+	return match[0], match[1]
 }
 
 var BindRegexpExtract = helper.ScalarN(func(args ...value.Value) (value.Value, error) {

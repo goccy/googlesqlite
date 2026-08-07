@@ -1,8 +1,80 @@
 spec: docs/specs/googlesql/functions/string/regexp_extract.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md
+# (REGEXP_EXTRACT section, lines 2880-2990) — every upstream Example
+# plus the documented error condition ("Returns an error if: ... The
+# regular expression has more than one capturing group").
 cases:
   - desc: extract first digit run
     sql: SELECT REGEXP_EXTRACT("abc123def", "[0-9]+")
     expected:
       rows:
         - ["123"]
+  - desc: upstream example — user name
+    sql: SELECT REGEXP_EXTRACT('foo@example.com', r'^[a-zA-Z0-9_.+-]+')
+    expected:
+      rows:
+        - ['foo']
+  - desc: upstream example — capturing group returns the group
+    sql: |-
+      SELECT REGEXP_EXTRACT('foo@example.com', r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.([a-zA-Z0-9-.]+$)')
+    expected:
+      rows:
+        - ['com']
+  - desc: upstream example — group participation decides the result
+    sql: |-
+      SELECT
+        REGEXP_EXTRACT('ab', '.b') AS result_a,
+        REGEXP_EXTRACT('ab', '(.)b') AS result_b,
+        REGEXP_EXTRACT('xyztb', '(.)+b') AS result_c,
+        REGEXP_EXTRACT('ab', '(z)?b') AS result_d
+    expected:
+      rows:
+        - ['ab', 'a', 't', null]
+  - desc: upstream example — position and occurrence
+    sql: |-
+      WITH example AS
+      (SELECT 'Hello Helloo and Hellooo' AS value, 'H?ello+' AS regex, 1 as position,
+      1 AS occurrence UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 1, 2 UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 1, 3 UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 1, 4 UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 2, 1 UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 3, 1 UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 3, 2 UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 3, 3 UNION ALL
+      SELECT 'Hello Helloo and Hellooo', 'H?ello+', 20, 1 UNION ALL
+      SELECT 'cats&dogs&rabbits' ,'\\w+&', 1, 2 UNION ALL
+      SELECT 'cats&dogs&rabbits', '\\w+&', 2, 3
+      )
+      SELECT value, regex, position, occurrence, REGEXP_EXTRACT(value, regex,
+      position, occurrence) AS regexp_value FROM example
+    expected:
+      # UNION ALL without ORDER BY leaves the row order unspecified.
+      unordered: true
+      rows:
+        - ['Hello Helloo and Hellooo', 'H?ello+', 1, 1, 'Hello']
+        - ['Hello Helloo and Hellooo', 'H?ello+', 1, 2, 'Helloo']
+        - ['Hello Helloo and Hellooo', 'H?ello+', 1, 3, 'Hellooo']
+        - ['Hello Helloo and Hellooo', 'H?ello+', 1, 4, null]
+        - ['Hello Helloo and Hellooo', 'H?ello+', 2, 1, 'ello']
+        - ['Hello Helloo and Hellooo', 'H?ello+', 3, 1, 'Helloo']
+        - ['Hello Helloo and Hellooo', 'H?ello+', 3, 2, 'Hellooo']
+        - ['Hello Helloo and Hellooo', 'H?ello+', 3, 3, null]
+        - ['Hello Helloo and Hellooo', 'H?ello+', 20, 1, null]
+        - ['cats&dogs&rabbits', '\w+&', 1, 2, 'dogs&']
+        - ['cats&dogs&rabbits', '\w+&', 2, 3, null]
+  - desc: more than one capturing group is an error
+    sql: SELECT REGEXP_EXTRACT('abc', r'(a)(b)')
+    expected:
+      error:
+        contains: capturing group
+  # The reference implementation validates the pattern where it starts
+  # matching, so a position past the end returns NULL and the pattern is
+  # never looked at (`regexp.cc:117`, `1f8aa33`). Verified against
+  # BigQuery.
+  - desc: a position past the end returns NULL without reading the pattern
+    sql: SELECT REGEXP_EXTRACT('abc', r'(a)(b)', 4)
+    expected:
+      rows:
+        - [null]
