@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ['[1,2,3]']
+  - desc: string input yields ARRAY<STRING> of JSON-formatted elements, nulls included
+    sql: SELECT ARRAY_TO_STRING(JSON_EXTRACT_ARRAY('[1, null, "s"]', '$'), '|')
+    expected:
+      rows:
+        - ['1|null|"s"']

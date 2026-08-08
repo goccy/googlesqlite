@@ -7,3 +7,21 @@ cases:
     expected:
       rows:
         - ["7"]
+  - desc: JSON input returns JSON
+    sql: |
+      SELECT JSON_QUERY(JSON '{"class": {"students": [{"id": 5}, {"id": 12}]}}', '$.class')
+    expected:
+      rows:
+        - ['{"students":[{"id":5},{"id":12}]}']
+  - desc: string input result is a STRING usable by string functions
+    sql: |
+      SELECT UPPER(JSON_QUERY('{"a": "x1y2"}', '$.a')), CONCAT(JSON_QUERY('{"a": {"b": 1}}', '$.a'), '!')
+    expected:
+      rows:
+        - ['"X1Y2"', '{"b":1}!']
+  - desc: JSON null is SQL NULL for a string input and JSON null for a JSON input
+    sql: |
+      SELECT JSON_QUERY('{"a": null}', '$.a') IS NULL, JSON_QUERY(JSON '{"a": null}', '$.a') IS NULL, TO_JSON_STRING(JSON_QUERY(JSON '{"a": null}', '$.a'))
+    expected:
+      rows:
+        - [true, false, 'null']
