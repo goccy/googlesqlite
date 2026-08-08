@@ -53,3 +53,71 @@ cases:
       rows:
         - ['a', 2]
         - ['b', 1]
+  # Upstream Examples (query-syntax.md#group_by_all).
+  - desc: GROUP BY ALL infers keys from non-aggregate SELECT items
+    sql: |-
+      WITH PlayerStats AS (
+        SELECT 'Adams' as LastName, 'Noam' as FirstName, 3 as PointsScored UNION ALL
+        SELECT 'Buchanan', 'Jie', 0 UNION ALL
+        SELECT 'Coolidge', 'Kiran', 1 UNION ALL
+        SELECT 'Adams', 'Noam', 4 UNION ALL
+        SELECT 'Buchanan', 'Jie', 13)
+      SELECT
+        SUM(PointsScored) AS total_points,
+        FirstName AS first_name,
+        LastName AS last_name
+      FROM PlayerStats
+      GROUP BY ALL
+    expected:
+      unordered: true
+      rows:
+        - [7, 'Noam', 'Adams']
+        - [13, 'Jie', 'Buchanan']
+        - [1, 'Kiran', 'Coolidge']
+  - desc: GROUP BY ALL excludes window functions from the inferred keys
+    sql: |-
+      WITH PlayerStats AS (
+        SELECT 'Adams' as LastName, 'Noam' as FirstName, 3 as PointsScored UNION ALL
+        SELECT 'Buchanan', 'Jie', 0 UNION ALL
+        SELECT 'Coolidge', 'Kiran', 1 UNION ALL
+        SELECT 'Adams', 'Noam', 4 UNION ALL
+        SELECT 'Buchanan', 'Jie', 13)
+      SELECT
+        COUNT(*) OVER () AS total_people,
+        FirstName AS first_name,
+        LastName AS last_name
+      FROM PlayerStats
+      GROUP BY ALL
+    expected:
+      unordered: true
+      rows:
+        - [3, 'Noam', 'Adams']
+        - [3, 'Jie', 'Buchanan']
+        - [3, 'Kiran', 'Coolidge']
+  - desc: GROUP BY ALL groups only by prefix paths when items overlap
+    sql: |-
+      WITH Values AS (
+        SELECT 1 AS x, 2 AS y
+        UNION ALL SELECT 1 AS x, 4 AS y
+        UNION ALL SELECT 2 AS x, 5 AS y
+      )
+      SELECT
+        Values.x AS x_coordinate,
+        Values.y AS y_coordinate,
+        [Values.x, Values.y] AS coordinates
+      FROM Values
+      GROUP BY ALL
+    expected:
+      unordered: true
+      rows:
+        - [1, 4, [1, 4]]
+        - [1, 2, [1, 2]]
+        - [2, 5, [2, 5]]
+  - desc: GROUP BY ALL with no inferred keys aggregates everything into one row
+    sql: |-
+      SELECT COUNT(*) AS num_rows
+      FROM UNNEST([])
+      GROUP BY ALL
+    expected:
+      rows:
+        - [0]

@@ -99,6 +99,7 @@ var enabledLanguageFeatures = []googlesql.LanguageFeature{
 	googlesql.LanguageFeatureFeatureV12WeekWithWeekday,
 	googlesql.LanguageFeatureFeatureIntervalType,
 	googlesql.LanguageFeatureFeatureGroupByRollup,
+	googlesql.LanguageFeatureFeatureGroupByAll,
 	googlesql.LanguageFeatureFeatureV13NullsFirstLastInOrderBy,
 	googlesql.LanguageFeatureFeatureV13Qualify,
 	googlesql.LanguageFeatureFeatureV13AllowDashesInTableName,
