@@ -6,3 +6,84 @@ cases:
     expected:
       rows:
         - [2]
+  # Upstream Examples (string_functions.md#instr), in order.
+  - desc: first occurrence from position 1
+    sql: SELECT INSTR('banana', 'an', 1, 1)
+    expected:
+      rows:
+        - [2]
+  - desc: second occurrence from position 1
+    sql: SELECT INSTR('banana', 'an', 1, 2)
+    expected:
+      rows:
+        - [4]
+  - desc: occurrence beyond the number of matches returns 0
+    sql: SELECT INSTR('banana', 'an', 1, 3)
+    expected:
+      rows:
+        - [0]
+  - desc: search starts at position 3
+    sql: SELECT INSTR('banana', 'an', 3, 1)
+    expected:
+      rows:
+        - [4]
+  - desc: negative position -1 searches backwards from the last character
+    sql: SELECT INSTR('banana', 'an', -1, 1)
+    expected:
+      rows:
+        - [4]
+  - desc: negative position -3 still finds the match starting at that character
+    sql: SELECT INSTR('banana', 'an', -3, 1)
+    expected:
+      rows:
+        - [4]
+  - desc: no match returns 0
+    sql: SELECT INSTR('banana', 'ann', 1, 1)
+    expected:
+      rows:
+        - [0]
+  - desc: position equal to the value length is valid
+    sql: SELECT INSTR('a', 'a', 1), INSTR('banana', 'a', 6)
+    expected:
+      rows:
+        - [1, 6]
+  - desc: position past the value length returns 0 in both directions
+    sql: SELECT INSTR('banana', 'a', 7), INSTR('banana', 'a', -7)
+    expected:
+      rows:
+        - [0, 0]
+  - desc: negative position anchors the latest allowed match start
+    sql: SELECT INSTR('banana', 'an', -4, 1), INSTR('banana', 'na', -1, 1), INSTR('banana', 'an', -1, 2)
+    expected:
+      rows:
+        - [2, 5, 2]
+  - desc: overlapping occurrences are counted in both directions
+    sql: SELECT INSTR('banana', 'ana', 1, 2), INSTR('aaaa', 'aa', 1, 2), INSTR('aaaa', 'aa', -1, 2)
+    expected:
+      rows:
+        - [4, 2, 2]
+  - desc: STRING positions count characters and BYTES positions count bytes
+    sql: SELECT INSTR('щцф', 'ф'), INSTR('щцфц', 'ц', 3), INSTR('щцф', 'ф', -1), INSTR(b'щцф', b'ф')
+    expected:
+      rows:
+        - [3, 4, 3, 5]
+  - desc: empty subvalue matches at every position including one past the end
+    sql: SELECT INSTR('banana', '', 3), INSTR('banana', '', 7), INSTR('banana', '', 8), INSTR('banana', '', -1), INSTR('', '', 1)
+    expected:
+      rows:
+        - [3, 7, 0, 7, 1]
+  - desc: NULL argument returns NULL
+    sql: SELECT INSTR(CAST(NULL AS STRING), 'a'), INSTR('banana', 'a', NULL)
+    expected:
+      rows:
+        - [null, null]
+  - desc: position 0 is an error
+    sql: SELECT INSTR('banana', 'a', 0)
+    expected:
+      error:
+        contains: "position must be non-zero"
+  - desc: non-positive occurrence is an error
+    sql: SELECT INSTR('banana', 'a', 1, 0)
+    expected:
+      error:
+        contains: "occurrence must be positive"

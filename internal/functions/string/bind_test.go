@@ -440,6 +440,63 @@ func TestInstr(t *testing.T) {
 	}
 }
 
+func TestInstrPositionSemantics(t *testing.T) {
+	t.Parallel()
+
+	s := func(v string) value.Value { return value.StringValue(v) }
+	b := func(v string) value.Value { return value.BytesValue(v) }
+	n := func(v int64) value.Value { return value.IntValue(v) }
+	for _, tc := range []struct {
+		args []value.Value
+		want int64
+	}{
+		{[]value.Value{s("banana"), s("an"), n(1), n(1)}, 2},
+		{[]value.Value{s("banana"), s("an"), n(1), n(2)}, 4},
+		{[]value.Value{s("banana"), s("an"), n(1), n(3)}, 0},
+		{[]value.Value{s("banana"), s("an"), n(3), n(1)}, 4},
+		{[]value.Value{s("banana"), s("an"), n(-1), n(1)}, 4},
+		{[]value.Value{s("banana"), s("an"), n(-3), n(1)}, 4},
+		{[]value.Value{s("banana"), s("ann"), n(1), n(1)}, 0},
+		{[]value.Value{s("a"), s("a"), n(1)}, 1},
+		{[]value.Value{s("banana"), s("a"), n(6)}, 6},
+		{[]value.Value{s("banana"), s("a"), n(7)}, 0},
+		{[]value.Value{s("banana"), s("a"), n(-7)}, 0},
+		{[]value.Value{s("banana"), s("an"), n(-4), n(1)}, 2},
+		{[]value.Value{s("banana"), s("an"), n(-6), n(1)}, 0},
+		{[]value.Value{s("banana"), s("na"), n(-1), n(1)}, 5},
+		{[]value.Value{s("banana"), s("an"), n(-1), n(2)}, 2},
+		{[]value.Value{s("banana"), s("b"), n(-6)}, 1},
+		{[]value.Value{s("banana"), s("ana"), n(1), n(2)}, 4},
+		{[]value.Value{s("aaaa"), s("aa"), n(1), n(2)}, 2},
+		{[]value.Value{s("aaaa"), s("aa"), n(-1), n(2)}, 2},
+		{[]value.Value{s("aaaa"), s("aa"), n(-2), n(1)}, 3},
+		{[]value.Value{s("щцф"), s("ц")}, 2},
+		{[]value.Value{s("щцфц"), s("ц"), n(3)}, 4},
+		{[]value.Value{s("щцф"), s("ф"), n(-1)}, 3},
+		{[]value.Value{s("banana"), s(""), n(3)}, 3},
+		{[]value.Value{s("banana"), s(""), n(7)}, 7},
+		{[]value.Value{s("banana"), s(""), n(8)}, 0},
+		{[]value.Value{s("banana"), s(""), n(-1)}, 7},
+		{[]value.Value{s("banana"), s(""), n(-2), n(2)}, 5},
+		{[]value.Value{s("banana"), s(""), n(-7)}, 1},
+		{[]value.Value{s("banana"), s(""), n(-8)}, 0},
+		{[]value.Value{s(""), s(""), n(1)}, 1},
+		{[]value.Value{s(""), s("a")}, 0},
+		{[]value.Value{b("щцф"), b("ф")}, 5},
+		{[]value.Value{b("\xff\x00\xff"), b("\xff"), n(2)}, 3},
+		{[]value.Value{b("\xff\x00\xff"), b("\xff"), n(-1), n(2)}, 1},
+	} {
+		got, err := strfn.BindInstr(tc.args...)
+		if err != nil {
+			t.Errorf("INSTR%v: %v", tc.args, err)
+			continue
+		}
+		if i, _ := got.ToInt64(); i != tc.want {
+			t.Errorf("INSTR%v: got %d, want %d", tc.args, i, tc.want)
+		}
+	}
+}
+
 // ----- CONCAT ------------------------------------------------------
 
 func TestConcat(t *testing.T) {
@@ -1063,12 +1120,15 @@ func TestInstrBytesAndNegativePos(t *testing.T) {
 	}
 	// INSTR with negative position (search from the right).
 	got, _ = strfn.BindInstr(value.StringValue("banana"), value.StringValue("an"), value.IntValue(-1))
-	if got == nil {
-		t.Errorf("INSTR neg pos returned nil")
+	if i, _ := got.ToInt64(); i != 4 {
+		t.Errorf("INSTR neg pos: got %d, want 4", i)
 	}
-	// position past length -> error.
-	if _, err := strfn.BindInstr(value.StringValue("ab"), value.StringValue("a"), value.IntValue(100)); err == nil {
-		t.Errorf("INSTR pos too large should fail")
+	// position past length -> 0.
+	got, err := strfn.BindInstr(value.StringValue("ab"), value.StringValue("a"), value.IntValue(100))
+	if err != nil {
+		t.Errorf("INSTR pos too large: %v", err)
+	} else if i, _ := got.ToInt64(); i != 0 {
+		t.Errorf("INSTR pos too large: got %d, want 0", i)
 	}
 	// Different source / search types -> error.
 	if _, err := strfn.BindInstr(value.StringValue("ab"), value.BytesValue("a")); err == nil {
