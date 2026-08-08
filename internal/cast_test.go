@@ -3,6 +3,9 @@ package internal
 import (
 	"strings"
 	"testing"
+	gotime "time"
+
+	"github.com/goccy/go-googlesql"
 
 	"github.com/goccy/googlesqlite/internal/value"
 )
@@ -88,5 +91,28 @@ func TestBindCast_HappyPath(t *testing.T) {
 	s, _ := got.ToString()
 	if !strings.Contains(s, "42") {
 		t.Fatalf("expected result containing 42, got %q", s)
+	}
+}
+
+func TestCastTimestampToStringCanonicalForm(t *testing.T) {
+	for _, tc := range []struct {
+		in   gotime.Time
+		want string
+	}{
+		{gotime.Date(2026, 8, 7, 22, 0, 0, 0, gotime.UTC), "2026-08-07 22:00:00+00"},
+		{gotime.Date(2020, 1, 1, 0, 0, 0, 500000000, gotime.UTC), "2020-01-01 00:00:00.500+00"},
+		{gotime.Date(2020, 1, 1, 0, 0, 0, 123400000, gotime.UTC), "2020-01-01 00:00:00.123400+00"},
+		{gotime.Date(2020, 1, 1, 3, 0, 0, 0, gotime.FixedZone("", 3*3600)), "2020-01-01 00:00:00+00"},
+	} {
+		if got := castTimestampToString(tc.in); got != tc.want {
+			t.Errorf("castTimestampToString(%v): got %q, want %q", tc.in, got, tc.want)
+		}
+		got, err := CastValue(m1(tf().MakeSimpleType(googlesql.TypeKindTypeString)), value.TimestampValue(tc.in))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != value.Value(value.StringValue(tc.want)) {
+			t.Errorf("CastValue(STRING, TIMESTAMP %v): got %#v, want %q", tc.in, got, tc.want)
+		}
 	}
 }
