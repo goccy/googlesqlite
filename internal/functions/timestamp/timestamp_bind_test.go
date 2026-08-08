@@ -60,6 +60,17 @@ func TestBindTimestampFromString(t *testing.T) {
 	}
 }
 
+func TestBindTimestampFromTimestamp(t *testing.T) {
+	in := mkTimestamp(2025, 1, 1, 10, 30, 0)
+	got, err := BindTimestamp(in)
+	if err != nil {
+		t.Fatalf("BindTimestamp: %v", err)
+	}
+	if got != in {
+		t.Fatalf("TIMESTAMP(timestamp) must be the identity, got %v", got)
+	}
+}
+
 func TestBindTimestampStringZone(t *testing.T) {
 	got, err := BindTimestamp(value.StringValue("2024-06-15 00:00:00"), value.StringValue("UTC"))
 	if err != nil {

@@ -116,8 +116,20 @@ func DATETIME(args ...value.Value) (value.Value, error) {
 			return value.DatetimeValue(t.In(loc)), nil
 		}
 		return value.DatetimeValue(t), nil
+	case value.DatetimeValue:
+		if len(args) == 1 {
+			return v, nil
+		}
+	case value.StringValue:
+		if len(args) == 1 {
+			t, err := v.ToTime()
+			if err != nil {
+				return nil, fmt.Errorf("DATETIME: %w", err)
+			}
+			return value.DatetimeValue(t), nil
+		}
 	}
-	return nil, fmt.Errorf("DATETIME: first argument must be DATE or TIMESTAMP type")
+	return nil, fmt.Errorf("DATETIME: first argument must be DATE, DATETIME, TIMESTAMP or STRING type")
 }
 
 // BindDatetime short-circuits to NULL when any argument is NULL;

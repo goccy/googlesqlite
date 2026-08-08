@@ -33,6 +33,8 @@ func TIMESTAMP(v value.Value, zone string) (value.Value, error) {
 			return nil, err
 		}
 		return value.TimestampValue(modified), nil
+	case value.TimestampValue:
+		return v, nil
 	}
 	return nil, fmt.Errorf("TIMESTAMP: invalid first argument type %T", v)
 }

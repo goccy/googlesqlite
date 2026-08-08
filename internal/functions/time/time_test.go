@@ -77,6 +77,17 @@ func TestBindTimeFromDatetime(t *testing.T) {
 	}
 }
 
+func TestBindTimeFromTime(t *testing.T) {
+	in := mkTime(t, 10, 30, 0)
+	got, err := BindTime(in)
+	if err != nil {
+		t.Fatalf("BindTime: %v", err)
+	}
+	if got != value.Value(in) {
+		t.Fatalf("TIME(time) must be the identity, got %v", got)
+	}
+}
+
 // TestBindTimeNullPropagation: any NULL argument returns SQL NULL.
 func TestBindTimeNullPropagation(t *testing.T) {
 	got, err := BindTime(nil, value.IntValue(0), value.IntValue(0))

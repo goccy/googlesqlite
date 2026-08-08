@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [1710504000]
+  - desc: timestamp from timestamp is the identity
+    sql: SELECT UNIX_SECONDS(TIMESTAMP(TIMESTAMP "2024-03-15 12:00:00+00"))
+    expected:
+      rows:
+        - [1710504000]

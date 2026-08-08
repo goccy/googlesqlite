@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ["12:30:45"]
+  - desc: time from time is the identity
+    sql: SELECT CAST(TIME(TIME '12:30:45') AS STRING)
+    expected:
+      rows:
+        - ["12:30:45"]

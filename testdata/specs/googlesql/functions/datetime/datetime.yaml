@@ -6,3 +6,13 @@ cases:
     expected:
       rows:
         - ["2024-03-15T12:30:45"]
+  - desc: datetime from string
+    sql: SELECT DATETIME('2025-01-15T10:30:00'), DATETIME('2025-01-15 10:30:00.123456'), DATETIME('2025-01-15')
+    expected:
+      rows:
+        - ["2025-01-15T10:30:00", "2025-01-15T10:30:00.123456", "2025-01-15T00:00:00"]
+  - desc: datetime from datetime is the identity
+    sql: SELECT DATETIME(DATETIME '2025-01-15 10:30:00')
+    expected:
+      rows:
+        - ["2025-01-15T10:30:00"]
