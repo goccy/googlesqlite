@@ -78,3 +78,39 @@ cases:
     expected:
       rows:
         - [null]
+  # Source: compliance fixtures (regexp function tests) — `position`
+  # counts characters in a STRING.
+  - desc: position counts characters in a STRING
+    sql: SELECT REGEXP_EXTRACT('щцф', '.{2}', 2)
+    expected:
+      rows:
+        - ['цф']
+  - desc: position past the last character returns NULL
+    sql: SELECT REGEXP_EXTRACT('щцф', '.{2}', 3)
+    expected:
+      rows:
+        - [null]
+  - desc: occurrence counts from a character position
+    sql: SELECT REGEXP_EXTRACT('щцфщфф', 'щ(.).', 1, 2)
+    expected:
+      rows:
+        - ['ф']
+  # An empty value has no first character, but position 1 is still a
+  # valid start for it (`regexp.cc:117`, `1f8aa33`; compliance fixtures
+  # REGEXP_EXTRACT("", "") and its BYTES twin). Verified against
+  # BigQuery.
+  - desc: an empty pattern matches an empty value
+    sql: SELECT REGEXP_EXTRACT('', '')
+    expected:
+      rows:
+        - ['']
+  - desc: an empty pattern matches an empty BYTES value
+    sql: SELECT TO_HEX(REGEXP_EXTRACT(b'', b''))
+    expected:
+      rows:
+        - ['']
+  - desc: a position past the end of an empty value returns NULL
+    sql: SELECT REGEXP_EXTRACT('', '', 2)
+    expected:
+      rows:
+        - [null]

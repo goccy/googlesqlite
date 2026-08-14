@@ -55,6 +55,22 @@ func normalizeReplacement(repl string) (string, error) {
 	return string(normalized), nil
 }
 
+// charOffset returns the byte offset of the n-th character of s,
+// counting from zero, and reports whether s has that many characters.
+// A `position` argument into a STRING is measured in characters while
+// the match indices Go returns are byte offsets, so the two units have
+// to be converted into each other rather than used interchangeably.
+func charOffset(s string, n int) (int, bool) {
+	count := 0
+	for i := range s {
+		if count == n {
+			return i, true
+		}
+		count++
+	}
+	return 0, false
+}
+
 // validCodePoint reports whether v is a code point CHR and
 // CODE_POINTS_TO_STRING accept: [0, 0xD7FF] or [0xE000, 0x10FFFF].
 // Everything else, surrogates included, is an error.

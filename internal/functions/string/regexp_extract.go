@@ -34,13 +34,17 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if err != nil {
 			return nil, err
 		}
-		if pos >= len([]rune(v)) {
+		// Position 1 is a valid start for an empty value even though it
+		// has no first character, so an empty pattern still matches it.
+		atStartOfEmpty := v == "" && pos == 0
+		off, ok := charOffset(v, pos)
+		if !ok && !atStartOfEmpty {
 			return nil, nil
 		}
 		if err := checkCapturingGroups(re); err != nil {
 			return nil, err
 		}
-		rest := v[pos:]
+		rest := v[off:]
 		matches := re.FindAllStringSubmatchIndex(rest, occ)
 		if len(matches) < occ {
 			return nil, nil
@@ -55,7 +59,8 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if err != nil {
 			return nil, err
 		}
-		if pos >= len(v) {
+		atStartOfEmpty := len(v) == 0 && pos == 0
+		if pos >= len(v) && !atStartOfEmpty {
 			return nil, nil
 		}
 		if err := checkCapturingGroups(re); err != nil {
