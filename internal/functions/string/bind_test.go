@@ -1290,6 +1290,10 @@ func TestRegexpReplaceBackreferences(t *testing.T) {
 		// Invalid escapes: '\' must be followed by a digit or '\'.
 		{"backslash_nondigit", "abc", "(b)", `\q`, "", true},
 		{"trailing_backslash", "abc", "(b)", `x\`, "", true},
+		// A backreference the pattern cannot satisfy is an error, not
+		// an empty substitution.
+		{"group_out_of_range", "abc", "b(.)", `X\2`, "", true},
+		{"group_without_any", "abc", "b", `X\1`, "", true},
 	}
 	for _, c := range cases {
 		c := c

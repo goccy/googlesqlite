@@ -29,7 +29,7 @@ func isDelim(v rune, delimiters []rune) bool {
 //
 // Go's Expand template instead spells group references "${d}" and uses
 // '$' as its sigil, so a literal '$' must be doubled to "$$".
-func normalizeReplacement(repl string) (string, error) {
+func normalizeReplacement(repl string, numGroups int) (string, error) {
 	var normalized []byte
 	for i := 0; i < len(repl); i++ {
 		switch c := repl[i]; c {
@@ -40,6 +40,12 @@ func normalizeReplacement(repl string) (string, error) {
 			next := repl[i+1]
 			switch {
 			case next >= '0' && next <= '9':
+				// Expand substitutes the empty string for a group the
+				// pattern does not have, so the reference
+				// implementation's check has to happen here.
+				if group := int(next - '0'); group > numGroups {
+					return "", fmt.Errorf("REGEXP_REPLACE: replacement refers to capturing group %d, but the regular expression has only %d", group, numGroups)
+				}
 				normalized = append(normalized, '$', '{', next, '}')
 			case next == '\\':
 				normalized = append(normalized, '\\')

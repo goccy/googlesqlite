@@ -73,3 +73,19 @@ cases:
     expected:
       error:
         contains: "must be followed by a digit"
+  # Source: reference implementation `regexp.cc:469` (`1f8aa33`), which
+  # checks the replacement against the pattern before rewriting; the
+  # rule itself is RE2's CheckRewriteString. The second row is the
+  # compliance fixtures' REGEXP_REPLACE("", "", "\\1").
+  - desc: a backreference past the last group is an error
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"b(.)", r"X\2")
+    expected:
+      error:
+        contains: capturing group
+  - desc: a backreference with no group at all is an error
+    sql: |
+      SELECT REGEXP_REPLACE("", "", r"\1")
+    expected:
+      error:
+        contains: capturing group

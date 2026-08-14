@@ -26,7 +26,7 @@ func REGEXP_REPLACE(val, exprValue, replacementValue value.Value) (value.Value, 
 		if err != nil {
 			return nil, err
 		}
-		normalized, err := normalizeReplacement(replacement)
+		normalized, err := normalizeReplacement(replacement, re.NumSubexp())
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,7 @@ func REGEXP_REPLACE(val, exprValue, replacementValue value.Value) (value.Value, 
 		if err != nil {
 			return nil, err
 		}
-		normalized, err := normalizeReplacement(string(replacement))
+		normalized, err := normalizeReplacement(string(replacement), re.NumSubexp())
 		if err != nil {
 			return nil, err
 		}
