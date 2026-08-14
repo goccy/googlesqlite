@@ -41,7 +41,7 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if !ok && !atStartOfEmpty {
 			return nil, nil
 		}
-		if err := checkCapturingGroups(re); err != nil {
+		if err := checkExtractionGroups("REGEXP_EXTRACT", re); err != nil {
 			return nil, err
 		}
 		rest := v[off:]
@@ -63,7 +63,7 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		if pos >= len(v) && !atStartOfEmpty {
 			return nil, nil
 		}
-		if err := checkCapturingGroups(re); err != nil {
+		if err := checkExtractionGroups("REGEXP_EXTRACT", re); err != nil {
 			return nil, err
 		}
 		rest := v[pos:]
@@ -78,18 +78,6 @@ func REGEXP_EXTRACT(val value.Value, expr string, position, occurrence int64) (v
 		return value.BytesValue(rest[start:end]), nil
 	}
 	return nil, fmt.Errorf("REGEXP_EXTRACT: val argument must be STRING or BYTES")
-}
-
-// checkCapturingGroups rejects a pattern this function cannot use: it
-// returns one span per match, so at most one capturing group may decide
-// which span that is. The reference implementation reaches this check
-// only once it is about to match, so a value that yields no result at
-// all never gets here.
-func checkCapturingGroups(re *regexp.Regexp) error {
-	if re.NumSubexp() > 1 {
-		return fmt.Errorf("REGEXP_EXTRACT: regular expressions passed into extraction functions must not have more than 1 capturing group")
-	}
-	return nil
 }
 
 // extractedSpan picks the span REGEXP_EXTRACT returns for one match:

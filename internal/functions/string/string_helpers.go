@@ -2,6 +2,7 @@ package string
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"unicode"
 )
@@ -53,6 +54,16 @@ func normalizeReplacement(repl string) (string, error) {
 		}
 	}
 	return string(normalized), nil
+}
+
+// checkExtractionGroups rejects a pattern the extraction functions
+// cannot use. They return one span per match, so at most one capturing
+// group may decide which span that is.
+func checkExtractionGroups(fn string, re *regexp.Regexp) error {
+	if re.NumSubexp() > 1 {
+		return fmt.Errorf("%s: regular expressions passed into extraction functions must not have more than 1 capturing group", fn)
+	}
+	return nil
 }
 
 // charOffset returns the byte offset of the n-th character of s,

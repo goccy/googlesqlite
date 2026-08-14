@@ -47,8 +47,11 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 			return nil, err
 		}
 		off, ok := charOffset(source, pos)
-		if !ok {
+		if !ok || expr == "" {
 			return value.IntValue(0), nil
+		}
+		if err := checkExtractionGroups("REGEXP_INSTR", re); err != nil {
+			return nil, err
 		}
 		rest := source[off:]
 		matches := re.FindAllStringSubmatchIndex(rest, occ)
@@ -73,8 +76,11 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 		if err != nil {
 			return nil, err
 		}
-		if pos >= len(source) {
+		if pos >= len(source) || len(expr) == 0 {
 			return value.IntValue(0), nil
+		}
+		if err := checkExtractionGroups("REGEXP_INSTR", re); err != nil {
+			return nil, err
 		}
 		matches := re.FindAllSubmatchIndex(source[pos:], occ)
 		if len(matches) < occ {

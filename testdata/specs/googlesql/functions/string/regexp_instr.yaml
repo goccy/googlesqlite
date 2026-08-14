@@ -73,6 +73,35 @@ cases:
     expected:
       error:
         contains: return_position_after_match
+  # "Returns 0 if: ... The regular expression is empty." and "Returns
+  # an error if: ... The regular expression has more than one capturing
+  # group." — the same two rows the compliance fixtures carry for this
+  # function.
+  - desc: an empty regular expression returns 0
+    sql: SELECT REGEXP_INSTR('abcdef', '')
+    expected:
+      rows:
+        - [0]
+  - desc: an empty BYTES regular expression returns 0
+    sql: SELECT REGEXP_INSTR(b'abcdef', b'')
+    expected:
+      rows:
+        - [0]
+  - desc: two capturing groups are an error
+    sql: SELECT REGEXP_INSTR('abc', r'(a)(b)')
+    expected:
+      error:
+        contains: capturing group
+  - desc: nested capturing groups are an error
+    sql: SELECT REGEXP_INSTR('abc', r'((a))')
+    expected:
+      error:
+        contains: capturing group
+  - desc: two capturing groups in a BYTES pattern are an error
+    sql: SELECT REGEXP_INSTR(b'abc', rb'(a)(b)')
+    expected:
+      error:
+        contains: capturing group
   # A STRING is measured in characters and a BYTES value in bytes, so
   # the position this function returns — and the `position` it takes —
   # follow the same units. The end-of-match row is the documented
