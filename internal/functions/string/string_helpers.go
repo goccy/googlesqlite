@@ -15,12 +15,14 @@ func isDelim(v rune, delimiters []rune) bool {
 // replacement string into the template syntax consumed by Go's
 // regexp.Expand (ReplaceAllString / ReplaceAll).
 //
-// The BigQuery replacement grammar (string_functions.md#regexp_replace)
-// is:
+// string_functions.md#regexp_replace documents \0 .. \9 as the text
+// captured by the corresponding group (\0 being the entire match) and
+// a backslash as the only character that needs escaping. The rest of
+// the grammar is stated by the reference implementation alone
+// (`regexp.cc:536`, `1f8aa33`):
 //
-//   - \0 .. \9  insert the text captured by the corresponding group,
-//     where \0 is the entire match. The index is a SINGLE digit; a
-//     following digit is a literal (e.g. \10 is group 1 then "0").
+//   - the group index is a SINGLE digit; a following digit is a
+//     literal (e.g. \10 is group 1 then "0").
 //   - \\        a literal backslash.
 //   - \ + other an error: "'\' must be followed by a digit or '\'".
 //   - every other byte, INCLUDING '$', is a literal.
