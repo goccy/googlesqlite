@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ['[{"a":1},{"a":2}]']
+  - desc: string input yields ARRAY<STRING> of JSON-formatted elements, nulls included
+    sql: SELECT ARRAY_TO_STRING(JSON_QUERY_ARRAY('["p", null, 1]', '$'), '|')
+    expected:
+      rows:
+        - ['"p"|null|1']
