@@ -3,6 +3,7 @@ package string
 import (
 	"fmt"
 	"regexp"
+	"unicode/utf8"
 
 	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
@@ -45,10 +46,12 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 		if err != nil {
 			return nil, err
 		}
-		if pos >= len([]rune(source)) {
+		off, ok := charOffset(source, pos)
+		if !ok {
 			return value.IntValue(0), nil
 		}
-		matches := re.FindAllStringSubmatchIndex(source[pos:], occ)
+		rest := source[off:]
+		matches := re.FindAllStringSubmatchIndex(rest, occ)
 		if len(matches) < occ {
 			return value.IntValue(0), nil
 		}
@@ -56,7 +59,7 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 		if len(match) <= occPos {
 			return value.IntValue(0), nil
 		}
-		return value.IntValue(pos + match[occPos] + 1), nil
+		return value.IntValue(pos + utf8.RuneCountInString(rest[:match[occPos]]) + 1), nil
 	case value.BytesValue:
 		source, err := sourceValue.ToBytes()
 		if err != nil {

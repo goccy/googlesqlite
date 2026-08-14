@@ -73,6 +73,30 @@ cases:
     expected:
       error:
         contains: return_position_after_match
+  # A STRING is measured in characters and a BYTES value in bytes, so
+  # the position this function returns — and the `position` it takes —
+  # follow the same units. The end-of-match row is the documented
+  # "LENGTH(source_value) + 1" case.
+  - desc: the returned position counts characters
+    sql: SELECT REGEXP_INSTR('é@x', '@')
+    expected:
+      rows:
+        - [2]
+  - desc: the position argument counts characters
+    sql: SELECT REGEXP_INSTR('éé@', '@', 2)
+    expected:
+      rows:
+        - [3]
+  - desc: end of the match at the end of the value is LENGTH + 1
+    sql: SELECT REGEXP_INSTR('é@', '@', 1, 1, 1)
+    expected:
+      rows:
+        - [3]
+  - desc: BYTES positions count bytes
+    sql: SELECT REGEXP_INSTR(b'éa', b'a')
+    expected:
+      rows:
+        - [3]
   - desc: occurrence_position other than 0 or 1 is an error
     sql: SELECT REGEXP_INSTR('abc', 'b', 1, 1, 2)
     expected:
