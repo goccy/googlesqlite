@@ -21,3 +21,13 @@ cases:
     expected:
       rows:
         - ['true']
+  - desc: cast timestamp column to string uses the canonical space/+00 form
+    sql: |-
+      SELECT CAST(ts AS STRING) AS r
+      FROM UNNEST([TIMESTAMP '2026-08-07 22:00:00+00', TIMESTAMP '2020-01-01 00:00:00.5+00', TIMESTAMP '2020-01-01 00:00:00.1234+00']) AS ts
+    expected:
+      unordered: true
+      rows:
+        - ['2026-08-07 22:00:00+00']
+        - ['2020-01-01 00:00:00.500+00']
+        - ['2020-01-01 00:00:00.123400+00']
