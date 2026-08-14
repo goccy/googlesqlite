@@ -36,6 +36,28 @@ cases:
     expected:
       rows:
         - ['[]']
+  # A capturing group that did not participate in the match contributes
+  # an empty string, not NULL: the iterator hands the group's empty
+  # span to the caller (`regexp.cc:192`, `1f8aa33`), which builds a
+  # value from it without asking whether the group took part
+  # (`reference_impl/function.cc:1422`). Only the single-value
+  # REGEXP_EXTRACT distinguishes the two. Source: compliance fixtures
+  # (`functions_testlib_regex.cc:307-309`).
+  - desc: a group that did not participate contributes an empty string
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('', r'(abc)?'))
+    expected:
+      rows:
+        - ['[""]']
+  - desc: a group that captured nothing contributes an empty string
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('', r'()'))
+    expected:
+      rows:
+        - ['[""]']
+  - desc: a pattern that does not match at all returns an empty array
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('', r'(abc)'))
+    expected:
+      rows:
+        - ['[]']
   - desc: two capturing groups are an error
     sql: SELECT REGEXP_EXTRACT_ALL('abc', r'(a)(b)')
     expected:
