@@ -1089,6 +1089,54 @@ func scanStringLiteral(s string, start int) int {
 	return len(s)
 }
 
+// blankComments overwrites comments with spaces, keeping newlines, so
+// positions reported by the parser still match the original query.
+func blankComments(query string) string {
+	if !strings.Contains(query, "--") && !strings.Contains(query, "#") && !strings.Contains(query, "/*") {
+		return query
+	}
+	b := []byte(query)
+	blank := func(from, to int) {
+		for k := from; k < to; k++ {
+			if b[k] != '\n' {
+				b[k] = ' '
+			}
+		}
+	}
+	i := 0
+	for i < len(query) {
+		c := query[i]
+		switch {
+		case c == '\'' || c == '"':
+			i = scanStringLiteral(query, i)
+		case c == '`':
+			end := i + 1
+			for end < len(query) && query[end] != '`' {
+				end++
+			}
+			i = end + 1
+		case c == '#' || (c == '-' && i+1 < len(query) && query[i+1] == '-'):
+			end := i
+			for end < len(query) && query[end] != '\n' {
+				end++
+			}
+			blank(i, end)
+			i = end
+		case c == '/' && i+1 < len(query) && query[i+1] == '*':
+			end := strings.Index(query[i+2:], "*/")
+			if end < 0 {
+				return string(b)
+			}
+			end += i + 4
+			blank(i, end)
+			i = end
+		default:
+			i++
+		}
+	}
+	return string(b)
+}
+
 // parsedScript bundles parsed statements with the handles they point
 // into. The ParserOutput handles own the AST subtrees referenced by
 // stmts; keeping them live here lets callers iterate AST nodes without
@@ -1518,6 +1566,7 @@ func (a *Analyzer) Analyze(ctx context.Context, conn *Conn, query string, args [
 	// arg slice, applyScriptVariables needs ctx/conn) stay as explicit
 	// calls in their exact positions relative to the uniform pipeline
 	// steps.
+	query = blankComments(query)
 	query, args = applyMixedParameterRewrite(query, args)
 	query = applySQLRewritePipeline(query, sqlRewritePipelinePreScriptVars)
 	query = applyScriptVariables(ctx, query, conn)

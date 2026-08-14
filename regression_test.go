@@ -34,6 +34,41 @@ func TestRegression_DefaultTimezoneIsUTC(t *testing.T) {
 	}
 }
 
+func TestRegression_CommentsDoNotAffectRewrites(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name, sql string
+		want      int64
+	}{
+		{"block comment with PARTITION BY", "SELECT 1 /* partition by day */ AS a", 1},
+		{"block comment with PARTITION BY before CTE body", "WITH t /* no PARTITION BY here */ AS (SELECT 1 AS x) SELECT x FROM t WHERE x >= 1", 1},
+		{"apostrophe in block comment before naive TIMESTAMP literal", "SELECT /* it's */ EXTRACT(HOUR FROM ts) FROM (SELECT TIMESTAMP '2024-01-01 12:00:00' AS ts)", 12},
+		{"apostrophe in dash comment before naive TIMESTAMP literal", "-- it's\nSELECT EXTRACT(HOUR FROM TIMESTAMP '2024-01-01 12:00:00')", 12},
+	} {
+		var got int64
+		if err := db.QueryRowContext(ctx, tc.sql).Scan(&got); err != nil {
+			t.Errorf("%s: %v", tc.name, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("%s: got %d, want %d", tc.name, got, tc.want)
+		}
+	}
+	var s string
+	if err := db.QueryRowContext(ctx, `SELECT '-- a /* b */ #c' /* ' */`).Scan(&s); err != nil {
+		t.Fatal(err)
+	}
+	if s != "-- a /* b */ #c" {
+		t.Errorf("comment markers inside a string literal were altered: %q", s)
+	}
+}
+
 // TestRegression_IntegerTypeAlias asserts that INTEGER and INT are accepted
 // as aliases for INT64 in DDL.
 //
