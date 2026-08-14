@@ -83,6 +83,41 @@ func TestBindDatetimeFromTimestampZone(t *testing.T) {
 	}
 }
 
+func TestBindDatetimeFromString(t *testing.T) {
+	for _, tc := range []struct {
+		in   string
+		want gotime.Time
+	}{
+		{"2025-01-15T10:30:00", gotime.Date(2025, 1, 15, 10, 30, 0, 0, gotime.UTC)},
+		{"2025-01-15", gotime.Date(2025, 1, 15, 0, 0, 0, 0, gotime.UTC)},
+	} {
+		got, err := BindDatetime(value.StringValue(tc.in))
+		if err != nil {
+			t.Fatalf("DATETIME(%q): %v", tc.in, err)
+		}
+		if _, ok := got.(value.DatetimeValue); !ok {
+			t.Fatalf("DATETIME(%q): want DatetimeValue, got %T", tc.in, got)
+		}
+		if tt, _ := got.ToTime(); !tt.Equal(tc.want) {
+			t.Fatalf("DATETIME(%q): got %v, want %v", tc.in, tt, tc.want)
+		}
+	}
+	if _, err := BindDatetime(value.StringValue("not a datetime")); err == nil {
+		t.Fatalf("DATETIME(invalid string) must fail")
+	}
+}
+
+func TestBindDatetimeFromDatetime(t *testing.T) {
+	in := mkDatetime(2025, 1, 15, 10, 30, 0)
+	got, err := BindDatetime(in)
+	if err != nil {
+		t.Fatalf("BindDatetime: %v", err)
+	}
+	if got != in {
+		t.Fatalf("DATETIME(datetime) must be the identity, got %v", got)
+	}
+}
+
 func TestBindDatetimeNullPropagation(t *testing.T) {
 	got, _ := BindDatetime(nil)
 	if got != nil {

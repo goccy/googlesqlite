@@ -67,6 +67,10 @@ func TIME(args ...value.Value) (value.Value, error) {
 			return nil, err
 		}
 		return value.TimeValue(t), nil
+	case value.TimeValue:
+		if len(args) == 1 {
+			return args[0], nil
+		}
 	}
 	return nil, fmt.Errorf("TIME: invalid first argument type %T", args[0])
 }
