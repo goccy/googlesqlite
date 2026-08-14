@@ -7,6 +7,24 @@ cases:
     expected:
       rows:
         - [1710505845]
+  # A trailing literal in the format ('Z') with the input one character
+  # short is a clean parse failure, not a crash. BigQuery returns NULL
+  # from SAFE.PARSE_TIMESTAMP here.
+  - desc: trailing format literal missing from input fails cleanly
+    sql: |
+      SELECT PARSE_TIMESTAMP("%Y-%m-%dT%H:%M:%E3SZ", "2024-01-05T12:30:00.123")
+    expected:
+      error:
+        contains: "expected literal"
+  # A trailing literal that is present but wrong ('X' instead of 'Z') is
+  # also a parse failure, not silently accepted. BigQuery returns NULL
+  # from SAFE.PARSE_TIMESTAMP here.
+  - desc: trailing format literal mismatched in input fails cleanly
+    sql: |
+      SELECT PARSE_TIMESTAMP("%Y-%m-%dT%H:%M:%E3SZ", "2024-01-05T12:30:00.123X")
+    expected:
+      error:
+        contains: "expected literal"
   # %E3S matches up to three fractional-second digits; ".123" is within
   # precision and parses to 123000 microseconds past the second.
   - desc: fractional seconds within %E3S precision

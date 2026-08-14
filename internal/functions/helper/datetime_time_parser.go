@@ -1223,6 +1223,13 @@ func ParseTimeFormat(formatStr, targetStr string, typ TimeFormatType) (*time.Tim
 				targetIdx++
 			}
 		} else {
+			// A format literal must match the same character in the
+			// target; without this guard targetIdx runs past the end and
+			// panics at the target[targetIdx:] slice below. BigQuery
+			// treats a missing or mismatched literal as no match (NULL).
+			if targetIdx >= len(target) || target[targetIdx] != c {
+				return nil, fmt.Errorf("error parsing [%s] with format [%s]: expected literal %q", string(target), formatStr, string(c))
+			}
 			formatIdx++
 			targetIdx++
 		}
