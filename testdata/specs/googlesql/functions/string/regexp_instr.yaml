@@ -126,6 +126,43 @@ cases:
     expected:
       rows:
         - [3]
+  # Source: reference implementation `regexp.h:276` (`1f8aa33`) — "If
+  # the regular expression contains a capturing group, the function
+  # returns the position for the capturing group", not for the whole
+  # match. The values below are the compliance fixtures' rows.
+  - desc: a capturing group decides the reported position
+    sql: SELECT REGEXP_INSTR('abc', r'a(b)c')
+    expected:
+      rows:
+        - [2]
+  - desc: a capturing group in the middle of a longer match
+    sql: SELECT REGEXP_INSTR('abcdef', r'a(.c.*)f')
+    expected:
+      rows:
+        - [2]
+  - desc: the group position counts characters
+    sql: SELECT REGEXP_INSTR('щцф', r'щ(.).')
+    expected:
+      rows:
+        - [2]
+  - desc: a capturing group on BYTES operands
+    sql: SELECT REGEXP_INSTR(b'abcdef', rb'a(.c.*)f')
+    expected:
+      rows:
+        - [2]
+  - desc: a capturing group after an explicit position
+    sql: SELECT REGEXP_INSTR(b'agbfagde', rb'ag(..)', 2)
+    expected:
+      rows:
+        - [7]
+  # A group that did not participate has no position of its own, so the
+  # result is 0 even though the pattern matched (`regexp.cc:419`,
+  # `1f8aa33`). Verified against BigQuery.
+  - desc: a capturing group that did not participate returns 0
+    sql: SELECT REGEXP_INSTR('abc', r'(z)?b')
+    expected:
+      rows:
+        - [0]
   - desc: occurrence_position other than 0 or 1 is an error
     sql: SELECT REGEXP_INSTR('abc', 'b', 1, 1, 2)
     expected:

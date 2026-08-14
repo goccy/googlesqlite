@@ -9,6 +9,16 @@ import (
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
+// reportedSpanIndex picks the match index REGEXP_INSTR reports on:
+// occurrencePos selects the start or the end of the span, and the span
+// is the capturing group when the pattern has one.
+func reportedSpanIndex(re *regexp.Regexp, occurrencePos int) int {
+	if re.NumSubexp() == 1 {
+		return occurrencePos + 2
+	}
+	return occurrencePos
+}
+
 func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occurrencePos int64) (value.Value, error) {
 	if position <= 0 {
 		return nil, fmt.Errorf("REGEXP_INSTR: unexpected position number. position must be positive number")
@@ -58,11 +68,12 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 		if len(matches) < occ {
 			return value.IntValue(0), nil
 		}
+		idx := reportedSpanIndex(re, occPos)
 		match := matches[occ-1]
-		if len(match) <= occPos {
+		if len(match) <= idx || match[idx] < 0 {
 			return value.IntValue(0), nil
 		}
-		return value.IntValue(pos + utf8.RuneCountInString(rest[:match[occPos]]) + 1), nil
+		return value.IntValue(pos + utf8.RuneCountInString(rest[:match[idx]]) + 1), nil
 	case value.BytesValue:
 		source, err := sourceValue.ToBytes()
 		if err != nil {
@@ -86,11 +97,12 @@ func REGEXP_INSTR(sourceValue, exprValue value.Value, position, occurrence, occu
 		if len(matches) < occ {
 			return value.IntValue(0), nil
 		}
+		idx := reportedSpanIndex(re, occPos)
 		match := matches[occ-1]
-		if len(match) <= occPos {
+		if len(match) <= idx || match[idx] < 0 {
 			return value.IntValue(0), nil
 		}
-		return value.IntValue(pos + match[occPos] + 1), nil
+		return value.IntValue(pos + match[idx] + 1), nil
 	}
 	return nil, fmt.Errorf("REGEXP_INSTR: source value must be STRING or BYTES")
 }
