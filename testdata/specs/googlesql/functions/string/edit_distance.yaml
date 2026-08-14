@@ -1,8 +1,45 @@
 spec: docs/specs/googlesql/functions/string/edit_distance.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md
+# (EDIT_DISTANCE section, lines 1060-1149) — every upstream Example.
+# max_distance is documented as "an INT64 value that's greater than or
+# equal to zero", so a negative value is an error.
 cases:
   - desc: edit_distance basic behaviour
     sql: SELECT EDIT_DISTANCE("kitten", "sitting")
     expected:
       rows:
         - [3]
+  - desc: upstream example — one differing character
+    sql: SELECT EDIT_DISTANCE('a', 'b')
+    expected:
+      rows:
+        - [1]
+  - desc: upstream example — two differing characters
+    sql: SELECT EDIT_DISTANCE('aa', 'b')
+    expected:
+      rows:
+        - [2]
+  - desc: upstream example — only the first character differs
+    sql: SELECT EDIT_DISTANCE('aa', 'ba')
+    expected:
+      rows:
+        - [1]
+  - desc: upstream example — max_distance caps the result
+    sql: SELECT EDIT_DISTANCE('abcdefg', 'a', max_distance => 2)
+    expected:
+      rows:
+        - [2]
+  - desc: negative max_distance is an error
+    sql: SELECT EDIT_DISTANCE('abc', 'abd', max_distance => -1)
+    expected:
+      error:
+        contains: max_distance
+  # An explicit NULL argument is not an absent one: the compliance
+  # fixtures give EDIT_DISTANCE('abc', 'a', NULL) as NULL, the same
+  # NULL propagation the two value arguments have.
+  - desc: NULL max_distance propagates
+    sql: SELECT EDIT_DISTANCE('abcdefg', 'a', max_distance => CAST(NULL AS INT64))
+    expected:
+      rows:
+        - [null]

@@ -1,8 +1,70 @@
 spec: docs/specs/googlesql/functions/string/regexp_extract_all.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md
+# (REGEXP_EXTRACT_ALL section, lines 3264-3305) — the upstream Example
+# and the documented error conditions ("Returns an error if: ... The
+# regular expression has more than one capturing group"). The remaining
+# rows are compliance fixtures for this function.
 cases:
   - desc: capture-group extraction returns digits
-    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('a1 b2 c3', r'(\w)(\d)'))
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('a1 b2 c3', r'\w(\d)'))
     expected:
       rows:
         - ['["1","2","3"]']
+  - desc: upstream example — every quoted call
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('Try `func(x)` or `func(y)`', '`(.+?)`'))
+    expected:
+      rows:
+        - ['["func(x)","func(y)"]']
+  - desc: no capturing group returns whole matches
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('abc', '.'))
+    expected:
+      rows:
+        - ['["a","b","c"]']
+  - desc: whole matches are counted in characters
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('щцф', '.'))
+    expected:
+      rows:
+        - ['["щ","ц","ф"]']
+  - desc: a repeated capturing group keeps its last match
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('abcd', r'a(bc)*'))
+    expected:
+      rows:
+        - ['["bc"]']
+  - desc: no match returns an empty array
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('abcdef', 'ac.*e.'))
+    expected:
+      rows:
+        - ['[]']
+  # A capturing group that did not participate in the match contributes
+  # an empty string, not NULL: the iterator hands the group's empty
+  # span to the caller (`regexp.cc:192`, `1f8aa33`), which builds a
+  # value from it without asking whether the group took part
+  # (`reference_impl/function.cc:1422`). Only the single-value
+  # REGEXP_EXTRACT distinguishes the two. Source: compliance fixtures
+  # (`functions_testlib_regex.cc:307-309`).
+  - desc: a group that did not participate contributes an empty string
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('', r'(abc)?'))
+    expected:
+      rows:
+        - ['[""]']
+  - desc: a group that captured nothing contributes an empty string
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('', r'()'))
+    expected:
+      rows:
+        - ['[""]']
+  - desc: a pattern that does not match at all returns an empty array
+    sql: SELECT TO_JSON_STRING(REGEXP_EXTRACT_ALL('', r'(abc)'))
+    expected:
+      rows:
+        - ['[]']
+  - desc: two capturing groups are an error
+    sql: SELECT REGEXP_EXTRACT_ALL('abc', r'(a)(b)')
+    expected:
+      error:
+        contains: capturing group
+  - desc: nested capturing groups are an error
+    sql: SELECT REGEXP_EXTRACT_ALL('abc', r'((a))')
+    expected:
+      error:
+        contains: capturing group

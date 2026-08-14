@@ -13,6 +13,9 @@ func REGEXP_EXTRACT_ALL(val value.Value, expr string) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkExtractionGroups("REGEXP_EXTRACT_ALL", re); err != nil {
+		return nil, err
+	}
 	switch val.(type) {
 	case value.StringValue:
 		v, err := val.ToString()

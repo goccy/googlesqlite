@@ -31,8 +31,10 @@ cases:
     expected:
       rows:
         - ["a[bc]"]
-  # Backreferences are a single digit: \10 is group 1 followed by a
-  # literal '0', not group 10.
+  # Source: reference implementation `regexp.cc:536` (`1f8aa33`) — the
+  # group index is read one digit at a time, so \10 is group 1 followed
+  # by a literal '0', not group 10. string_functions.md documents only
+  # \0 to \9 and says nothing about the two-digit form.
   - desc: single-digit backreference then literal digit
     sql: |
       SELECT REGEXP_REPLACE("abcdefghijk", r"(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)", r"\10")
@@ -46,8 +48,10 @@ cases:
     expected:
       rows:
         - ["a\\c"]
-  # '$' is an ordinary literal in a BigQuery replacement (unlike RE2's
-  # own Expand syntax, where '$' is the group sigil).
+  # Source: reference implementation `regexp.cc:536` (`1f8aa33`) — only
+  # a backslash is special in a replacement, so '$' is an ordinary
+  # literal (unlike RE2's own Expand syntax, where it is the group
+  # sigil).
   - desc: literal dollar sign in replacement
     sql: |
       SELECT REGEXP_REPLACE("abc", r"(b)", r"p$q")
@@ -60,11 +64,28 @@ cases:
     expected:
       rows:
         - ["a${1}c"]
-  # A backslash must be followed by a digit or another backslash;
-  # anything else is an error.
+  # Source: reference implementation `regexp.cc:536` (`1f8aa33`) — a
+  # backslash must be followed by a digit or another backslash;
+  # anything else is "Invalid REGEXP_REPLACE pattern".
   - desc: backslash followed by a non-digit is an error
     sql: |
       SELECT REGEXP_REPLACE("abc", r"(b)", r"\q")
     expected:
       error:
         contains: "must be followed by a digit"
+  # Source: reference implementation `regexp.cc:469` (`1f8aa33`), which
+  # checks the replacement against the pattern before rewriting; the
+  # rule itself is RE2's CheckRewriteString. The second row is the
+  # compliance fixtures' REGEXP_REPLACE("", "", "\\1").
+  - desc: a backreference past the last group is an error
+    sql: |
+      SELECT REGEXP_REPLACE("abc", r"b(.)", r"X\2")
+    expected:
+      error:
+        contains: capturing group
+  - desc: a backreference with no group at all is an error
+    sql: |
+      SELECT REGEXP_REPLACE("", "", r"\1")
+    expected:
+      error:
+        contains: capturing group

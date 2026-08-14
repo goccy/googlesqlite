@@ -1252,12 +1252,12 @@ func TestBase32RoundTrip(t *testing.T) {
 
 // ----- REGEXP_REPLACE backreferences ---------------------------
 
-// TestRegexpReplaceBackreferences pins the BigQuery replacement grammar
-// (string_functions.md#regexp_replace): \0..\9 are single-digit group
-// references (\0 = the whole match), \\ is a literal backslash, '$' is
-// an ordinary literal, and any other escape is an error. Expected
-// values are the upstream Description/Examples plus the documented
-// single-digit and literal-backslash rules.
+// TestRegexpReplaceBackreferences pins the replacement grammar: \0..\9
+// are group references (\0 = the whole match) and \\ is a literal
+// backslash, per string_functions.md#regexp_replace; the index being a
+// single digit, '$' being an ordinary literal and any other escape
+// being an error come from the reference implementation
+// (`regexp.cc:536`, `1f8aa33`).
 func TestRegexpReplaceBackreferences(t *testing.T) {
 	t.Parallel()
 
@@ -1277,7 +1277,8 @@ func TestRegexpReplaceBackreferences(t *testing.T) {
 		{"trailing_ref", "abc", "b(.)", `X\1`, "aXc", false},
 		// \0 is the entire match.
 		{"whole_match", "abc", "b(.)", `[\0]`, "a[bc]", false},
-		// Single-digit index: \10 is group 1 then a literal '0'.
+		// Single-digit index (reference implementation): \10 is group 1
+		// then a literal '0'.
 		{"single_digit", "abcdefghijk", "(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)", `\10`, "a0k", false},
 		// Consecutive references.
 		{"double_ref", "xyz", "(y)", `\1\1`, "xyyz", false},
@@ -1289,6 +1290,10 @@ func TestRegexpReplaceBackreferences(t *testing.T) {
 		// Invalid escapes: '\' must be followed by a digit or '\'.
 		{"backslash_nondigit", "abc", "(b)", `\q`, "", true},
 		{"trailing_backslash", "abc", "(b)", `x\`, "", true},
+		// A backreference the pattern cannot satisfy is an error, not
+		// an empty substitution.
+		{"group_out_of_range", "abc", "b(.)", `X\2`, "", true},
+		{"group_without_any", "abc", "b", `X\1`, "", true},
 	}
 	for _, c := range cases {
 		c := c

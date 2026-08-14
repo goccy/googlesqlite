@@ -1,5 +1,10 @@
 spec: docs/specs/googlesql/functions/string/chr.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md (CHR
+# section, lines 721-762) — both upstream Examples plus the documented
+# code-point range ("Each valid code point should fall within the range
+# of [0, 0xD7FF] and [0xE000, 0x10FFFF] ... If an invalid Unicode code
+# point is specified, an error is returned").
 cases:
   - desc: ascii uppercase
     sql: SELECT CHR(65)
@@ -11,3 +16,28 @@ cases:
     expected:
       rows:
         - ['a']
+  - desc: upstream example — Latin-1 and Cyrillic code points
+    sql: SELECT CHR(65) AS a, CHR(255) AS b, CHR(513) AS c, CHR(1024) AS d
+    expected:
+      rows:
+        - ['A', 'ÿ', 'ȁ', 'Ѐ']
+  - desc: upstream example — code point 0 is the empty string, NULL propagates
+    sql: SELECT CHR(97) AS a, CHR(0xF9B5) AS b, CHR(0) AS c, CHR(NULL) AS d
+    expected:
+      rows:
+        - ["a", "例", "", null]
+  - desc: negative code point is an error
+    sql: SELECT CHR(-1)
+    expected:
+      error:
+        contains: Invalid codepoint
+  - desc: code point above the Unicode maximum is an error
+    sql: SELECT CHR(1114112)
+    expected:
+      error:
+        contains: Invalid codepoint
+  - desc: surrogate code point is an error
+    sql: SELECT CHR(55296)
+    expected:
+      error:
+        contains: Invalid codepoint

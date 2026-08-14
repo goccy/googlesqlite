@@ -1,6 +1,8 @@
 package string
 
 import (
+	"fmt"
+
 	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
@@ -69,15 +71,27 @@ func BindEditDistance(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
+	// An argument that is present but NULL is not an absent one: like
+	// the two values, max_distance propagates NULL.
+	hasMaxDistance := len(args) >= 3
+	if hasMaxDistance && args[2] == nil {
+		return nil, nil
+	}
+	var maxDistance int64
+	if hasMaxDistance {
+		maxDistance, err = args[2].ToInt64()
+		if err != nil {
+			return nil, err
+		}
+		if maxDistance < 0 {
+			return nil, fmt.Errorf("EDIT_DISTANCE: max_distance must be non-negative")
+		}
+	}
 	out, err := EDIT_DISTANCE(a, b)
 	if err != nil || out == nil {
 		return out, err
 	}
-	if len(args) >= 3 && args[2] != nil {
-		maxDistance, err := args[2].ToInt64()
-		if err != nil {
-			return nil, err
-		}
+	if hasMaxDistance {
 		got, err := out.ToInt64()
 		if err != nil {
 			return nil, err

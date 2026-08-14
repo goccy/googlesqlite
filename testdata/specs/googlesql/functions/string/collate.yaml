@@ -27,3 +27,45 @@ cases:
     expected:
       rows:
         - [false]
+  # docs/third_party/googlesql-docs/collation-concepts.md enumerates the
+  # allowed language tags: a CLDR locale string, `und`, `unicode` or
+  # `binary`, optionally suffixed with `:ci` / `:cs`. Anything else is
+  # not a collation specification.
+  - desc: empty specification removes the collation
+    sql: SELECT COLLATE('abc', '')
+    expected:
+      rows:
+        - ['abc']
+  - desc: binary language tag is accepted
+    sql: SELECT COLLATE('abc', 'binary')
+    expected:
+      rows:
+        - ['abc']
+  - desc: unknown language tag is an error
+    sql: SELECT COLLATE('abc', 'invalid')
+    expected:
+      error:
+        contains: is not valid
+  # The binary specification is a bare language tag
+  # (collation-concepts.md#binary_collation), so a suffix on it is not a
+  # collation specification: reference implementation `collator.cc:93`
+  # (`1f8aa33`), "binary cannot be combined with a suffix".
+  - desc: binary language tag with an attribute is an error
+    sql: SELECT COLLATE('ABC', 'binary:ci')
+    expected:
+      error:
+        contains: binary
+  # `unicode:ci` is identical to `und:ci` and plain `unicode` to
+  # `binary`, which orders by code point (collation-concepts.md#
+  # unicode_collation), so these two are the upstream `und:ci` Example
+  # and its uncollated counterpart under the other spelling.
+  - desc: unicode language tag keeps the case-insensitive attribute
+    sql: SELECT COLLATE('a', 'unicode:ci') < COLLATE('Z', 'unicode:ci')
+    expected:
+      rows:
+        - [true]
+  - desc: unicode language tag is case-sensitive by default
+    sql: SELECT COLLATE('a', 'unicode') < COLLATE('Z', 'unicode')
+    expected:
+      rows:
+        - [false]

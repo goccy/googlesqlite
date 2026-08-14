@@ -1,8 +1,93 @@
 spec: docs/specs/googlesql/functions/string/rpad.md
 dialect: googlesql
+# Source: docs/third_party/googlesql-docs/string_functions.md (RPAD
+# section, lines 3729-3814) — every upstream Example plus the two
+# documented error conditions ("This function returns an error if:
+# + return_length is negative + pattern is empty").
 cases:
   - desc: pad to length 5
     sql: SELECT RPAD('hi', 5, '*')
     expected:
       rows:
         - ['hi***']
+  - desc: upstream example — default pattern is a blank space
+    sql: SELECT FORMAT('%T', RPAD('c', 5))
+    expected:
+      rows:
+        - ['"c    "']
+  - desc: upstream example — single-character pattern
+    sql: SELECT RPAD('b', 5, 'a')
+    expected:
+      rows:
+        - ['baaaa']
+  - desc: upstream example — repeated pattern truncated to the gap
+    sql: SELECT RPAD('abc', 10, 'ghd')
+    expected:
+      rows:
+        - ['abcghdghdg']
+  - desc: upstream example — return_length shorter than the value truncates
+    sql: SELECT RPAD('abc', 2, 'd')
+    expected:
+      rows:
+        - ['ab']
+  - desc: upstream example — BYTES value and pattern
+    sql: SELECT FORMAT('%T', RPAD(b'abc', 10, b'ghd'))
+    expected:
+      rows:
+        - ['b"abcghdghdg"']
+  # Same rule as the BYTES Example above, with the pattern longer than
+  # the gap it fills: the pattern is truncated, not repeated. Values
+  # from the GoogleSQL compliance fixtures (padding function tests).
+  - desc: BYTES pattern longer than the remaining gap
+    sql: SELECT FORMAT('%T', RPAD(b'abc', 5, b'defgh'))
+    expected:
+      rows:
+        - ['b"abcde"']
+  - desc: STRING pattern longer than the remaining gap
+    sql: SELECT RPAD('abc', 5, 'defgh')
+    expected:
+      rows:
+        - ['abcde']
+  - desc: empty value padded with a repeated pattern
+    sql: SELECT RPAD('', 7, 'def')
+    expected:
+      rows:
+        - ['defdefd']
+  - desc: NULL value propagates
+    sql: SELECT RPAD(CAST(NULL AS STRING), 5, '*')
+    expected:
+      rows:
+        - [null]
+  - desc: negative return_length is an error
+    sql: SELECT RPAD('abc', -1)
+    expected:
+      error:
+        contains: cannot be negative
+  - desc: negative return_length on BYTES is an error
+    sql: SELECT RPAD(b'abc', -1, b'x')
+    expected:
+      error:
+        contains: cannot be negative
+  - desc: empty pattern is an error
+    sql: SELECT RPAD('abc', 5, '')
+    expected:
+      error:
+        contains: cannot be empty
+  - desc: empty BYTES pattern is an error
+    sql: SELECT RPAD(b'abc', 5, b'')
+    expected:
+      error:
+        contains: cannot be empty
+  # Source: reference implementation string.cc:1440 (1f8aa33) — the pad
+  # arguments are verified before the output_size <= input length path,
+  # so a value that only needs truncating is rejected too.
+  - desc: empty pattern is an error when the value is truncated
+    sql: SELECT RPAD('abc', 2, '')
+    expected:
+      error:
+        contains: cannot be empty
+  - desc: empty BYTES pattern is an error when the value is unchanged
+    sql: SELECT RPAD(b'abc', 3, b'')
+    expected:
+      error:
+        contains: cannot be empty
