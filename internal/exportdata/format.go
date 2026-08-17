@@ -13,15 +13,16 @@ import (
 type Format string
 
 const (
-	FormatCSV    Format = "CSV"
-	FormatNDJSON Format = "NEWLINE_DELIMITED_JSON"
+	FormatCSV     Format = "CSV"
+	FormatNDJSON  Format = "NEWLINE_DELIMITED_JSON"
+	FormatParquet Format = "PARQUET"
 )
 
 // ParseFormat normalizes the `format` option value. An empty string maps to
 // CSV (matching real BigQuery's default). Formats that BigQuery accepts but
 // the emulator does not yet implement fall into two buckets:
 //
-//   - Object-store formats (AVRO, PARQUET) — the encoder is missing.
+//   - Object-store formats (AVRO) — the encoder is missing.
 //   - Reverse-ETL destination formats (CLOUD_SPANNER, CLOUD_BIGTABLE,
 //     CLOUD_PUBSUB, ALLOYDB) — these target operational databases /
 //     pub-sub topics rather than blob storage and require a managed
@@ -35,7 +36,9 @@ func ParseFormat(s string) (Format, error) {
 		return FormatCSV, nil
 	case "JSON", "NEWLINE_DELIMITED_JSON":
 		return FormatNDJSON, nil
-	case "AVRO", "PARQUET":
+	case "PARQUET":
+		return FormatParquet, nil
+	case "AVRO":
 		return "", fmt.Errorf("EXPORT DATA: format %q is not yet supported by googlesqlite", s)
 	case "CLOUD_SPANNER", "CLOUD_BIGTABLE", "CLOUD_PUBSUB", "ALLOYDB":
 		return "", fmt.Errorf("EXPORT DATA: reverse-ETL destination format %q is not supported by googlesqlite (no managed connector for the target service)", s)

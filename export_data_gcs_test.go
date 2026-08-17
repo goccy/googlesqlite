@@ -13,6 +13,7 @@
 package googlesqlite_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/fsouza/fake-gcs-server/fakestorage"
+	"github.com/parquet-go/parquet-go"
 	"google.golang.org/api/option"
 )
 
@@ -88,7 +90,7 @@ func TestExportDataStatementGCS(t *testing.T) {
 		}
 	}
 
-	readObject := func(t *testing.T, name string) string {
+	readObjectBytes := func(t *testing.T, name string) []byte {
 		t.Helper()
 		r, err := gcs.Bucket(bucket).Object(name).NewReader(ctx)
 		if err != nil {
@@ -99,7 +101,11 @@ func TestExportDataStatementGCS(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
 		}
-		return string(b)
+		return b
+	}
+	readObject := func(t *testing.T, name string) string {
+		t.Helper()
+		return string(readObjectBytes(t, name))
 	}
 
 	t.Run("CSV", func(t *testing.T) {
@@ -127,6 +133,31 @@ func TestExportDataStatementGCS(t *testing.T) {
 		want := `{"id":1,"name":"a"}` + "\n" + `{"id":2,"name":"b"}` + "\n"
 		if got != want {
 			t.Errorf("json body = %q; want %q", got, want)
+		}
+	})
+
+	t.Run("Parquet Snappy", func(t *testing.T) {
+		exec(t, fmt.Sprintf(
+			`EXPORT DATA OPTIONS(
+				uri = 'gs://%s/parquet/*.parquet', format = 'PARQUET',
+				compression = 'SNAPPY', overwrite = true
+			) AS SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2, 'b'`,
+			bucket,
+		))
+		raw := readObjectBytes(t, "parquet/000000000000.parquet")
+		reader := parquet.NewGenericReader[any](bytes.NewReader(raw))
+		defer reader.Close()
+		rows := make([]any, 2)
+		n, err := reader.Read(rows)
+		if err != nil && err != io.EOF {
+			t.Fatalf("read Parquet: %v", err)
+		}
+		if n != 2 {
+			t.Fatalf("Parquet row count = %d; want 2", n)
+		}
+		first, ok := rows[0].(map[string]any)
+		if !ok || first["id"] != int64(1) || first["name"] != "a" {
+			t.Fatalf("first Parquet row = %#v", rows[0])
 		}
 	})
 }

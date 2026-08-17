@@ -614,13 +614,32 @@ func (a *ExportDataStmtAction) export(ctx context.Context, conn *Conn) error {
 			return fmt.Errorf("EXPORT DATA: read column names: %w", err)
 		}
 	}
+	var parquetConfig *exportdata.ParquetEncodingConfig
+	if a.opts.Format == exportdata.FormatParquet {
+		parquetColumns := make([]exportdata.ColumnSchema, len(a.outputColumns))
+		for i, column := range a.outputColumns {
+			parquetColumns[i] = exportColumnSchema(column)
+		}
+		parquetConfig, err = exportdata.NewParquetEncodingConfig(parquetColumns, a.opts.Compression)
+		if err != nil {
+			return err
+		}
+	}
 
 	dest, err := writer(ctx, a.opts.URI, exportdata.WriterOpts{Overwrite: a.opts.Overwrite})
 	if err != nil {
 		return fmt.Errorf("EXPORT DATA: open destination %q: %w", a.opts.URI, err)
 	}
-	// Wrap with the compression codec; both Closers must run so the
-	// compression trailer flushes AND the underlying object commits.
+	if a.opts.Format == exportdata.FormatParquet {
+		encodeErr := exportdata.EncodeParquetRows(dest, parquetConfig, parquetSQLRowsSource(rows, len(columns)))
+		if closeErr := dest.Close(); closeErr != nil && encodeErr == nil {
+			encodeErr = fmt.Errorf("EXPORT DATA: close destination %q: %w", a.opts.URI, closeErr)
+		}
+		return encodeErr
+	}
+
+	// CSV and JSON compression wraps the entire output stream. Parquet codecs
+	// are handled inside column chunks by the Parquet writer above.
 	encStream, err := exportdata.WrapCompressor(dest, a.opts.Compression)
 	if err != nil {
 		_ = dest.Close()
@@ -633,14 +652,45 @@ func (a *ExportDataStmtAction) export(ctx context.Context, conn *Conn) error {
 	return encodeErr
 }
 
+func exportColumnSchema(column *ColumnSpec) exportdata.ColumnSchema {
+	return exportdata.ColumnSchema{Name: column.Name, Type: exportTypeSchema(column.Type)}
+}
+
+func exportTypeSchema(t *Type) *exportdata.TypeSchema {
+	if t == nil {
+		return nil
+	}
+	schema := &exportdata.TypeSchema{
+		Name: t.Name,
+		Kind: t.kindAs(),
+	}
+	if t.ElementType != nil {
+		schema.ElementType = exportTypeSchema(t.ElementType)
+	}
+	for _, field := range t.FieldTypes {
+		schema.FieldTypes = append(schema.FieldTypes, exportdata.ColumnSchema{
+			Name: field.Name,
+			Type: exportTypeSchema(field.Type),
+		})
+	}
+	return schema
+}
+
 // sqlRowsSource adapts a database/sql.Rows iterator to exportdata.RowSource.
 // Each invocation advances one row, scans the raw driver values, and decodes
-// them out of googlesqlite's envelope into Go-native primitives so the
-// format encoders see real strings / ints / floats rather than the base64
-// `{header, body}` layout the driver round-trips internally. The (false,
-// nil) terminator surfaces both natural end-of-stream and an underlying
-// scan error (via rows.Err()).
+// them out of googlesqlite's envelope into Go-native primitives so the CSV and
+// JSON encoders retain their existing input contract and behavior.
 func sqlRowsSource(rows *sql.Rows, ncols int) exportdata.RowSource {
+	return newSQLRowsSource(rows, ncols, false)
+}
+
+// parquetSQLRowsSource retains the decoded value.Value instances required for
+// schema-aware Parquet conversion.
+func parquetSQLRowsSource(rows *sql.Rows, ncols int) exportdata.RowSource {
+	return newSQLRowsSource(rows, ncols, true)
+}
+
+func newSQLRowsSource(rows *sql.Rows, ncols int, preserveTypes bool) exportdata.RowSource {
 	return func() ([]any, bool, error) {
 		if !rows.Next() {
 			if err := rows.Err(); err != nil {
@@ -658,7 +708,13 @@ func sqlRowsSource(rows *sql.Rows, ncols int) exportdata.RowSource {
 		}
 		out := make([]any, ncols)
 		for i, v := range raw {
-			decoded, err := decodeExportValue(v)
+			var decoded any
+			var err error
+			if preserveTypes {
+				decoded, err = DecodeValue(v)
+			} else {
+				decoded, err = decodeExportValue(v)
+			}
 			if err != nil {
 				return nil, false, fmt.Errorf("EXPORT DATA: decode column %d: %w", i, err)
 			}
@@ -668,13 +724,9 @@ func sqlRowsSource(rows *sql.Rows, ncols int) exportdata.RowSource {
 	}
 }
 
-// decodeExportValue turns a single scanned driver value (still wrapped in
-// googlesqlite's `{header, body}` envelope) into the Go-native value the
-// EXPORT DATA encoders work in. Primitives (string, int64, float64, bool,
-// []byte) pass through to keep the encoder's type-driven branches happy;
-// richer types (Date, Timestamp, Numeric, Array, Struct ...) collapse to
-// their canonical string form via the value's ToString — that string is
-// what BigQuery itself uses for the same column in CSV / JSON output.
+// decodeExportValue turns a scanned driver value into the Go-native value used
+// by the existing CSV and JSON encoders. Rich values use their canonical string
+// representation, matching the pre-Parquet EXPORT DATA behavior.
 func decodeExportValue(v any) (any, error) {
 	if v == nil {
 		return nil, nil
