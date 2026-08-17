@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"math/big"
 	"reflect"
 	"regexp"
@@ -89,12 +90,19 @@ func literalFromValue(v value.Value) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		value := strconv.FormatFloat(f64, 'g', -1, 64)
-		if !strings.Contains(value, ".") && !strings.Contains(value, "e") {
-			// append x.0 suffix to keep float value context
-			value = fmt.Sprintf("%s.0", value)
+		switch {
+		case math.IsInf(f64, 1):
+			return "9e999", nil
+		case math.IsInf(f64, -1):
+			return "-9e999", nil
+		case !math.IsNaN(f64):
+			value := strconv.FormatFloat(f64, 'g', -1, 64)
+			if !strings.Contains(value, ".") && !strings.Contains(value, "e") {
+				// append x.0 suffix to keep float value context
+				value = fmt.Sprintf("%s.0", value)
+			}
+			return value, nil
 		}
-		return value, nil
 	case value.BoolValue:
 		b, err := v.ToBool()
 		if err != nil {
@@ -133,7 +141,7 @@ func valueFromGoogleSQLValue(v googlesql.Value) (value.Value, error) {
 	case googlesql.TypeKindTypeBool:
 		return boolValueFromLiteral(m1(v.GetSQLLiteral()))
 	case googlesql.TypeKindTypeFloat, googlesql.TypeKindTypeDouble:
-		return floatValueFromLiteral(m1(v.GetSQLLiteral()))
+		return value.FloatValue(m1(v.ToDouble())), nil
 	case googlesql.TypeKindTypeString:
 		return value.StringValue(m1(v.StringValue())), nil
 	case googlesql.TypeKindTypeEnum:
@@ -237,14 +245,6 @@ func boolValueFromLiteral(lit string) (value.BoolValue, error) {
 		return false, err
 	}
 	return value.BoolValue(v), nil
-}
-
-func floatValueFromLiteral(lit string) (value.FloatValue, error) {
-	v, err := strconv.ParseFloat(lit, 64)
-	if err != nil {
-		return 0, err
-	}
-	return value.FloatValue(v), nil
 }
 
 func stringValueFromLiteral(lit string) (value.StringValue, error) {

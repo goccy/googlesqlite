@@ -2,6 +2,8 @@ package internal
 
 import (
 	"fmt"
+	"math"
+	"strings"
 	"sync"
 
 	"github.com/goccy/go-json"
@@ -151,19 +153,32 @@ func RegisterFunctions(conn *sqlite3.Conn) error {
 		if err != nil {
 			return "", err
 		}
-		encodedValues := make([]any, 0, len(array.Values))
-		for _, value := range array.Values {
-			v, err := EncodeValue(value)
+		var b strings.Builder
+		b.WriteByte('[')
+		for i, elem := range array.Values {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			if f, ok := elem.(value.FloatValue); ok && math.IsInf(float64(f), 0) {
+				if f > 0 {
+					b.WriteString("9e999")
+				} else {
+					b.WriteString("-9e999")
+				}
+				continue
+			}
+			v, err := value.EncodeElement(elem)
 			if err != nil {
 				return "", err
 			}
-			encodedValues = append(encodedValues, v)
+			e, err := json.Marshal(v)
+			if err != nil {
+				return "", err
+			}
+			b.Write(e)
 		}
-		b, err := json.Marshal(encodedValues)
-		if err != nil {
-			return "", err
-		}
-		return string(b), err
+		b.WriteByte(']')
+		return b.String(), nil
 	}, deterministic); err != nil {
 		return fmt.Errorf("failed to register decode_array function: %w", err)
 	}
