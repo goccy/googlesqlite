@@ -167,11 +167,13 @@ func TestBinaryMath(t *testing.T) {
 		t.Fatalf("POW(2,8) = %v, want 256", mustFloat(t, got))
 	}
 
-	got, _ = MOD(value.FloatValue(10), value.FloatValue(3))
-	if gomath.Abs(mustFloat(t, got)-1) > 1e-9 {
-		t.Fatalf("MOD(10,3) = %v, want 1", mustFloat(t, got))
+	if got, _ = MOD(value.IntValue(10), value.IntValue(3)); got != value.Value(value.IntValue(1)) {
+		t.Fatalf("MOD(10,3) = %#v, want IntValue(1)", got)
 	}
-	if _, err := MOD(value.FloatValue(1), value.FloatValue(0)); err == nil {
+	if got, _ = MOD(value.IntValue(9007199254740993), value.IntValue(10)); got != value.Value(value.IntValue(3)) {
+		t.Fatalf("MOD(9007199254740993,10) = %#v, want IntValue(3)", got)
+	}
+	if _, err := MOD(value.IntValue(1), value.IntValue(0)); err == nil {
 		t.Fatalf("MOD division by zero should error")
 	}
 }

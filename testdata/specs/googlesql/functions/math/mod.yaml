@@ -11,3 +11,18 @@ cases:
     expected:
       rows:
         - [0]
+  - desc: sign follows the dividend
+    sql: SELECT MOD(-25, 12), MOD(25, -12), MOD(NUMERIC '-5.5', NUMERIC '2')
+    expected:
+      rows:
+        - [-1, 1, "-1.5"]
+  - desc: INT64 result stays exact beyond 2^53 and is usable as an integer
+    sql: SELECT MOD(x, 10), FORMAT('%04d', MOD(x, 10)) FROM (SELECT 9007199254740993 AS x)
+    expected:
+      rows:
+        - [3, "0003"]
+  - desc: zero divisor is an error
+    sql: SELECT MOD(n, 0) FROM (SELECT 25 AS n)
+    expected:
+      error:
+        contains: "division by zero"

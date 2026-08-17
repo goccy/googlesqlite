@@ -2,22 +2,38 @@ package math
 
 import (
 	"fmt"
-	"math"
+	"math/big"
 
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
 func MOD(x, y value.Value) (value.Value, error) {
-	xv, err := x.ToFloat64()
+	if xi, ok := x.(value.IntValue); ok {
+		if yi, ok := y.(value.IntValue); ok {
+			if yi == 0 {
+				return nil, fmt.Errorf("MOD: division by zero")
+			}
+			return value.IntValue(int64(xi) % int64(yi)), nil
+		}
+	}
+	xr, err := x.ToRat()
 	if err != nil {
 		return nil, err
 	}
-	yv, err := y.ToFloat64()
+	yr, err := y.ToRat()
 	if err != nil {
 		return nil, err
 	}
-	if yv == 0 {
-		return nil, fmt.Errorf("MOD: zero divided")
+	if yr.Sign() == 0 {
+		return nil, fmt.Errorf("MOD: division by zero")
 	}
-	return value.FloatValue(math.Mod(xv, yv)), nil
+	q := new(big.Rat).Quo(xr, yr)
+	n := new(big.Int).Quo(q.Num(), q.Denom())
+	r := new(big.Rat).Sub(xr, new(big.Rat).Mul(yr, new(big.Rat).SetInt(n)))
+	return &value.NumericValue{Rat: r, IsBigNumeric: isBigNumeric(x) || isBigNumeric(y)}, nil
+}
+
+func isBigNumeric(v value.Value) bool {
+	nv, ok := v.(*value.NumericValue)
+	return ok && nv.IsBigNumeric
 }
