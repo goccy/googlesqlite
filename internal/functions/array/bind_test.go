@@ -328,6 +328,16 @@ func TestArrayToString(t *testing.T) {
 	if got != value.StringValue("a--N--c") {
 		t.Errorf("got %v; want a--N--c", got)
 	}
+	for _, args := range [][]value.Value{
+		{nil, value.StringValue("--")},
+		{a, nil},
+		{an, value.StringValue("--"), nil},
+	} {
+		got, err = arrayfn.BindArrayToString(args...)
+		if err != nil || got != nil {
+			t.Errorf("BindArrayToString(%v) = %v, %v; want NULL", args, got, err)
+		}
+	}
 }
 
 // ------------------------------------------------------------------
