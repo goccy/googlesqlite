@@ -2,7 +2,10 @@ package value
 
 import (
 	"fmt"
+	"math"
 	"math/big"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -88,11 +91,27 @@ func (fv FloatValue) ToInt64() (int64, error) {
 }
 
 func (fv FloatValue) ToString() (string, error) {
-	return fmt.Sprint(fv), nil
+	return formatFloat(float64(fv)), nil
 }
 
 func (fv FloatValue) ToBytes() ([]byte, error) {
-	return []byte(fmt.Sprint(fv)), nil
+	return []byte(formatFloat(float64(fv))), nil
+}
+
+func formatFloat(f float64) string {
+	switch {
+	case math.IsNaN(f):
+		return "nan"
+	case math.IsInf(f, 1):
+		return "inf"
+	case math.IsInf(f, -1):
+		return "-inf"
+	}
+	s := strconv.FormatFloat(f, 'g', 15, 64)
+	if v, err := strconv.ParseFloat(s, 64); err != nil || v != f {
+		s = strconv.FormatFloat(f, 'g', 17, 64)
+	}
+	return s
 }
 
 func (fv FloatValue) ToFloat64() (float64, error) {
@@ -118,7 +137,16 @@ func (fv FloatValue) ToStruct() (*StructValue, error) {
 }
 
 func (fv FloatValue) ToJSON() (string, error) {
-	return fmt.Sprint(fv), nil
+	switch f := float64(fv); {
+	case math.IsNaN(f):
+		return `"NaN"`, nil
+	case math.IsInf(f, 1):
+		return `"Infinity"`, nil
+	case math.IsInf(f, -1):
+		return `"-Infinity"`, nil
+	default:
+		return formatFloat(f), nil
+	}
 }
 
 func (fv FloatValue) ToTime() (time.Time, error) {
@@ -132,7 +160,18 @@ func (fv FloatValue) ToRat() (*big.Rat, error) {
 }
 
 func (fv FloatValue) Format(verb rune) string {
-	return fmt.Sprint(fv)
+	f := float64(fv)
+	s := formatFloat(f)
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		if verb == 'T' {
+			return fmt.Sprintf("CAST(%q AS FLOAT64)", s)
+		}
+		return s
+	}
+	if !strings.ContainsAny(s, ".e") {
+		s += ".0"
+	}
+	return s
 }
 
 func (fv FloatValue) Interface() any {

@@ -21,3 +21,15 @@ cases:
     expected:
       rows:
         - ['true']
+  - desc: cast float64 column to string uses the shortest round-trip form
+    sql: |-
+      SELECT CAST(x AS STRING) AS r
+      FROM UNNEST([123456789.0, 1234567.5, 1e15, 0.00001, 0.1 + 0.2]) AS x WITH OFFSET o
+      ORDER BY o
+    expected:
+      rows:
+        - ['123456789']
+        - ['1234567.5']
+        - ['1e+15']
+        - ['1e-05']
+        - ['0.30000000000000004']

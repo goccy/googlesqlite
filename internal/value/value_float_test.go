@@ -176,3 +176,38 @@ func TestFloatValue(t *testing.T) {
 		}
 	})
 }
+
+func TestFloatTextForms(t *testing.T) {
+	for _, tc := range []struct {
+		in                 float64
+		str, fmtt, T, json string
+	}{
+		{3, "3", "3.0", "3.0", "3"},
+		{math.Copysign(0, -1), "-0", "-0.0", "-0.0", "-0"},
+		{123456789, "123456789", "123456789.0", "123456789.0", "123456789"},
+		{1234567.5, "1234567.5", "1234567.5", "1234567.5", "1234567.5"},
+		{1e15, "1e+15", "1e+15", "1e+15", "1e+15"},
+		{1e14 + 0.5, "100000000000000.5", "100000000000000.5", "100000000000000.5", "100000000000000.5"},
+		{0.00001, "1e-05", "1e-05", "1e-05", "1e-05"},
+		{0.0001, "0.0001", "0.0001", "0.0001", "0.0001"},
+		{math.Nextafter(0.3, 1), "0.30000000000000004", "0.30000000000000004", "0.30000000000000004", "0.30000000000000004"},
+		{123456789012345678, "1.2345678901234568e+17", "1.2345678901234568e+17", "1.2345678901234568e+17", "1.2345678901234568e+17"},
+		{math.NaN(), "nan", "nan", `CAST("nan" AS FLOAT64)`, `"NaN"`},
+		{math.Inf(1), "inf", "inf", `CAST("inf" AS FLOAT64)`, `"Infinity"`},
+		{math.Inf(-1), "-inf", "-inf", `CAST("-inf" AS FLOAT64)`, `"-Infinity"`},
+	} {
+		v := value.FloatValue(tc.in)
+		if s, _ := v.ToString(); s != tc.str {
+			t.Errorf("FloatValue(%v).ToString() = %q, want %q", tc.in, s, tc.str)
+		}
+		if s := v.Format('t'); s != tc.fmtt {
+			t.Errorf("FloatValue(%v).Format('t') = %q, want %q", tc.in, s, tc.fmtt)
+		}
+		if s := v.Format('T'); s != tc.T {
+			t.Errorf("FloatValue(%v).Format('T') = %q, want %q", tc.in, s, tc.T)
+		}
+		if s, _ := v.ToJSON(); s != tc.json {
+			t.Errorf("FloatValue(%v).ToJSON() = %q, want %q", tc.in, s, tc.json)
+		}
+	}
+}

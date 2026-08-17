@@ -44,3 +44,8 @@ cases:
     expected:
       rows:
         - ['[]']
+  - desc: FLOAT64 values use the shortest round-trip form
+    sql: SELECT TO_JSON_STRING(x * 41152263), TO_JSON_STRING(x / 30), TO_JSON_STRING(x * 1e21) FROM (SELECT 3.0 AS x)
+    expected:
+      rows:
+        - ["123456789", "0.1", "3e+21"]
