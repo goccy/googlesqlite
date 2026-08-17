@@ -472,6 +472,12 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 	// Googlesql_TypeNode carries Kind directly, no upcast needed.
 	switch m1(t.Kind()) {
 	case googlesql.TypeKindTypeInt32, googlesql.TypeKindTypeInt64, googlesql.TypeKindTypeUint32, googlesql.TypeKindTypeUint64:
+		if s, ok := v.(value.StringValue); ok {
+			v = value.StringValue(strings.TrimSpace(string(s)))
+			if v == value.StringValue("") {
+				return nil, fmt.Errorf("invalid INT64 value: %q", string(s))
+			}
+		}
 		i64, err := v.ToInt64()
 		if err != nil {
 			return nil, err
@@ -484,6 +490,12 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 		}
 		return value.BoolValue(b), nil
 	case googlesql.TypeKindTypeFloat, googlesql.TypeKindTypeDouble:
+		if s, ok := v.(value.StringValue); ok {
+			v = value.StringValue(strings.TrimSpace(string(s)))
+			if v == value.StringValue("") {
+				return nil, fmt.Errorf("invalid FLOAT64 value: %q", string(s))
+			}
+		}
 		f64, err := v.ToFloat64()
 		if err != nil {
 			return nil, err
