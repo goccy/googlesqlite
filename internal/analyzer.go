@@ -958,6 +958,18 @@ func applyNaiveTimestampUTC(query string) string {
 			word := query[i:j]
 			b.WriteString(word)
 			i = j
+			if strings.EqualFold(word, "CAST") || strings.EqualFold(word, "SAFE_CAST") {
+				if lit, end, ok := naiveTimestampCastLiteral(query, i); ok {
+					b.WriteString(query[i:lit])
+					content := strings.TrimSpace(query[lit+1 : end-1])
+					b.WriteByte(query[lit])
+					b.WriteString(content)
+					b.WriteString(utcSuffix(content))
+					b.WriteByte(query[lit])
+					i = end
+				}
+				continue
+			}
 			if strings.EqualFold(word, "TIMESTAMP") {
 				// Skip whitespace, then if the next token is a string
 				// literal without a TZ marker, rewrite it to UTC.
@@ -975,7 +987,7 @@ func applyNaiveTimestampUTC(query string) string {
 						if !timestampHasTZ(content) {
 							b.WriteByte(quote)
 							b.WriteString(content)
-							b.WriteString("+00:00")
+							b.WriteString(utcSuffix(content))
 							b.WriteByte(quote)
 						} else {
 							b.WriteString(query[k:end])
@@ -992,6 +1004,49 @@ func applyNaiveTimestampUTC(query string) string {
 	return b.String()
 }
 
+// naiveTimestampCastLiteral matches `( '<naive>' AS TIMESTAMP )` at query[i:] and
+// returns the span of the string literal.
+func naiveTimestampCastLiteral(query string, i int) (lit, end int, ok bool) {
+	skip := func(k int) int {
+		for k < len(query) && (query[k] == ' ' || query[k] == '\t' || query[k] == '\n' || query[k] == '\r') {
+			k++
+		}
+		return k
+	}
+	k := skip(i)
+	if k >= len(query) || query[k] != '(' {
+		return 0, 0, false
+	}
+	lit = skip(k + 1)
+	if lit >= len(query) || (query[lit] != '\'' && query[lit] != '"') {
+		return 0, 0, false
+	}
+	end = scanStringLiteral(query, lit)
+	if end <= lit+1 || end > len(query) || query[end-1] != query[lit] || timestampHasTZ(strings.TrimSpace(query[lit+1:end-1])) {
+		return 0, 0, false
+	}
+	k = skip(end)
+	if k+2 > len(query) || !strings.EqualFold(query[k:k+2], "AS") {
+		return 0, 0, false
+	}
+	k = skip(k + 2)
+	const target = "TIMESTAMP"
+	if k+len(target) > len(query) || !strings.EqualFold(query[k:k+len(target)], target) {
+		return 0, 0, false
+	}
+	if k = skip(k + len(target)); k >= len(query) || query[k] != ')' {
+		return 0, 0, false
+	}
+	return lit, end, true
+}
+
+func utcSuffix(content string) string {
+	if dateOnly.MatchString(content) {
+		return " 00:00:00+00:00"
+	}
+	return "+00:00"
+}
+
 // timestampHasTZ reports whether a TIMESTAMP literal body already
 // carries a timezone marker (offset, `Z`, or an IANA / abbreviation
 // timezone name).
@@ -1001,6 +1056,9 @@ func timestampHasTZ(s string) bool {
 	}
 	if strings.HasSuffix(s, "Z") || strings.HasSuffix(s, "z") {
 		return true
+	}
+	if dateOnly.MatchString(s) {
+		return false
 	}
 	if tzOffsetTail.MatchString(s) {
 		return true
@@ -1015,9 +1073,10 @@ func timestampHasTZ(s string) bool {
 }
 
 var (
-	timestampNeedle = regexp.MustCompile(`(?i)\bTIMESTAMP\s*['"]`)
+	timestampNeedle = regexp.MustCompile(`(?i)\bTIMESTAMP\s*['")]`)
 	// Match `[+-]HH`, `[+-]HHMM`, or `[+-]HH:MM` at the tail.
 	tzOffsetTail = regexp.MustCompile(`[+-]\d{2}(?::?\d{2})?\s*$`)
+	dateOnly     = regexp.MustCompile(`^\d{4}-\d{1,2}-\d{1,2}$`)
 	// Match a trailing alphabetic timezone identifier separated from
 	// the time component by a space (e.g. `UTC`, `GMT`,
 	// `America/Los_Angeles`, `EST`, `PST`).
