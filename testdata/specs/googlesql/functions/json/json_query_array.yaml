@@ -11,3 +11,8 @@ cases:
     expected:
       rows:
         - ['"p"|null|1']
+  - desc: string input that is not JSON yields NULL
+    sql: SELECT JSON_QUERY_ARRAY('*', '$') IS NULL
+    expected:
+      rows:
+        - [true]

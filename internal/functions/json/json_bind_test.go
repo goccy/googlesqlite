@@ -370,6 +370,24 @@ func TestJsonQueryResultTypedLikeInput(t *testing.T) {
 	}
 }
 
+func TestJsonStringInputMalformedOrNonMatchingIsNull(t *testing.T) {
+	t.Parallel()
+
+	for name, fn := range map[string]func(...value.Value) (value.Value, error){
+		"JSON_QUERY": BindJsonQuery, "JSON_EXTRACT": BindJsonExtract, "JSON_VALUE": BindJsonValue,
+		"JSON_EXTRACT_SCALAR": BindJsonExtractScalar, "JSON_QUERY_ARRAY": BindJsonQueryArray, "JSON_EXTRACT_ARRAY": BindJsonExtractArray,
+	} {
+		for _, args := range [][2]string{{`*`, `$`}, {`not json`, `$.a`}, {`{"a":{"b":"x"}}`, `$.a[0].b`}, {`[1,2]`, `$.a`}} {
+			if got, err := fn(value.StringValue(args[0]), value.StringValue(args[1])); err != nil || got != nil {
+				t.Errorf("%s(%q, %q) = %v, %v; want NULL", name, args[0], args[1], got, err)
+			}
+		}
+		if _, err := fn(value.StringValue(`{"a":1}`), value.StringValue(`$[`)); err == nil {
+			t.Errorf("%s with an invalid JSONPath must fail", name)
+		}
+	}
+}
+
 func TestBindJsonQueryArray(t *testing.T) {
 	t.Parallel()
 

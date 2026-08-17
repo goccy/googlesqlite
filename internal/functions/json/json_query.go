@@ -18,15 +18,12 @@ func queryJSONText(name, doc, path string, allowSingleQuotes bool) (text string,
 		return "", false, fmt.Errorf("%s: doesn't use single quote path selector", name)
 	}
 	extracted, err := p.Extract([]byte(doc))
-	if err != nil {
-		return "", false, err
-	}
-	if len(extracted) == 0 {
+	if err != nil || len(extracted) == 0 {
 		return "", false, nil
 	}
 	var buf bytes.Buffer
 	if err := json.Compact(&buf, extracted[0]); err != nil {
-		return "", false, fmt.Errorf("failed to format json %q: %w", extracted[0], err)
+		return "", false, nil
 	}
 	return buf.String(), true, nil
 }

@@ -25,3 +25,15 @@ cases:
     expected:
       rows:
         - [true, false, 'null']
+  - desc: string input that is not JSON or does not match the path shape yields NULL
+    sql: |
+      SELECT JSON_QUERY('not json', '$.a'), JSON_QUERY('{"a": {"b": 1}}', '$.a[0]'), JSON_QUERY('[1, 2]', '$.a')
+    expected:
+      rows:
+        - [null, null, null]
+  - desc: an invalid JSONPath is an error
+    sql: |
+      SELECT JSON_QUERY('{"a": 1}', '$[')
+    expected:
+      error:
+        contains: "invalid path"
