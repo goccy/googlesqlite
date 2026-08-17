@@ -873,6 +873,25 @@ func TestCollate(t *testing.T) {
 
 // ----- FORMAT --------------------------------------------------
 
+func TestFormatNullArguments(t *testing.T) {
+	t.Parallel()
+
+	got, err := strfn.BindFormat(value.StringValue("00-%t-00 %T"), nil, nil)
+	if err != nil || !equalString(got, "00-NULL-00 NULL") {
+		t.Errorf("FORMAT %%t/%%T with NULL: got %v, %v", got, err)
+	}
+	for _, args := range [][]value.Value{
+		{nil, value.IntValue(1)},
+		{value.StringValue("%d"), nil},
+		{value.StringValue("%s %t"), nil, value.IntValue(1)},
+		{value.StringValue("%*d"), nil, value.IntValue(5)},
+	} {
+		if got, err := strfn.BindFormat(args...); err != nil || got != nil {
+			t.Errorf("FORMAT%v: got %v, %v; want NULL", args, got, err)
+		}
+	}
+}
+
 func TestFormat(t *testing.T) {
 	t.Parallel()
 

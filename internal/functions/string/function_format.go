@@ -438,29 +438,29 @@ func (p *FormatPrecision) format(args []value.Value) (int, []value.Value, error)
 	return p.num, args, nil
 }
 
-func parseFormat(format string, args ...value.Value) (string, error) {
+func parseFormat(format string, args ...value.Value) (result string, isNull bool, err error) {
 	ctx := &FormatContext{src: []rune(format)}
 	formatArgs := args
-	result := []rune{}
+	out := []rune{}
 	for ctx.idx < len(ctx.src) {
 		c := ctx.current()
 		if c != '%' {
-			result = append(result, c)
+			out = append(out, c)
 			ctx.progress(1)
 			continue
 		}
 		ctx.progress(1)
 		if len(ctx.src) <= ctx.idx {
-			return "", fmt.Errorf("invalid format")
+			return "", false, fmt.Errorf("invalid format")
 		}
 		flag := parseFormatFlag(ctx)
 		width, err := parseFormatWidth(ctx)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 		precision, err := parseFormatPrecision(ctx)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 		specifier := ctx.current()
 		param := &FormatParam{
@@ -471,29 +471,39 @@ func parseFormat(format string, args ...value.Value) (string, error) {
 		}
 		info, exists := formatSpecifierTable[param.specifier]
 		if !exists {
-			return "", fmt.Errorf("unexpected format type %%%c", specifier)
+			return "", false, fmt.Errorf("unexpected format type %%%c", specifier)
 		}
 		num := param.requiredArgNum()
 		if len(formatArgs) < num {
-			return "", fmt.Errorf("not enough arguments for format")
+			return "", false, fmt.Errorf("not enough arguments for format")
 		}
 		args := formatArgs[:num]
-		if err := param.validateArgs(info, args); err != nil {
-			return "", fmt.Errorf("invalid argument type: %w", err)
-		}
-		text, err := info.parse(param, args)
-		if err != nil {
-			return "", err
+		var text []rune
+		switch nullArg(args) {
+		case -1:
+			if err := param.validateArgs(info, args); err != nil {
+				return "", false, fmt.Errorf("invalid argument type: %w", err)
+			}
+			if text, err = info.parse(param, args); err != nil {
+				return "", false, err
+			}
+		case num - 1:
+			if specifier != 't' && specifier != 'T' {
+				return "", true, nil
+			}
+			text = []rune("NULL")
+		default:
+			return "", true, nil
 		}
 		if len(formatArgs) > num {
 			formatArgs = formatArgs[num:]
 		} else if num != 0 {
 			formatArgs = nil
 		}
-		result = append(result, text...)
+		out = append(out, text...)
 		ctx.progress(1)
 	}
-	return string(result), nil
+	return string(out), false, nil
 }
 
 func parseFormatFlag(ctx *FormatContext) FormatFlag {
@@ -581,4 +591,13 @@ func parseFormatPrecision(ctx *FormatContext) (*FormatPrecision, error) {
 		return &FormatPrecision{num: num}, nil
 	}
 	return nil, nil
+}
+
+func nullArg(args []value.Value) int {
+	for i, a := range args {
+		if a == nil {
+			return i
+		}
+	}
+	return -1
 }
