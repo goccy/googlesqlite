@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -26,6 +27,9 @@ func ARRAY_TO_STRING(arr *value.ArrayValue, delim string, nullText ...string) (v
 func BindArrayToString(args ...value.Value) (value.Value, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("ARRAY_TO_STRING: invalid number of arguments: got %d, want at least 2", len(args))
+	}
+	if helper.ExistsNull(args) {
+		return nil, nil
 	}
 	arr, err := args[0].ToArray()
 	if err != nil {
