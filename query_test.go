@@ -6201,8 +6201,8 @@ WITH examples AS (
 				{"abc", int64(5), `"abc  "`},
 				{"abc", int64(2), `"ab"`},
 				{"例子", int64(4), `"例子  "`},
-				{nil, int64(2), nil},
-				{"abc", nil, nil},
+				{nil, int64(2), "NULL"},
+				{"abc", nil, "NULL"},
 			},
 		},
 		{
@@ -6215,7 +6215,7 @@ WITH examples AS (
 			expectedRows: [][]any{
 				{"abc", int64(8), "def", `"abcdefde"`},
 				{"abc", int64(5), "-", `"abc--"`},
-				{"abc", int64(5), nil, nil},
+				{"abc", int64(5), nil, "NULL"},
 				{"例子", int64(5), "中文", `"例子中文中"`},
 			},
 		},
@@ -8122,7 +8122,7 @@ FROM (
 				{`b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"`},
 				{`b"0123456789@ABCDE"`},
 				{`b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xc0\x00\x02\x80"`},
-				{nil},
+				{"NULL"},
 			},
 		},
 		{
@@ -8258,9 +8258,9 @@ FROM (
 				{`b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"`},
 				{`b"0123456789@ABCDE"`},
 				{`b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xc0\x00\x02\x80"`},
-				{nil},
-				{nil},
-				{nil},
+				{"NULL"},
+				{"NULL"},
+				{"NULL"},
 			},
 		},
 

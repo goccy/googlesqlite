@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ['00042']
+  - desc: a NULL argument makes the result NULL except under %t and %T
+    sql: SELECT FORMAT('00-%t-00 %T', NULL, CAST(NULL AS INT64)), FORMAT('%d', CAST(NULL AS INT64)), FORMAT('%s %t', CAST(NULL AS STRING), 1), FORMAT(CAST(NULL AS STRING), 1)
+    expected:
+      rows:
+        - ["00-NULL-00 NULL", null, null, null]

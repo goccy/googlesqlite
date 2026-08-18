@@ -8,16 +8,19 @@ import (
 )
 
 func FORMAT(format string, args ...value.Value) (value.Value, error) {
-	result, err := parseFormat(format, args...)
-	if err != nil {
+	result, isNull, err := parseFormat(format, args...)
+	if err != nil || isNull {
 		return nil, err
 	}
 	return value.StringValue(result), nil
 }
 
-var BindFormat = helper.ScalarN(func(args ...value.Value) (value.Value, error) {
+var BindFormat = helper.ScalarNKeepNull(func(args ...value.Value) (value.Value, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("FORMAT: invalid number of arguments: got %d, want at least 1", len(args))
+	}
+	if args[0] == nil {
+		return nil, nil
 	}
 	format, err := args[0].ToString()
 	if err != nil {
