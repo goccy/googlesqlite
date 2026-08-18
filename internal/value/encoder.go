@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -139,10 +140,17 @@ func ValueLayoutFromValue(v Value) (*ValueLayout, error) {
 	return valueLayoutFromValue(v)
 }
 
-// EncodeElement is EncodeValue for a value nested in a JSON body, where ±Inf cannot be a number.
+// EncodeElement is EncodeValue for a value nested in a JSON body.
 func EncodeElement(v Value) (any, error) {
-	if f, ok := v.(FloatValue); ok && math.IsInf(float64(f), 0) {
-		return encodeLayout(v)
+	if f, ok := v.(FloatValue); ok && !math.IsNaN(float64(f)) {
+		if math.IsInf(float64(f), 0) {
+			return encodeLayout(v)
+		}
+		s := strconv.FormatFloat(float64(f), 'g', -1, 64)
+		if !strings.ContainsAny(s, ".eE") {
+			s += ".0"
+		}
+		return json.RawMessage(s), nil
 	}
 	return EncodeValue(v)
 }
