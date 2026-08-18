@@ -34,6 +34,33 @@ func TestRegression_DefaultTimezoneIsUTC(t *testing.T) {
 	}
 }
 
+func TestRegression_NaiveTimestampStringCastIsUTC(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	for expr, want := range map[string]string{
+		`CAST('2026-01-15 10:00:00' AS TIMESTAMP)`:                  "2026-01-15 10:00:00",
+		`SAFE_CAST("2026-01-15T10:00:00" AS TIMESTAMP)`:             "2026-01-15 10:00:00",
+		`cast ( '2026-01-15' as timestamp )`:                        "2026-01-15 00:00:00",
+		`TIMESTAMP '2026-01-15'`:                                    "2026-01-15 00:00:00",
+		`CAST('2026-01-15 10:00:00+02' AS TIMESTAMP)`:               "2026-01-15 08:00:00",
+		`CAST('2026-01-15 10:00:00 America/New_York' AS TIMESTAMP)`: "2026-01-15 15:00:00",
+	} {
+		var got string
+		if err := db.QueryRowContext(ctx, "SELECT FORMAT_TIMESTAMP('%F %T', "+expr+", 'UTC')").Scan(&got); err != nil {
+			t.Errorf("%s: %v", expr, err)
+			continue
+		}
+		if got != want {
+			t.Errorf("%s = %s, want %s", expr, got, want)
+		}
+	}
+}
+
 // TestRegression_IntegerTypeAlias asserts that INTEGER and INT are accepted
 // as aliases for INT64 in DDL.
 //
