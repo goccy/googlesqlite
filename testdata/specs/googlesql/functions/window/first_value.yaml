@@ -11,3 +11,14 @@ cases:
         - [10, 10]
         - [20, 10]
         - [30, 10]
+  - desc: IGNORE NULLS picks the first non-NULL value of the frame
+    sql: |
+      SELECT t, FIRST_VALUE(x IGNORE NULLS) OVER (ORDER BY t ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS fv
+      FROM UNNEST([STRUCT(1 AS t, CAST(NULL AS STRING) AS x), (2, 'a'), (3, CAST(NULL AS STRING)), (4, 'b')])
+      ORDER BY t
+    expected:
+      rows:
+        - [1, "a"]
+        - [2, "a"]
+        - [3, "b"]
+        - [4, "b"]

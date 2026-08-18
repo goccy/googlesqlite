@@ -15,3 +15,14 @@ cases:
         - [10, 30]
         - [20, 30]
         - [30, 30]
+  - desc: IGNORE NULLS carries the last non-NULL value forward
+    sql: |
+      SELECT t, LAST_VALUE(x IGNORE NULLS) OVER (ORDER BY t) AS lv
+      FROM UNNEST([STRUCT(1 AS t, 'a' AS x), (2, CAST(NULL AS STRING)), (3, 'b'), (4, CAST(NULL AS STRING))])
+      ORDER BY t
+    expected:
+      rows:
+        - [1, "a"]
+        - [2, "a"]
+        - [3, "b"]
+        - [4, "b"]

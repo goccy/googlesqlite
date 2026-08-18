@@ -6,3 +6,13 @@ cases:
     expected:
       rows:
         - [20]
+  - desc: IGNORE NULLS counts only non-NULL values
+    sql: |
+      SELECT t, NTH_VALUE(x, 2 IGNORE NULLS) OVER (ORDER BY t ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS nv
+      FROM UNNEST([STRUCT(1 AS t, 'a' AS x), (2, CAST(NULL AS STRING)), (3, 'b')])
+      ORDER BY t
+    expected:
+      rows:
+        - [1, "b"]
+        - [2, "b"]
+        - [3, "b"]
