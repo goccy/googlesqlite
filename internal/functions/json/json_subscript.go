@@ -1,45 +1,33 @@
 package json
 
 import (
-	"fmt"
-
 	"github.com/goccy/go-json"
 	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
 func JSON_SUBSCRIPT(v string, field value.Value) (value.Value, error) {
-	var path *json.Path
-	switch field.(type) {
+	var raw json.RawMessage
+	switch f := field.(type) {
 	case value.IntValue:
-		index, err := field.ToInt64()
-		if err != nil {
-			return nil, err
+		var elems []json.RawMessage
+		if err := json.Unmarshal([]byte(v), &elems); err != nil || f < 0 || int(f) >= len(elems) {
+			return nil, nil
 		}
-		p, err := json.CreatePath(fmt.Sprintf(`$[%d]`, index))
-		if err != nil {
-			return nil, err
-		}
-		path = p
+		raw = elems[f]
 	case value.StringValue:
-		name, err := field.ToString()
-		if err != nil {
-			return nil, err
+		var members map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(v), &members); err != nil {
+			return nil, nil
 		}
-		p, err := json.CreatePath(fmt.Sprintf(`$.%q`, name))
-		if err != nil {
-			return nil, err
+		var ok bool
+		if raw, ok = members[string(f)]; !ok {
+			return nil, nil
 		}
-		path = p
-	}
-	extracted, err := path.Extract([]byte(v))
-	if err != nil {
-		return nil, err
-	}
-	if len(extracted) == 0 {
+	default:
 		return nil, nil
 	}
-	return value.JsonValue(string(extracted[0])), nil
+	return value.JsonValue(string(raw)), nil
 }
 
 var BindSubscript = helper.Scalar2(func(a, b value.Value) (value.Value, error) {

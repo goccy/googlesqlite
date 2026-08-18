@@ -21,3 +21,10 @@ cases:
     expected:
       rows:
         - ['["a"]']
+  - desc: only keys containing a dot or a double quote are escaped, and keys round-trip through subscript
+    sql: |
+      SELECT TO_JSON_STRING(JSON_KEYS(j, 1)), TO_JSON_STRING(ARRAY(SELECT j[k] FROM UNNEST(JSON_KEYS(j, 1)) AS k WHERE j[k] IS NOT NULL ORDER BY k))
+      FROM (SELECT JSON '{"k:v": 2, "a b": 1, "a.b": 3}' AS j)
+    expected:
+      rows:
+        - ['["\"a.b\"","a b","k:v"]', "[1,2]"]
