@@ -576,6 +576,35 @@ func TestLike(t *testing.T) {
 	if b, _ := got.ToBool(); b {
 		t.Errorf("LIKE non-match expected FALSE")
 	}
+	for _, tc := range []struct {
+		v, p value.Value
+		want bool
+	}{
+		{value.StringValue("abc"), value.StringValue("ab_"), true},
+		{value.StringValue("ab"), value.StringValue("ab_"), false},
+		{value.StringValue("щ"), value.StringValue("_"), true},
+		{value.StringValue("a\nb"), value.StringValue("a_b"), true},
+		{value.StringValue("a_c"), value.StringValue(`a\_c`), true},
+		{value.StringValue("abc"), value.StringValue(`a\_c`), false},
+		{value.StringValue("a%c"), value.StringValue(`a\%c`), true},
+		{value.StringValue(`a\c`), value.StringValue(`a\\c`), true},
+		{value.StringValue("abc"), value.StringValue("a.c"), false},
+		{value.StringValue("a(b"), value.StringValue("a(_"), true},
+		{value.BytesValue("\xd1\x89"), value.BytesValue("__"), true},
+		{value.BytesValue("abc"), value.BytesValue("a_c"), true},
+	} {
+		got, err := strfn.BindLike(tc.v, tc.p)
+		if err != nil {
+			t.Errorf("%v LIKE %v: %v", tc.v, tc.p, err)
+			continue
+		}
+		if b, _ := got.ToBool(); b != tc.want {
+			t.Errorf("%v LIKE %v = %v, want %v", tc.v, tc.p, b, tc.want)
+		}
+	}
+	if _, err := strfn.BindLike(value.StringValue("x"), value.StringValue(`a\`)); err == nil {
+		t.Errorf("a pattern ending in a backslash must fail")
+	}
 }
 
 func TestRegexpFamily(t *testing.T) {
