@@ -7,3 +7,9 @@ cases:
     expected:
       rows:
         - ["1"]
+  - desc: string input result is a STRING usable by string functions
+    sql: |
+      SELECT REGEXP_EXTRACT_ALL(JSON_EXTRACT('{"a": "x1y2"}', '$.a'), r'\d'), UPPER(JSON_EXTRACT('{"a": "q"}', "$.a"))
+    expected:
+      rows:
+        - [['1', '2'], '"Q"']

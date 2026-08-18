@@ -24,9 +24,9 @@ func JSON_PATH_EXISTS(args ...value.Value) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	got, err := JSON_QUERY(body, path)
+	text, found, err := queryJSONText("JSON_PATH_EXISTS", body, path, false)
 	if err != nil {
 		return value.BoolValue(false), nil
 	}
-	return value.BoolValue(got != nil), nil
+	return value.BoolValue(found && text != "null"), nil
 }

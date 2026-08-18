@@ -219,14 +219,13 @@ func TestBindJsonExtractArray(t *testing.T) {
 		t.Fatalf("expected 3, got %d", len(arr.Values))
 	}
 
-	// Array with null element.
 	got, err = BindJsonExtractArray(value.StringValue(`[1, null, 3]`), value.StringValue("$"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	arr = mustArray(t, got)
-	if arr.Values[1] != nil {
-		t.Fatal("expected null element")
+	if arr.Values[1] != value.Value(value.StringValue("null")) {
+		t.Fatalf("expected STRING \"null\" element, got %#v", arr.Values[1])
 	}
 
 	// Non-array path -> NULL.
@@ -338,6 +337,54 @@ func TestBindJsonQuery(t *testing.T) {
 
 	if v, _ := BindJsonQuery(nil, value.StringValue("$.a")); v != nil {
 		t.Fatal("expected null")
+	}
+}
+
+func TestJsonQueryResultTypedLikeInput(t *testing.T) {
+	t.Parallel()
+
+	str, js, path := value.StringValue(`{"a":"x","n":null,"l":[1,null]}`), value.JsonValue(`{"a":"x","n":null,"l":[1,null]}`), value.StringValue("$.a")
+	for name, fn := range map[string]func(...value.Value) (value.Value, error){"JSON_QUERY": BindJsonQuery, "JSON_EXTRACT": BindJsonExtract} {
+		if got, _ := fn(str, path); got != value.Value(value.StringValue(`"x"`)) {
+			t.Errorf("%s(string): got %#v, want STRING %q", name, got, `"x"`)
+		}
+		if got, _ := fn(js, path); got != value.Value(value.JsonValue(`"x"`)) {
+			t.Errorf("%s(json): got %#v, want JSON %q", name, got, `"x"`)
+		}
+		if got, _ := fn(str, value.StringValue("$.n")); got != nil {
+			t.Errorf("%s(string) at JSON null: got %#v, want SQL NULL", name, got)
+		}
+		if got, _ := fn(js, value.StringValue("$.n")); got != value.Value(value.JsonValue("null")) {
+			t.Errorf("%s(json) at JSON null: got %#v, want JSON null", name, got)
+		}
+	}
+	for name, fn := range map[string]func(...value.Value) (value.Value, error){"JSON_QUERY_ARRAY": BindJsonQueryArray, "JSON_EXTRACT_ARRAY": BindJsonExtractArray} {
+		got, _ := fn(str, value.StringValue("$.l"))
+		if arr := mustArray(t, got); arr.Values[0] != value.Value(value.StringValue("1")) || arr.Values[1] != value.Value(value.StringValue("null")) {
+			t.Errorf("%s(string): got %#v, want STRING elements [\"1\" \"null\"]", name, arr.Values)
+		}
+		got, _ = fn(js, value.StringValue("$.l"))
+		if arr := mustArray(t, got); arr.Values[0] != value.Value(value.JsonValue("1")) || arr.Values[1] != value.Value(value.JsonValue("null")) {
+			t.Errorf("%s(json): got %#v, want JSON elements [1 null]", name, arr.Values)
+		}
+	}
+}
+
+func TestJsonStringInputMalformedOrNonMatchingIsNull(t *testing.T) {
+	t.Parallel()
+
+	for name, fn := range map[string]func(...value.Value) (value.Value, error){
+		"JSON_QUERY": BindJsonQuery, "JSON_EXTRACT": BindJsonExtract, "JSON_VALUE": BindJsonValue,
+		"JSON_EXTRACT_SCALAR": BindJsonExtractScalar, "JSON_QUERY_ARRAY": BindJsonQueryArray, "JSON_EXTRACT_ARRAY": BindJsonExtractArray,
+	} {
+		for _, args := range [][2]string{{`*`, `$`}, {`not json`, `$.a`}, {`{"a":{"b":"x"}}`, `$.a[0].b`}, {`[1,2]`, `$.a`}} {
+			if got, err := fn(value.StringValue(args[0]), value.StringValue(args[1])); err != nil || got != nil {
+				t.Errorf("%s(%q, %q) = %v, %v; want NULL", name, args[0], args[1], got, err)
+			}
+		}
+		if _, err := fn(value.StringValue(`{"a":1}`), value.StringValue(`$[`)); err == nil {
+			t.Errorf("%s with an invalid JSONPath must fail", name)
+		}
 	}
 }
 

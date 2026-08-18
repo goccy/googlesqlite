@@ -7613,7 +7613,7 @@ SELECT
   JSON_EXTRACT('{"a":null}', "$.b"),
   JSON_EXTRACT(JSON '{"a":null}', "$.a"),
   JSON_EXTRACT(JSON '{"a":null}', "$.b")`,
-			expectedRows: [][]any{{nil, nil, nil, nil}},
+			expectedRows: [][]any{{nil, nil, "null", nil}},
 		},
 		{
 			name:         "json_query",
@@ -7677,7 +7677,7 @@ SELECT
   JSON_QUERY('{"a":null}', "$.b"),
   JSON_QUERY(JSON '{"a":null}', "$.a"),
   JSON_QUERY(JSON '{"a":null}', "$.b")`,
-			expectedRows: [][]any{{nil, nil, nil, nil}},
+			expectedRows: [][]any{{nil, nil, "null", nil}},
 		},
 		{
 			name:         "json_extract_scalar with number",

@@ -7,3 +7,9 @@ cases:
     expected:
       rows:
         - ["alice"]
+  - desc: string input that is not JSON or does not match the path shape yields NULL
+    sql: |
+      SELECT JSON_VALUE('not json', '$.a'), JSON_VALUE('{"a": {"b": "x"}}', '$.a[0].b')
+    expected:
+      rows:
+        - [null, null]
