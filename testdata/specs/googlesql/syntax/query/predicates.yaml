@@ -26,6 +26,11 @@ cases:
     expected:
       rows:
         - [true, false]
+  - desc: LIKE single-character wildcard and escapes
+    sql: SELECT 'abc' LIKE 'ab_', 'ab' LIKE 'ab_', 'a_c' LIKE 'a\\_c', 'abc' LIKE 'a\\_c', 'a%c' LIKE r'a\%c', 'abc' LIKE 'a.c', b'abc' LIKE b'a_c'
+    expected:
+      rows:
+        - [true, false, true, false, true, false, true]
   - desc: EXISTS subquery
     sql: |-
       SELECT
