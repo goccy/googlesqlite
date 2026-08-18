@@ -12,3 +12,15 @@ cases:
         - ['a', 3]
         - ['b', 3]
         - [null, 6]
+  - desc: the empty grouping set yields one grand-total row even without aggregate calls
+    sql: |-
+      SELECT a, o, GROUPING(a) * 2 + GROUPING(o) AS gid
+      FROM UNNEST([STRUCT('a1' AS a, 'o1' AS o), ('a2', 'o1')])
+      GROUP BY GROUPING SETS ((a, o), (o), ())
+      ORDER BY gid, a
+    expected:
+      rows:
+        - ['a1', 'o1', 0]
+        - ['a2', 'o1', 0]
+        - [null, 'o1', 2]
+        - [null, null, 3]
