@@ -11,3 +11,8 @@ cases:
     expected:
       rows:
         - [null]
+  - desc: an empty or blank string is not a number, surrounding spaces are ignored
+    sql: SELECT SAFE_CAST(e AS INT64), SAFE_CAST(e AS FLOAT64), SAFE_CAST(b AS INT64), SAFE_CAST(p AS INT64), SAFE_CAST(p AS FLOAT64) FROM (SELECT '' AS e, '   ' AS b, ' 12 ' AS p)
+    expected:
+      rows:
+        - [null, null, null, 12, 12.0]

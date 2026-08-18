@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-googlesql"
+
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -88,5 +90,21 @@ func TestBindCast_HappyPath(t *testing.T) {
 	s, _ := got.ToString()
 	if !strings.Contains(s, "42") {
 		t.Fatalf("expected result containing 42, got %q", s)
+	}
+}
+
+func TestCastStringToNumberRejectsBlankAndTrims(t *testing.T) {
+	i64 := m1(tf().MakeSimpleType(googlesql.TypeKindTypeInt64))
+	f64 := m1(tf().MakeSimpleType(googlesql.TypeKindTypeDouble))
+	for _, in := range []string{"", "   "} {
+		if _, err := CastValue(i64, value.StringValue(in)); err == nil {
+			t.Errorf("CastValue(INT64, %q) must fail", in)
+		}
+		if _, err := CastValue(f64, value.StringValue(in)); err == nil {
+			t.Errorf("CastValue(FLOAT64, %q) must fail", in)
+		}
+	}
+	if got, err := CastValue(i64, value.StringValue(" 12 ")); err != nil || got != value.Value(value.IntValue(12)) {
+		t.Errorf("CastValue(INT64, \" 12 \") = %v, %v; want 12", got, err)
 	}
 }
