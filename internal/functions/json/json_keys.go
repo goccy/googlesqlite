@@ -90,34 +90,15 @@ func (c *jsonKeysCollector) walk(node any, path string, depth int, insideArray b
 	}
 }
 
-// joinJSONKey appends `key` onto `parent`, quoting keys that contain
-// non-identifier characters per the spec ("Keys containing special
-// characters are escaped using double quotes").
 func joinJSONKey(parent, key string) string {
 	out := key
-	if needsJSONKeyQuote(key) {
+	if strings.ContainsAny(key, `."`) {
 		out = strconv.Quote(key)
 	}
 	if parent == "" {
 		return out
 	}
 	return parent + "." + out
-}
-
-func needsJSONKeyQuote(s string) bool {
-	if s == "" {
-		return true
-	}
-	for i, r := range s {
-		if r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
-			continue
-		}
-		if i > 0 && r >= '0' && r <= '9' {
-			continue
-		}
-		return true
-	}
-	return false
 }
 
 // BindJsonKeys parses positional args and any kwargs the analyzer

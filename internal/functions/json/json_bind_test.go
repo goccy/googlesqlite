@@ -1,6 +1,7 @@
 package json
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -459,6 +460,37 @@ func TestBindJsonType(t *testing.T) {
 	}
 }
 
+func TestJsonSubscriptByRuntimeKey(t *testing.T) {
+	t.Parallel()
+
+	doc := value.JsonValue(`{"ns::name": 1, "a.b": {"x": [7]}, "arr": [1, {"k": 2}]}`)
+	for _, tc := range []struct {
+		field value.Value
+		want  string
+	}{
+		{value.StringValue("ns::name"), "1"},
+		{value.StringValue("a.b"), `{"x": [7]}`},
+		{value.StringValue(`"a.b"`), ""},
+		{value.StringValue("missing"), ""},
+		{value.IntValue(0), ""},
+	} {
+		got, err := BindSubscript(doc, tc.field)
+		if err != nil {
+			t.Fatalf("subscript %v: %v", tc.field, err)
+		}
+		if s := fmt.Sprint(got); (tc.want == "" && got != nil) || (tc.want != "" && s != tc.want) {
+			t.Errorf("subscript %v = %v, want %q", tc.field, got, tc.want)
+		}
+	}
+	arr, _ := BindSubscript(doc, value.StringValue("arr"))
+	if got, _ := BindSubscript(arr, value.IntValue(1)); fmt.Sprint(got) != `{"k": 2}` {
+		t.Errorf("arr[1] = %v", got)
+	}
+	if got, _ := BindSubscript(arr, value.IntValue(5)); got != nil {
+		t.Errorf("arr[5] = %v, want NULL", got)
+	}
+}
+
 func TestBindJsonKeys(t *testing.T) {
 	t.Parallel()
 
@@ -516,14 +548,13 @@ func TestBindJsonKeys(t *testing.T) {
 		t.Fatalf("lax should include array-nested key: %v", arr.Values)
 	}
 
-	// Special-character key gets quoted.
-	got, err = BindJsonKeys(value.StringValue(`{"a b":1}`))
+	got, err = BindJsonKeys(value.StringValue(`{"a b":1, "k:v":2, "a.b":{"c":3}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	arr = mustArray(t, got)
-	if mustString(t, arr.Values[0]) != `"a b"` {
-		t.Fatalf("got %q", mustString(t, arr.Values[0]))
+	if fmt.Sprint(arr.Values) != `["a.b" "a.b".c a b k:v]` {
+		t.Fatalf("got %v", arr.Values)
 	}
 
 	// Invalid JSON -> error.
