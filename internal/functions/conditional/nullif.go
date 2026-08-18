@@ -6,8 +6,8 @@ import (
 )
 
 func NULLIF(expr, exprToMatch value.Value) (value.Value, error) {
-	if expr == nil {
-		return nil, nil
+	if expr == nil || exprToMatch == nil {
+		return expr, nil
 	}
 	cond, err := expr.EQ(exprToMatch)
 	if err != nil {
