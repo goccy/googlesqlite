@@ -101,6 +101,12 @@ func DecodeValue(v any) (Value, error) {
 
 func decodeFromValueLayout(layout *ValueLayout) (Value, error) {
 	switch layout.Header {
+	case FloatValueType:
+		f, err := strconv.ParseFloat(layout.Body, 64)
+		if err != nil {
+			return nil, err
+		}
+		return FloatValue(f), nil
 	case StringValueType:
 		return StringValue(layout.Body), nil
 	case BytesValueType:

@@ -11,3 +11,8 @@ cases:
     expected:
       rows:
         - [5.0]
+  - desc: division by zero yields infinities and NaN that survive as values
+    sql: SELECT IS_INF(IEEE_DIVIDE(o, z)), IEEE_DIVIDE(o, z) > 0, IS_NAN(IEEE_DIVIDE(z, z)) FROM (SELECT 1.0 AS o, 0.0 AS z)
+    expected:
+      rows:
+        - [true, true, true]
