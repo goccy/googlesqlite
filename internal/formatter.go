@@ -1877,7 +1877,7 @@ func (n *AggregateScanNode) FormatSQL(ctx context.Context) (string, error) {
 		}
 		stmts := []string{}
 		for i := 0; i < len(columnPatterns); i++ {
-			var groupBy string
+			groupBy := "GROUP BY NULL"
 			if len(groupByColumnPatterns[i]) != 0 {
 				groupBy = fmt.Sprintf("GROUP BY %s", strings.Join(groupByColumnPatterns[i], ","))
 			}
