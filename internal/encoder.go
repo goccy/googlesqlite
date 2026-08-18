@@ -490,6 +490,9 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 		}
 		return value.FloatValue(f64), nil
 	case googlesql.TypeKindTypeString, googlesql.TypeKindTypeEnum:
+		if ts, ok := v.(value.TimestampValue); ok {
+			return value.StringValue(ts.CanonicalString()), nil
+		}
 		s, err := v.ToString()
 		if err != nil {
 			return nil, err

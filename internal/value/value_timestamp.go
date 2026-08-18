@@ -160,9 +160,21 @@ func (t TimestampValue) ToRat() (*big.Rat, error) {
 	return nil, fmt.Errorf("failed to convert *big.Rat from timestamp %v", t)
 }
 
+// CanonicalString is the CAST(TIMESTAMP AS STRING) form.
+func (t TimestampValue) CanonicalString() string {
+	u := time.Time(t).UTC()
+	switch us := u.Nanosecond() / 1000; {
+	case us == 0:
+		return u.Format("2006-01-02 15:04:05+00")
+	case us%1000 == 0:
+		return u.Format("2006-01-02 15:04:05.000+00")
+	default:
+		return u.Format("2006-01-02 15:04:05.000000+00")
+	}
+}
+
 func (t TimestampValue) Format(verb rune) string {
-	const timestampPrintableFormat = "2006-01-02 15:04:05"
-	formatted := time.Time(t).UTC().Format(timestampPrintableFormat) + "+00"
+	formatted := t.CanonicalString()
 	switch verb {
 	case 't':
 		return formatted
