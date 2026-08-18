@@ -142,6 +142,16 @@ func TestBindNullIfDifferent(t *testing.T) {
 	}
 }
 
+func TestBindNullIfMatchNull(t *testing.T) {
+	got, err := BindNullIf(value.StringValue("a"), nil)
+	if err != nil {
+		t.Fatalf("BindNullIf: %v", err)
+	}
+	if got != value.Value(value.StringValue("a")) {
+		t.Fatalf("NULLIF('a', NULL) = %v, want 'a'", got)
+	}
+}
+
 // TestBindNullIfExprNull: NULLIF(NULL, x) returns NULL.
 func TestBindNullIfExprNull(t *testing.T) {
 	got, err := BindNullIf(nil, value.IntValue(5))

@@ -31,3 +31,8 @@ cases:
     expected:
       rows:
         - [null, 1]
+  - desc: NULLIF with a NULL match value returns the first argument
+    sql: SELECT NULLIF('a', y), NULLIF(y, 'a') FROM (SELECT CAST(NULL AS STRING) AS y)
+    expected:
+      rows:
+        - ["a", null]
