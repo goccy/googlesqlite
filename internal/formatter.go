@@ -811,6 +811,25 @@ var customNativeWindowFuncMap = map[string]string{
 // nativeWindowFuncForName returns the SQLite native name for a
 // predecessor window function, or "" when no native equivalent
 // applies.
+// argumentIsNativeNumber reports whether the first argument reaches SQLite as
+// an INTEGER or REAL rather than an encoded value.
+func (n *AnalyticFunctionCallNode) argumentIsNativeNumber() bool {
+	args := m1(n.node.ResolvedFunctionCallBase.ArgumentList())
+	if len(args) == 0 {
+		return false
+	}
+	t, err := args[0].Type()
+	if err != nil || t == nil {
+		return false
+	}
+	switch m1(t.Kind()) {
+	case googlesql.TypeKindTypeInt32, googlesql.TypeKindTypeInt64, googlesql.TypeKindTypeUint32, googlesql.TypeKindTypeUint64,
+		googlesql.TypeKindTypeFloat, googlesql.TypeKindTypeDouble, googlesql.TypeKindTypeBool:
+		return true
+	}
+	return false
+}
+
 func nativeWindowFuncForName(name string) string {
 	if v, ok := nativeWindowFuncMap[name]; ok {
 		return v
@@ -843,6 +862,9 @@ func (n *AnalyticFunctionCallNode) FormatSQL(ctx context.Context) (string, error
 		if custom, ok := distinctAwareNativeWindowFuncs[rawName]; ok {
 			return n.formatNative(ctx, custom, orderColumns, true)
 		}
+	}
+	if (rawName == "min" || rawName == "max") && !n.argumentIsNativeNumber() {
+		return n.formatNative(ctx, "googlesqlite_window_"+rawName+"_ordered", orderColumns, false)
 	}
 	if native := nativeWindowFuncForName(rawName); native != "" && !n.requiresPredecessorEmulation() {
 		return n.formatNative(ctx, native, orderColumns, false)
