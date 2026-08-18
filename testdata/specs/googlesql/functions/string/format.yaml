@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ['00042']
+  - desc: '%t and %T keep the fractional seconds of a TIMESTAMP'
+    sql: SELECT FORMAT('%t|%T', t, t) FROM (SELECT TIMESTAMP '2026-08-17 22:37:14.701047+00' AS t)
+    expected:
+      rows:
+        - ['2026-08-17 22:37:14.701047+00|TIMESTAMP "2026-08-17 22:37:14.701047+00"']

@@ -491,7 +491,7 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 		return value.FloatValue(f64), nil
 	case googlesql.TypeKindTypeString, googlesql.TypeKindTypeEnum:
 		if ts, ok := v.(value.TimestampValue); ok {
-			return value.StringValue(castTimestampToString(time.Time(ts))), nil
+			return value.StringValue(ts.CanonicalString()), nil
 		}
 		s, err := v.ToString()
 		if err != nil {
@@ -762,16 +762,4 @@ func encodeValueAgainstParamType(v any, t googlesql.Googlesql_TypeNode) (any, er
 		}
 	}
 	return encodeGoValue(t, v)
-}
-
-func castTimestampToString(t time.Time) string {
-	t = t.UTC()
-	switch us := t.Nanosecond() / 1000; {
-	case us == 0:
-		return t.Format("2006-01-02 15:04:05+00")
-	case us%1000 == 0:
-		return t.Format("2006-01-02 15:04:05.000+00")
-	default:
-		return t.Format("2006-01-02 15:04:05.000000+00")
-	}
 }

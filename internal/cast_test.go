@@ -104,8 +104,8 @@ func TestCastTimestampToStringCanonicalForm(t *testing.T) {
 		{gotime.Date(2020, 1, 1, 0, 0, 0, 123400000, gotime.UTC), "2020-01-01 00:00:00.123400+00"},
 		{gotime.Date(2020, 1, 1, 3, 0, 0, 0, gotime.FixedZone("", 3*3600)), "2020-01-01 00:00:00+00"},
 	} {
-		if got := castTimestampToString(tc.in); got != tc.want {
-			t.Errorf("castTimestampToString(%v): got %q, want %q", tc.in, got, tc.want)
+		if got := value.TimestampValue(tc.in).Format('t'); got != tc.want {
+			t.Errorf("Format('t') of %v: got %q, want %q", tc.in, got, tc.want)
 		}
 		got, err := CastValue(m1(tf().MakeSimpleType(googlesql.TypeKindTypeString)), value.TimestampValue(tc.in))
 		if err != nil {
