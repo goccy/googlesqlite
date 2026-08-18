@@ -624,3 +624,67 @@ func (a *arrayConcatAggWindowNative) Done() (any, error) {
 	}
 	return value.EncodeValue(&value.ArrayValue{Values: flattened})
 }
+
+type extremumWindowNative struct {
+	values []value.Value
+	max    bool
+}
+
+func NewMinOrderedWindowNative() func() any {
+	return func() any { return &extremumWindowNative{} }
+}
+
+func NewMaxOrderedWindowNative() func() any {
+	return func() any { return &extremumWindowNative{max: true} }
+}
+
+func (a *extremumWindowNative) Step(stepArgs ...any) error {
+	values, err := value.ConvertArgs(stepArgs...)
+	if err != nil {
+		return err
+	}
+	values, _ = helper.ParseOptions(values...)
+	values, _ = parseWindowOptions(values...)
+	if len(values) == 0 {
+		return nil
+	}
+	a.values = append(a.values, values[0])
+	return nil
+}
+
+func (a *extremumWindowNative) Inverse(_ ...any) error {
+	if len(a.values) > 0 {
+		a.values = a.values[1:]
+	}
+	return nil
+}
+
+func (a *extremumWindowNative) Done() (any, error) {
+	var best value.Value
+	for _, v := range a.values {
+		if v == nil {
+			continue
+		}
+		if best == nil {
+			best = v
+			continue
+		}
+		var better bool
+		var err error
+		if a.max {
+			better, err = v.GT(best)
+		} else {
+			better, err = v.LT(best)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if better {
+			best = v
+		}
+	}
+	if best == nil {
+		return nil, nil
+	}
+	return value.EncodeValue(best)
+}

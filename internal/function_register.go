@@ -70,6 +70,8 @@ func RegisterFunctions(conn *sqlite3.Conn) error {
 		windowFuncMap["any_value"] = []*nameAndFunc{
 			{Name: "googlesqlite_window_any_value", Func: window.NewAnyValueWindowNative()},
 		}
+		windowFuncMap["min"] = append(windowFuncMap["min"], &nameAndFunc{Name: "googlesqlite_window_min_ordered", Func: window.NewMinOrderedWindowNative()})
+		windowFuncMap["max"] = append(windowFuncMap["max"], &nameAndFunc{Name: "googlesqlite_window_max_ordered", Func: window.NewMaxOrderedWindowNative()})
 		windowFuncMap["corr"] = []*nameAndFunc{
 			{Name: "googlesqlite_window_corr", Func: window.NewCorrWindowNative()},
 		}

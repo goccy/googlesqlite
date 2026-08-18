@@ -11,3 +11,11 @@ cases:
     expected:
       rows:
         - [null]
+  - desc: MAX as a window function orders DATETIME, TIME and STRING values correctly
+    sql: |
+      SELECT MAX(x) OVER () = DATETIME '2026-07-08 06:00:00', MAX(t) OVER () = TIME '08:00:00', MAX(s) OVER ()
+      FROM UNNEST([STRUCT(DATETIME '2026-07-08 06:00:00' AS x, TIME '08:00:00' AS t, 'b' AS s), (DATETIME '2026-07-01 06:00:00', TIME '01:00:00', 'c'), (DATETIME '2026-07-05 06:00:00', TIME '05:00:00', 'a')])
+      LIMIT 1
+    expected:
+      rows:
+        - [true, true, "c"]

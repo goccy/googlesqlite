@@ -11,3 +11,14 @@ cases:
     expected:
       rows:
         - [null]
+  - desc: MIN as a window function orders DATETIME values correctly per partition and skips NULL
+    sql: |
+      SELECT p, MIN(x) OVER (PARTITION BY p) = DATETIME '2026-07-01 06:00:00', MIN(x) OVER (PARTITION BY p) = DATETIME '2026-07-05 06:00:00'
+      FROM UNNEST([STRUCT(1 AS p, DATETIME '2026-07-08 06:00:00' AS x), (1, DATETIME '2026-07-01 06:00:00'), (2, DATETIME '2026-07-05 06:00:00'), (2, CAST(NULL AS DATETIME))])
+      ORDER BY p
+    expected:
+      rows:
+        - [1, true, false]
+        - [1, true, false]
+        - [2, false, true]
+        - [2, false, true]
