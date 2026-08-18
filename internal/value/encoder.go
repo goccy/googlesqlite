@@ -3,7 +3,10 @@ package value
 import (
 	"encoding/base64"
 	"fmt"
+	"math"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -22,12 +25,18 @@ func EncodeValue(v Value) (any, error) {
 	case IntValue:
 		return v.ToInt64()
 	case FloatValue:
-		return v.ToFloat64()
+		if !math.IsNaN(float64(vv)) {
+			return float64(vv), nil
+		}
 	case BoolValue:
 		return v.ToBool()
 	case *SafeValue:
 		return EncodeValue(vv.Value)
 	}
+	return encodeLayout(v)
+}
+
+func encodeLayout(v Value) (any, error) {
 	layout, err := valueLayoutFromValue(v)
 	if err != nil {
 		return nil, err
@@ -131,8 +140,25 @@ func ValueLayoutFromValue(v Value) (*ValueLayout, error) {
 	return valueLayoutFromValue(v)
 }
 
+// EncodeElement is EncodeValue for a value nested in a JSON body.
+func EncodeElement(v Value) (any, error) {
+	if f, ok := v.(FloatValue); ok && !math.IsNaN(float64(f)) {
+		if math.IsInf(float64(f), 0) {
+			return encodeLayout(v)
+		}
+		s := strconv.FormatFloat(float64(f), 'g', -1, 64)
+		if !strings.ContainsAny(s, ".eE") {
+			s += ".0"
+		}
+		return json.RawMessage(s), nil
+	}
+	return EncodeValue(v)
+}
+
 func valueLayoutFromValue(v Value) (*ValueLayout, error) {
 	switch vv := v.(type) {
+	case FloatValue:
+		return &ValueLayout{Header: FloatValueType, Body: strconv.FormatFloat(float64(vv), 'g', -1, 64)}, nil
 	case StringValue:
 		return &ValueLayout{
 			Header: StringValueType,
@@ -211,7 +237,7 @@ func valueLayoutFromValue(v Value) (*ValueLayout, error) {
 				values = append(values, nil)
 				continue
 			}
-			val, err := EncodeValue(v)
+			val, err := EncodeElement(v)
 			if err != nil {
 				return nil, err
 			}
@@ -228,7 +254,7 @@ func valueLayoutFromValue(v Value) (*ValueLayout, error) {
 	case *StructValue:
 		values := make([]any, 0, len(vv.Values))
 		for _, v := range vv.Values {
-			val, err := EncodeValue(v)
+			val, err := EncodeElement(v)
 			if err != nil {
 				return nil, err
 			}

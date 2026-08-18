@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"os"
 	"testing"
 )
@@ -31,6 +32,40 @@ func TestRegression_DefaultTimezoneIsUTC(t *testing.T) {
 	}
 	if got != 12 {
 		t.Fatalf("default TZ leaks: EXTRACT(HOUR) returned %d, want 12 (UTC)", got)
+	}
+}
+
+func TestRegression_NonFiniteFloats(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	var isNaN, isInf, nanInArray, infInArray bool
+	var neg float64
+	if err := db.QueryRowContext(ctx, `SELECT IS_NAN(CAST('nan' AS FLOAT64)), IS_INF(IEEE_DIVIDE(o, z)), CAST('-inf' AS FLOAT64), IS_NAN(a[OFFSET(0)]), IS_INF(a[OFFSET(1)]) FROM (SELECT z, o, [IEEE_DIVIDE(z, z), IEEE_DIVIDE(o, z)] AS a FROM (SELECT 0.0 AS z, 1.0 AS o))`).Scan(&isNaN, &isInf, &neg, &nanInArray, &infInArray); err != nil {
+		t.Fatal(err)
+	}
+	if !isNaN || !isInf || !math.IsInf(neg, -1) || !nanInArray || !infInArray {
+		t.Errorf("got %v %v %v %v %v", isNaN, isInf, neg, nanInArray, infInArray)
+	}
+	rows, err := db.QueryContext(ctx, `SELECT x FROM UNNEST([3.0, IEEE_DIVIDE(1, 0), IEEE_DIVIDE(-1, 0)]) AS x ORDER BY x`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var got []float64
+	for rows.Next() {
+		var f float64
+		if err := rows.Scan(&f); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, f)
+	}
+	if len(got) != 3 || !math.IsInf(got[0], -1) || got[1] != 3 || !math.IsInf(got[2], 1) {
+		t.Errorf("ORDER BY over infinities: got %v", got)
 	}
 }
 

@@ -179,3 +179,29 @@ func TestArrayValue(t *testing.T) {
 		}
 	})
 }
+
+func TestIntegralFloatInsideArrayAndStructKeepsItsType(t *testing.T) {
+	arr := &value.ArrayValue{Values: []value.Value{value.FloatValue(3), value.FloatValue(2.5), value.IntValue(4)}}
+	enc, err := value.EncodeValue(arr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec, err := value.DecodeValue(enc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := dec.ToArray()
+	if _, ok := got.Values[0].(value.FloatValue); !ok {
+		t.Errorf("array element 3.0 decoded as %T, want FloatValue", got.Values[0])
+	}
+	if _, ok := got.Values[2].(value.IntValue); !ok {
+		t.Errorf("array element 4 decoded as %T, want IntValue", got.Values[2])
+	}
+	st := &value.StructValue{Keys: []string{"f"}, Values: []value.Value{value.FloatValue(7)}}
+	enc, _ = value.EncodeValue(st)
+	dec, _ = value.DecodeValue(enc)
+	sv, _ := dec.ToStruct()
+	if _, ok := sv.Values[0].(value.FloatValue); !ok {
+		t.Errorf("struct field 7.0 decoded as %T, want FloatValue", sv.Values[0])
+	}
+}
