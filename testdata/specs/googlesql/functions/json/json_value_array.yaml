@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ['["a","b"]']
+  - desc: a JSON null element becomes a NULL element, the string "null" does not
+    sql: SELECT ARRAY_TO_STRING(JSON_VALUE_ARRAY('["a", null, "null"]', '$'), ',', 'NULL'), ARRAY_LENGTH(JSON_VALUE_ARRAY('[null]', '$'))
+    expected:
+      rows:
+        - ["a,NULL,null", 1]
