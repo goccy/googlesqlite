@@ -21,6 +21,11 @@ cases:
     expected:
       rows:
         - [true, false, true]
+  - desc: IS [NOT] TRUE / FALSE never yield NULL
+    sql: SELECT b IS TRUE, b IS NOT TRUE, b IS FALSE, b IS NOT FALSE, t IS TRUE, f IS NOT FALSE FROM (SELECT CAST(NULL AS BOOL) AS b, TRUE AS t, FALSE AS f)
+    expected:
+      rows:
+        - [false, true, false, true, true, false]
   - desc: LIKE wildcard
     sql: SELECT 'abc' LIKE 'a%' AS prefix_hit, 'abc' LIKE 'b%' AS prefix_miss
     expected:
