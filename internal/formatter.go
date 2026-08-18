@@ -772,6 +772,12 @@ var nativeWindowFuncMap = map[string]string{
 // safe to invoke through native OVER syntax instead of the
 // per-output-row correlated-subquery emulation. The value is the
 // custom SQLite function name registered through sqlitex.
+var ignoreNullsNativeWindowFuncs = map[string]string{
+	"first_value": "googlesqlite_window_first_value_ignore_nulls",
+	"last_value":  "googlesqlite_window_last_value_ignore_nulls",
+	"nth_value":   "googlesqlite_window_nth_value_ignore_nulls",
+}
+
 var customNativeWindowFuncMap = map[string]string{
 	"array_agg":  "googlesqlite_window_array_agg",
 	"string_agg": "googlesqlite_window_string_agg",
@@ -842,6 +848,11 @@ func (n *AnalyticFunctionCallNode) FormatSQL(ctx context.Context) (string, error
 	if m1(n.node.Distinct()) {
 		if custom, ok := distinctAwareNativeWindowFuncs[rawName]; ok {
 			return n.formatNative(ctx, custom, orderColumns, true)
+		}
+	}
+	if m1(n.node.NullHandlingModifier()) == googlesql.ResolvedNonScalarFunctionCallBaseEnums_NullHandlingModifierIgnoreNulls {
+		if custom, ok := ignoreNullsNativeWindowFuncs[rawName]; ok {
+			return n.formatNative(ctx, custom, orderColumns, false)
 		}
 	}
 	if native := nativeWindowFuncForName(rawName); native != "" && !n.requiresPredecessorEmulation() {
@@ -947,12 +958,9 @@ func (n *AnalyticFunctionCallNode) requiresPredecessorEmulation() bool {
 	case googlesql.ResolvedNonScalarFunctionCallBaseEnums_NullHandlingModifierIgnoreNulls:
 		// SQLite's SUM/AVG/COUNT/MIN/MAX/COUNT_STAR already skip
 		// NULLs unconditionally, which matches the IGNORE NULLS
-		// modifier exactly. Navigation functions (LAG/LEAD/
-		// FIRST_VALUE/LAST_VALUE/NTH_VALUE) honour the modifier
-		// natively.
+		// modifier exactly.
 		switch rawName {
-		case "sum", "count", "count_star", "avg", "min", "max",
-			"lag", "lead", "first_value", "last_value", "nth_value":
+		case "sum", "count", "count_star", "avg", "min", "max":
 			return false
 		}
 		// Custom natives parse `googlesqlite_ignore_nulls()` out of

@@ -624,3 +624,74 @@ func (a *arrayConcatAggWindowNative) Done() (any, error) {
 	}
 	return value.EncodeValue(&value.ArrayValue{Values: flattened})
 }
+
+type navigationWindowNative struct {
+	values []value.Value
+	n      int64
+	pick   func(nonNull []value.Value, n int64) value.Value
+}
+
+func NewFirstValueIgnoreNullsWindowNative() func() any {
+	return func() any {
+		return &navigationWindowNative{pick: func(vs []value.Value, _ int64) value.Value { return vs[0] }}
+	}
+}
+
+func NewLastValueIgnoreNullsWindowNative() func() any {
+	return func() any {
+		return &navigationWindowNative{pick: func(vs []value.Value, _ int64) value.Value { return vs[len(vs)-1] }}
+	}
+}
+
+func NewNthValueIgnoreNullsWindowNative() func() any {
+	return func() any {
+		return &navigationWindowNative{pick: func(vs []value.Value, n int64) value.Value {
+			if n < 1 || n > int64(len(vs)) {
+				return nil
+			}
+			return vs[n-1]
+		}}
+	}
+}
+
+func (a *navigationWindowNative) Step(stepArgs ...any) error {
+	values, err := value.ConvertArgs(stepArgs...)
+	if err != nil {
+		return err
+	}
+	values, _ = helper.ParseOptions(values...)
+	values, _ = parseWindowOptions(values...)
+	if len(values) == 0 {
+		return nil
+	}
+	if len(values) > 1 && values[1] != nil {
+		if a.n, err = values[1].ToInt64(); err != nil {
+			return err
+		}
+	}
+	a.values = append(a.values, values[0])
+	return nil
+}
+
+func (a *navigationWindowNative) Inverse(_ ...any) error {
+	if len(a.values) > 0 {
+		a.values = a.values[1:]
+	}
+	return nil
+}
+
+func (a *navigationWindowNative) Done() (any, error) {
+	nonNull := make([]value.Value, 0, len(a.values))
+	for _, v := range a.values {
+		if v != nil {
+			nonNull = append(nonNull, v)
+		}
+	}
+	if len(nonNull) == 0 {
+		return nil, nil
+	}
+	if v := a.pick(nonNull, a.n); v != nil {
+		return value.EncodeValue(v)
+	}
+	return nil, nil
+}
