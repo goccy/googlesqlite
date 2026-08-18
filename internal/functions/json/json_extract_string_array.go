@@ -30,17 +30,14 @@ func JSON_EXTRACT_STRING_ARRAY(v, path string) (value.Value, error) {
 	ret := &value.ArrayValue{}
 	for i := 0; i < rv.Len(); i++ {
 		elem := rv.Index(i).Interface()
-		elemV := reflect.ValueOf(elem)
-		elemKind := elemV.Type().Kind()
-		if elemKind == reflect.Map || elemKind == reflect.Slice {
+		if elem == nil {
+			ret.Values = append(ret.Values, nil)
+			continue
+		}
+		if k := reflect.TypeOf(elem).Kind(); k == reflect.Map || k == reflect.Slice {
 			return nil, nil
 		}
-		jsonValue := fmt.Sprint(elem)
-		if jsonValue == "null" {
-			ret.Values = append(ret.Values, nil)
-		} else {
-			ret.Values = append(ret.Values, value.StringValue(jsonValue))
-		}
+		ret.Values = append(ret.Values, value.StringValue(fmt.Sprint(elem)))
 	}
 	return ret, nil
 }
