@@ -1,0 +1,91 @@
+spec: docs/specs/googlesql/syntax/ddl/create_snapshot_table.md
+dialect: googlesql
+cases:
+  - desc: CREATE SNAPSHOT TABLE reproduces the source table's rows
+    setup:
+      - CREATE TABLE cst_src (a INT64, b STRING)
+      - INSERT INTO cst_src (a, b) VALUES (1, 'x')
+      - INSERT INTO cst_src (a, b) VALUES (2, 'y')
+      - CREATE SNAPSHOT TABLE cst_snap CLONE cst_src
+    sql: SELECT a, b FROM cst_snap ORDER BY a
+    expected:
+      rows:
+        - [1, 'x']
+        - [2, 'y']
+
+  - desc: CREATE SNAPSHOT TABLE reproduces the source table's columns
+    setup:
+      - CREATE TABLE cst_ds.cst_cols_src (a INT64, b STRING, c FLOAT64)
+      - CREATE SNAPSHOT TABLE cst_ds.cst_cols_snap CLONE cst_ds.cst_cols_src
+    sql: |-
+      SELECT column_name
+      FROM cst_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 'cst_cols_snap'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['a']
+        - ['b']
+        - ['c']
+
+  - desc: CREATE SNAPSHOT TABLE inherits NOT NULL from the source column
+    setup:
+      - CREATE TABLE cst_nn_src (a INT64 NOT NULL, b STRING)
+      - INSERT INTO cst_nn_src (a, b) VALUES (1, 'x')
+      - CREATE SNAPSHOT TABLE cst_nn_snap CLONE cst_nn_src
+    sql: INSERT INTO cst_nn_snap (a, b) VALUES (NULL, 'q')
+    expected:
+      error:
+        contains: NOT NULL
+
+  - desc: explicit OPTIONS take precedence over the source table's
+    setup:
+      - "CREATE TABLE cst_opt_ds.cst_opt_src (a INT64) OPTIONS(description='orig', friendly_name='fn')"
+      - "CREATE SNAPSHOT TABLE cst_opt_ds.cst_opt_snap CLONE cst_opt_ds.cst_opt_src OPTIONS(description='new')"
+    sql: |-
+      SELECT option_name, option_value
+      FROM cst_opt_ds.INFORMATION_SCHEMA.TABLE_OPTIONS
+      WHERE table_name = 'cst_opt_snap'
+      ORDER BY option_name
+    expected:
+      rows:
+        - ['description', "'new'"]
+        - ['friendly_name', "'fn'"]
+
+  - desc: CREATE SNAPSHOT TABLE IF NOT EXISTS does not re-copy rows
+    setup:
+      - CREATE TABLE cst_ine_src (a INT64)
+      - INSERT INTO cst_ine_src (a) VALUES (1)
+      - INSERT INTO cst_ine_src (a) VALUES (2)
+      - CREATE SNAPSHOT TABLE IF NOT EXISTS cst_ine_snap CLONE cst_ine_src
+      - CREATE SNAPSHOT TABLE IF NOT EXISTS cst_ine_snap CLONE cst_ine_src
+    sql: SELECT COUNT(*) AS n FROM cst_ine_snap
+    expected:
+      rows:
+        - [2]
+
+  - desc: DROP SNAPSHOT TABLE removes the snapshot
+    setup:
+      - CREATE TABLE cst_drop_src (a INT64)
+      - CREATE SNAPSHOT TABLE cst_drop_snap CLONE cst_drop_src
+      - DROP SNAPSHOT TABLE cst_drop_snap
+    sql: SELECT a FROM cst_drop_snap
+    expected:
+      error:
+        contains: 'Table not found'
+        phase: analysis
+
+  - desc: DROP SNAPSHOT TABLE IF EXISTS on a missing table succeeds
+    setup:
+      - DROP SNAPSHOT TABLE IF EXISTS cst_absent_snap
+    sql: SELECT 1 AS r
+    expected:
+      rows:
+        - [1]
+
+  - desc: CREATE SNAPSHOT TABLE against an unknown source is an analysis error
+    sql: CREATE SNAPSHOT TABLE cst_missing_snap CLONE cst_no_such_table
+    expected:
+      error:
+        contains: 'Table not found'
+        phase: analysis

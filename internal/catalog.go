@@ -2006,6 +2006,19 @@ func (c *Catalog) FunctionSpec(name string) (*FunctionSpec, bool) {
 	return spec, exists
 }
 
+// TableSpec returns the stored spec for a table by its storage name.
+// `CREATE TABLE ... LIKE / COPY / CLONE` uses it to inherit the source
+// table's constraints and options: the resolved AST carries the source
+// only as a catalog table handle, and the analyzer's own materialised
+// column list drops NOT NULL, DEFAULT and PRIMARY KEY.
+func (c *Catalog) TableSpec(name string) (*TableSpec, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	spec, exists := c.tableMap[name]
+	return spec, exists
+}
+
 func (c *Catalog) deleteTableSpecByName(name string) error {
 	spec, exists := c.tableMap[name]
 	if !exists {

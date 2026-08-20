@@ -28,6 +28,26 @@ type CreateTableStmtAction struct {
 	spec            *TableSpec
 	catalog         *Catalog
 	isAutoIndexMode bool
+	// cloneData, when non-empty, is the tail of an `INSERT INTO
+	// <table> ...` that materialises a `CREATE TABLE ... COPY /
+	// CLONE` (or `CREATE SNAPSHOT TABLE ... CLONE`) source into the
+	// newly created table.
+	//
+	// CREATE TABLE AS SELECT can lean on SQLite's single-statement
+	// CTAS, but the clone family inherits NOT NULL and PRIMARY KEY
+	// from its source and CTAS cannot express either. So the table is
+	// created from its own column list first and filled afterwards.
+	cloneData string
+	cloneArgs []any
+}
+
+// execCloneData fills a freshly created COPY / CLONE target from its
+// source. No-op for every other CREATE TABLE shape.
+func (a *CreateTableStmtAction) execCloneData(ctx context.Context, conn *Conn) error {
+	if a.cloneData == "" {
+		return nil
+	}
+	return execCloneData(ctx, conn, a.spec, a.cloneData, a.cloneArgs, a.query)
 }
 
 func (a *CreateTableStmtAction) Prepare(ctx context.Context, conn *Conn) (driver.Stmt, error) {
@@ -43,7 +63,7 @@ func (a *CreateTableStmtAction) Prepare(ctx context.Context, conn *Conn) (driver
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare %s: %w", a.query, err)
 	}
-	return newCreateTableStmt(stmt, conn, a.catalog, a.spec), nil
+	return newCreateTableStmt(stmt, conn, a.catalog, a.spec, a.cloneData, a.cloneArgs), nil
 }
 
 func (a *CreateTableStmtAction) createIndexAutomatically(ctx context.Context, conn *Conn) error {
@@ -66,6 +86,13 @@ func (a *CreateTableStmtAction) createIndexAutomatically(ctx context.Context, co
 }
 
 func (a *CreateTableStmtAction) exec(ctx context.Context, conn *Conn) error {
+	skip, err := skipCreateIntoExistingTable(ctx, conn, a.spec)
+	if err != nil {
+		return err
+	}
+	if skip {
+		return nil
+	}
 	// TEMP tables have "replace-on-recreate" semantics: re-running a
 	// `CREATE TEMP TABLE foo` is expected to overwrite the previous
 	// temp definition, not error out. The analyzer treats CREATE OR
@@ -81,6 +108,9 @@ func (a *CreateTableStmtAction) exec(ctx context.Context, conn *Conn) error {
 	}
 	if _, err := conn.ExecContext(ctx, a.spec.SQLiteSchema(), a.args...); err != nil {
 		return fmt.Errorf("failed to exec %s: %w", a.query, err)
+	}
+	if err := a.execCloneData(ctx, conn); err != nil {
+		return err
 	}
 	if a.isAutoIndexMode {
 		if err := a.createIndexAutomatically(ctx, conn); err != nil {

@@ -112,6 +112,19 @@ var enabledLanguageFeatures = []googlesql.LanguageFeature{
 	googlesql.LanguageFeatureFeatureCreateTablePartitionBy,
 	googlesql.LanguageFeatureFeatureCreateTableClusterBy,
 	googlesql.LanguageFeatureFeatureColumnDefaultValue,
+	// `CREATE TABLE ... LIKE / COPY / CLONE` and `CREATE SNAPSHOT
+	// TABLE ... CLONE`. All four are core GoogleSQL — the grammar is
+	// recorded upstream in docs/third_party/googlesql-docs/
+	// resolved_ast.md under ResolvedCreateTableStmt and
+	// ResolvedCreateSnapshotTableStmt — but each sits behind its own
+	// LanguageFeature that upstream leaves off by default. With the
+	// gate open the analyzer materialises LIKE into a full column
+	// list, and hands COPY / CLONE their source as a scan under
+	// copy_from / clone_from.
+	googlesql.LanguageFeatureFeatureCreateTableLike,
+	googlesql.LanguageFeatureFeatureCreateTableCopy,
+	googlesql.LanguageFeatureFeatureCreateTableClone,
+	googlesql.LanguageFeatureFeatureCreateSnapshotTable,
 	// Function-set feature flags. Enable the families we have
 	// runtime support for so the analyzer recognises the new
 	// builtins (LAX_*, EDIT_DISTANCE, MAX_BY / MIN_BY, etc.)
@@ -283,6 +296,8 @@ var supportedStatementKinds = []googlesql.ResolvedNodeKind{
 	googlesql.ResolvedNodeKindResolvedTruncateStmt,
 	googlesql.ResolvedNodeKindResolvedCreateTableStmt,
 	googlesql.ResolvedNodeKindResolvedCreateTableAsSelectStmt,
+	googlesql.ResolvedNodeKindResolvedCreateSnapshotTableStmt,
+	googlesql.ResolvedNodeKindResolvedDropSnapshotTableStmt,
 	googlesql.ResolvedNodeKindResolvedCreateProcedureStmt,
 	googlesql.ResolvedNodeKindResolvedCreateFunctionStmt,
 	googlesql.ResolvedNodeKindResolvedCreateTableFunctionStmt,
@@ -1785,6 +1800,10 @@ func (a *Analyzer) newStmtAction(ctx context.Context, query string, args []drive
 	case googlesql.ResolvedNodeKindResolvedCreateTableAsSelectStmt:
 		ctx = withUseColumnID(ctx)
 		return a.newCreateTableAsSelectStmtAction(ctx, query, args, node.(*googlesql.ResolvedCreateTableAsSelectStmt))
+	case googlesql.ResolvedNodeKindResolvedCreateSnapshotTableStmt:
+		return a.newCreateSnapshotTableStmtAction(ctx, query, args, node.(*googlesql.ResolvedCreateSnapshotTableStmt))
+	case googlesql.ResolvedNodeKindResolvedDropSnapshotTableStmt:
+		return a.newDropSnapshotTableStmtAction(ctx, query, args, node.(*googlesql.ResolvedDropSnapshotTableStmt))
 	case googlesql.ResolvedNodeKindResolvedCreateFunctionStmt:
 		return a.newCreateFunctionStmtAction(ctx, query, args, node.(*googlesql.ResolvedCreateFunctionStmt))
 	case googlesql.ResolvedNodeKindResolvedCreateViewStmt:
@@ -1900,7 +1919,41 @@ func (a *noopStmtAction) Args() []any                                   { return
 func (a *noopStmtAction) Cleanup(ctx context.Context, conn *Conn) error { return nil }
 
 func (a *Analyzer) newCreateTableStmtAction(ctx context.Context, query string, args []driver.NamedValue, node *googlesql.ResolvedCreateTableStmt) (*CreateTableStmtAction, error) {
+	// COPY / CLONE hand us no column list at all — the whole schema
+	// and the rows come from the source table.
+	scan, err := createTableCloneScan(node)
+	if err != nil {
+		return nil, err
+	}
+	if scan != nil {
+		return a.newCloneTableAction(
+			ctx,
+			query,
+			args,
+			scan,
+			m1(node.NamePath()),
+			resolvedCreateScope(node) == googlesql.ResolvedCreateStatementEnums_CreateScopeCreateTemp,
+			m1(node.CreateMode()),
+			newTableOptionsFromResolved(m1(node.OptionList())),
+		)
+	}
 	spec := newTableSpecWithQuery(ctx, a.namePath, query, node)
+	// LIKE resolves to a real column list, but only names and types
+	// survive: the analyzer drops NOT NULL, DEFAULT and PRIMARY KEY.
+	// Upstream specifies that constraints are inherited, so recover
+	// them from the source table's stored spec.
+	likeTable, err := node.LikeTable()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the CREATE TABLE LIKE source: %w", err)
+	}
+	if likeTable != nil {
+		if src, ok := sourceTableSpec(a.catalog, likeTable); ok {
+			inheritColumnConstraints(spec.Columns, src)
+			if len(spec.PrimaryKey) == 0 {
+				spec.PrimaryKey = append([]string(nil), src.PrimaryKey...)
+			}
+		}
+	}
 	queryArgs, err := getArgsFromParams(args, nil)
 	if err != nil {
 		return nil, err
@@ -1911,6 +1964,120 @@ func (a *Analyzer) newCreateTableStmtAction(ctx context.Context, query string, a
 		args:            queryArgs,
 		catalog:         a.catalog,
 		isAutoIndexMode: a.isAutoIndexMode,
+	}, nil
+}
+
+// newCloneTableAction builds the action shared by `CREATE TABLE ...
+// {COPY | CLONE}` and `CREATE SNAPSHOT TABLE ... CLONE`. Both inherit
+// their entire schema from the source table and then materialise its
+// rows; they differ only in which node carries the clone scan.
+func (a *Analyzer) newCloneTableAction(
+	ctx context.Context,
+	query string,
+	args []driver.NamedValue,
+	scan googlesql.ResolvedScanNode,
+	namePath []string,
+	isTemp bool,
+	createMode googlesql.ResolvedCreateStatementEnums_CreateMode,
+	options []*tableOptionSpec,
+) (*CreateTableStmtAction, error) {
+	tableScan, err := resolveSourceTableScan(scan)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkNoSystemTime(tableScan); err != nil {
+		return nil, err
+	}
+	table, err := tableScan.Table()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the clone source table: %w", err)
+	}
+	src, ok := sourceTableSpec(a.catalog, table)
+	if !ok {
+		return nil, fmt.Errorf(
+			"cannot copy from %q: only tables created through googlesqlite can be a COPY / CLONE source",
+			a.catalog.StorageNameForTable(table),
+		)
+	}
+	targetPath := a.namePath.mergePath(namePath)
+	// A self-referential clone would destroy the very rows it is
+	// meant to copy: CREATE OR REPLACE drops the target first, so the
+	// INSERT would then read from the freshly emptied table and
+	// silently leave it with no rows. Reject it instead.
+	//
+	// The comparison is case-insensitive because SQLite resolves table
+	// names that way: `CREATE OR REPLACE TABLE T COPY t` drops `t`
+	// even though the two names differ in the statement text, so a
+	// case-sensitive check would let exactly that data loss through.
+	if strings.EqualFold(formatPath(targetPath), a.catalog.StorageNameForTable(table)) {
+		return nil, fmt.Errorf(
+			"cannot COPY / CLONE table %q into itself",
+			a.catalog.StorageNameForTable(table),
+		)
+	}
+	cloneData, params, err := newCloneDataQuery(ctx, scan)
+	if err != nil {
+		return nil, err
+	}
+	cloneArgs, err := getArgsFromParams(args, params)
+	if err != nil {
+		return nil, err
+	}
+	return &CreateTableStmtAction{
+		query:           query,
+		spec:            newClonedTableSpec(src, targetPath, isTemp, createMode, options),
+		catalog:         a.catalog,
+		isAutoIndexMode: a.isAutoIndexMode,
+		cloneData:       cloneData,
+		cloneArgs:       cloneArgs,
+	}, nil
+}
+
+// newCreateSnapshotTableStmtAction handles `CREATE SNAPSHOT TABLE ...
+// CLONE <source>`.
+//
+// googlesqlite materialises the snapshot as an ordinary table holding a
+// copy of the source rows. It is neither point-in-time nor read-only:
+// the driver keeps only the current state of a table, so there is no
+// earlier version to pin, and it enforces no table-level access
+// control. Callers that need true snapshot isolation should not rely
+// on this.
+func (a *Analyzer) newCreateSnapshotTableStmtAction(ctx context.Context, query string, args []driver.NamedValue, node *googlesql.ResolvedCreateSnapshotTableStmt) (*CreateTableStmtAction, error) {
+	scan, err := node.CloneFrom()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the CREATE SNAPSHOT TABLE source: %w", err)
+	}
+	if scan == nil {
+		return nil, fmt.Errorf("CREATE SNAPSHOT TABLE requires a CLONE source")
+	}
+	return a.newCloneTableAction(
+		ctx,
+		query,
+		args,
+		scan,
+		m1(node.NamePath()),
+		resolvedCreateScope(node) == googlesql.ResolvedCreateStatementEnums_CreateScopeCreateTemp,
+		m1(node.CreateMode()),
+		newTableOptionsFromResolved(m1(node.OptionList())),
+	)
+}
+
+// newDropSnapshotTableStmtAction handles `DROP SNAPSHOT TABLE`. Since a
+// snapshot is materialised as an ordinary table, dropping one is the
+// same work as dropping a table.
+func (a *Analyzer) newDropSnapshotTableStmtAction(ctx context.Context, query string, args []driver.NamedValue, node *googlesql.ResolvedDropSnapshotTableStmt) (*DropStmtAction, error) {
+	queryArgs, err := getArgsFromParams(args, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &DropStmtAction{
+		name:       a.namePath.format2(node.NamePath()),
+		objectType: "TABLE",
+		ifExists:   m1(node.IsIfExists()),
+		funcMap:    funcMapFromContext(ctx),
+		catalog:    a.catalog,
+		query:      query,
+		args:       queryArgs,
 	}, nil
 }
 

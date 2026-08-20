@@ -1,0 +1,141 @@
+spec: docs/specs/googlesql/syntax/ddl/create_table_copy.md
+dialect: googlesql
+cases:
+  - desc: COPY reproduces the source table's rows
+    setup:
+      - CREATE TABLE ctc_src (a INT64, b STRING)
+      - INSERT INTO ctc_src (a, b) VALUES (1, 'x')
+      - INSERT INTO ctc_src (a, b) VALUES (2, 'y')
+      - CREATE TABLE ctc_dst COPY ctc_src
+    sql: SELECT a, b FROM ctc_dst ORDER BY a
+    expected:
+      rows:
+        - [1, 'x']
+        - [2, 'y']
+
+  - desc: COPY reproduces the source table's columns
+    setup:
+      - CREATE TABLE ctc_ds.ctc_cols_src (a INT64, b STRING, c FLOAT64)
+      - CREATE TABLE ctc_ds.ctc_cols_dst COPY ctc_ds.ctc_cols_src
+    sql: |-
+      SELECT column_name
+      FROM ctc_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 'ctc_cols_dst'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['a']
+        - ['b']
+        - ['c']
+
+  - desc: COPY inherits NOT NULL from the source column
+    setup:
+      - CREATE TABLE ctc_nn_src (a INT64 NOT NULL, b STRING)
+      - INSERT INTO ctc_nn_src (a, b) VALUES (1, 'x')
+      - CREATE TABLE ctc_nn_dst COPY ctc_nn_src
+    sql: INSERT INTO ctc_nn_dst (a, b) VALUES (NULL, 'q')
+    expected:
+      error:
+        contains: NOT NULL
+
+  - desc: COPY carries encoded ARRAY values across intact
+    setup:
+      - CREATE TABLE ctc_arr_src (a INT64, c ARRAY<INT64>)
+      - INSERT INTO ctc_arr_src (a, c) VALUES (1, [10, 20, 30])
+      - CREATE TABLE ctc_arr_dst COPY ctc_arr_src
+    sql: SELECT ARRAY_LENGTH(c) AS n FROM ctc_arr_dst WHERE a = 1
+    expected:
+      rows:
+        - [3]
+
+  - desc: explicit OPTIONS win and unspecified ones fall through from the source
+    setup:
+      - "CREATE TABLE ctc_opt_ds.ctc_opt_src (a INT64) OPTIONS(description='orig', friendly_name='fn')"
+      - "CREATE TABLE ctc_opt_ds.ctc_opt_dst COPY ctc_opt_ds.ctc_opt_src OPTIONS(description='new')"
+    sql: |-
+      SELECT option_name, option_value
+      FROM ctc_opt_ds.INFORMATION_SCHEMA.TABLE_OPTIONS
+      WHERE table_name = 'ctc_opt_dst'
+      ORDER BY option_name
+    expected:
+      rows:
+        - ['description', "'new'"]
+        - ['friendly_name', "'fn'"]
+
+  - desc: CREATE TABLE IF NOT EXISTS ... COPY does not re-copy rows
+    setup:
+      - CREATE TABLE ctc_ine_src (a INT64)
+      - INSERT INTO ctc_ine_src (a) VALUES (1)
+      - INSERT INTO ctc_ine_src (a) VALUES (2)
+      - CREATE TABLE IF NOT EXISTS ctc_ine_dst COPY ctc_ine_src
+      - CREATE TABLE IF NOT EXISTS ctc_ine_dst COPY ctc_ine_src
+      - CREATE TABLE IF NOT EXISTS ctc_ine_dst COPY ctc_ine_src
+    sql: SELECT COUNT(*) AS n FROM ctc_ine_dst
+    expected:
+      rows:
+        - [2]
+
+  - desc: CREATE OR REPLACE ... COPY leaves exactly one copy of the rows
+    setup:
+      - CREATE TABLE ctc_rep_src (a INT64)
+      - INSERT INTO ctc_rep_src (a) VALUES (1)
+      - INSERT INTO ctc_rep_src (a) VALUES (2)
+      - CREATE OR REPLACE TABLE ctc_rep_dst COPY ctc_rep_src
+      - CREATE OR REPLACE TABLE ctc_rep_dst COPY ctc_rep_src
+    sql: SELECT COUNT(*) AS n FROM ctc_rep_dst
+    expected:
+      rows:
+        - [2]
+
+  - desc: FOR SYSTEM_TIME AS OF is rejected
+    setup:
+      - CREATE TABLE ctc_st_src (a INT64)
+    sql: CREATE TABLE ctc_st_dst COPY ctc_st_src FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP()
+    expected:
+      error:
+        contains: FOR SYSTEM_TIME AS OF is not supported
+
+  - desc: COPY against an unknown source table is an analysis error
+    sql: CREATE TABLE ctc_missing_dst COPY ctc_no_such_table
+    expected:
+      error:
+        contains: 'Table not found'
+        phase: analysis
+
+  - desc: copying a table into itself is rejected
+    setup:
+      - CREATE TABLE ctc_self (a INT64)
+      - INSERT INTO ctc_self (a) VALUES (1)
+    sql: CREATE OR REPLACE TABLE ctc_self COPY ctc_self
+    expected:
+      error:
+        contains: into itself
+
+  - desc: a rejected self-copy leaves the source table intact
+    setup:
+      - CREATE TABLE ctc_self2 (a INT64)
+      - INSERT INTO ctc_self2 (a) VALUES (1)
+      - INSERT INTO ctc_self2 (a) VALUES (2)
+    sql: SELECT COUNT(*) AS n FROM ctc_self2
+    expected:
+      rows:
+        - [2]
+
+  - desc: a self-copy written with different letter case is still rejected
+    setup:
+      - CREATE TABLE ctc_case (a INT64)
+      - INSERT INTO ctc_case (a) VALUES (1)
+    sql: CREATE OR REPLACE TABLE CTC_CASE COPY ctc_case
+    expected:
+      error:
+        contains: into itself
+
+  - desc: a rejected case-differing self-copy leaves the source intact
+    setup:
+      - CREATE TABLE ctc_case2 (a INT64)
+      - INSERT INTO ctc_case2 (a) VALUES (1)
+      - INSERT INTO ctc_case2 (a) VALUES (2)
+    sql: SELECT COUNT(*) AS n FROM ctc_case2
+    expected:
+      rows:
+        - [2]
