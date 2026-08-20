@@ -1,0 +1,68 @@
+spec: docs/specs/googlesql/syntax/ddl/create_table_like.md
+dialect: googlesql
+cases:
+  - desc: LIKE reproduces the source table's columns
+    setup:
+      - CREATE TABLE ctl_ds.ctl_src (a INT64, b STRING, c FLOAT64)
+      - CREATE TABLE ctl_ds.ctl_dst LIKE ctl_ds.ctl_src
+    sql: |-
+      SELECT column_name
+      FROM ctl_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 'ctl_dst'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['a']
+        - ['b']
+        - ['c']
+
+  - desc: LIKE copies no rows
+    setup:
+      - CREATE TABLE ctl_empty_src (a INT64)
+      - INSERT INTO ctl_empty_src (a) VALUES (1)
+      - INSERT INTO ctl_empty_src (a) VALUES (2)
+      - CREATE TABLE ctl_empty_dst LIKE ctl_empty_src
+    sql: SELECT COUNT(*) AS n FROM ctl_empty_dst
+    expected:
+      rows:
+        - [0]
+
+  - desc: LIKE inherits the source column's DEFAULT
+    setup:
+      - CREATE TABLE ctl_def_src (a INT64, b STRING DEFAULT 'z')
+      - CREATE TABLE ctl_def_dst LIKE ctl_def_src
+      - INSERT INTO ctl_def_dst (a) VALUES (1)
+    sql: SELECT b FROM ctl_def_dst
+    expected:
+      rows:
+        - ['z']
+
+  - desc: LIKE inherits NOT NULL from the source column
+    setup:
+      - CREATE TABLE ctl_nn_src (a INT64 NOT NULL, b STRING)
+      - CREATE TABLE ctl_nn_dst LIKE ctl_nn_src
+    sql: INSERT INTO ctl_nn_dst (a, b) VALUES (NULL, 'q')
+    expected:
+      error:
+        contains: NOT NULL
+
+  - desc: LIKE against an unknown source table is an analysis error
+    sql: CREATE TABLE ctl_missing_dst LIKE ctl_no_such_table
+    expected:
+      error:
+        contains: 'Table not found'
+        phase: analysis
+
+  - desc: CREATE TABLE IF NOT EXISTS ... LIKE leaves an existing table alone
+    setup:
+      - CREATE TABLE ctl_ine_src (a INT64, b STRING)
+      - CREATE TABLE ctl_ine_ds.ctl_ine_dst (z INT64)
+      - CREATE TABLE IF NOT EXISTS ctl_ine_ds.ctl_ine_dst LIKE ctl_ine_src
+    sql: |-
+      SELECT column_name
+      FROM ctl_ine_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 'ctl_ine_dst'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['z']

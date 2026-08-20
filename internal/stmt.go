@@ -62,6 +62,12 @@ type CreateTableStmt struct {
 	conn    *Conn
 	catalog *Catalog
 	spec    *TableSpec
+	// cloneData / cloneArgs mirror the same fields on
+	// CreateTableStmtAction: the INSERT tail that fills a COPY /
+	// CLONE target once the table itself exists. Empty for every
+	// other CREATE TABLE shape.
+	cloneData string
+	cloneArgs []any
 }
 
 type CreateViewStmt struct {
@@ -84,8 +90,22 @@ func (s *CreateTableStmt) Exec(args []driver.Value) (driver.Result, error) {
 	for i, a := range args {
 		anyArgs[i] = a
 	}
+	skip, err := skipCreateIntoExistingTable(context.Background(), s.conn, s.spec)
+	if err != nil {
+		return nil, err
+	}
+	if skip {
+		return nil, nil
+	}
 	if _, err := s.stmt.Exec(anyArgs...); err != nil {
 		return nil, err
+	}
+	if s.cloneData != "" {
+		if err := execCloneData(
+			context.Background(), s.conn, s.spec, s.cloneData, s.cloneArgs, s.spec.TableName(),
+		); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.catalog.AddNewTableSpec(context.Background(), s.conn, s.spec); err != nil {
 		return nil, fmt.Errorf("failed to add new table spec: %w", err)
@@ -97,12 +117,14 @@ func (s *CreateTableStmt) Query(args []driver.Value) (driver.Rows, error) {
 	return nil, fmt.Errorf("CREATE TABLE statement does not return rows")
 }
 
-func newCreateTableStmt(stmt *sql.Stmt, conn *Conn, catalog *Catalog, spec *TableSpec) *CreateTableStmt {
+func newCreateTableStmt(stmt *sql.Stmt, conn *Conn, catalog *Catalog, spec *TableSpec, cloneData string, cloneArgs []any) *CreateTableStmt {
 	return &CreateTableStmt{
-		stmt:    stmt,
-		conn:    conn,
-		catalog: catalog,
-		spec:    spec,
+		stmt:      stmt,
+		conn:      conn,
+		catalog:   catalog,
+		spec:      spec,
+		cloneData: cloneData,
+		cloneArgs: cloneArgs,
 	}
 }
 

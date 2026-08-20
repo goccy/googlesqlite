@@ -1,0 +1,128 @@
+spec: docs/specs/googlesql/syntax/ddl/create_table_clone.md
+dialect: googlesql
+cases:
+  - desc: CLONE reproduces the source table's rows
+    setup:
+      - CREATE TABLE ctn_src (a INT64, b STRING)
+      - INSERT INTO ctn_src (a, b) VALUES (1, 'x')
+      - INSERT INTO ctn_src (a, b) VALUES (2, 'y')
+      - CREATE TABLE ctn_dst CLONE ctn_src
+    sql: SELECT a, b FROM ctn_dst ORDER BY a
+    expected:
+      rows:
+        - [1, 'x']
+        - [2, 'y']
+
+  - desc: CLONE with a WHERE clause copies only matching rows
+    setup:
+      - CREATE TABLE ctn_w_src (a INT64, b STRING)
+      - INSERT INTO ctn_w_src (a, b) VALUES (1, 'x')
+      - INSERT INTO ctn_w_src (a, b) VALUES (2, 'y')
+      - INSERT INTO ctn_w_src (a, b) VALUES (3, 'z')
+      - CREATE TABLE ctn_w_dst CLONE ctn_w_src WHERE a > 1
+    sql: SELECT a, b FROM ctn_w_dst ORDER BY a
+    expected:
+      rows:
+        - [2, 'y']
+        - [3, 'z']
+
+  - desc: a WHERE clause that matches nothing yields an empty table
+    setup:
+      - CREATE TABLE ctn_none_src (a INT64)
+      - INSERT INTO ctn_none_src (a) VALUES (1)
+      - CREATE TABLE ctn_none_dst CLONE ctn_none_src WHERE a > 100
+    sql: SELECT COUNT(*) AS n FROM ctn_none_dst
+    expected:
+      rows:
+        - [0]
+
+  - desc: CLONE reproduces the source table's columns
+    setup:
+      - CREATE TABLE ctn_ds.ctn_cols_src (a INT64, b STRING, c FLOAT64)
+      - CREATE TABLE ctn_ds.ctn_cols_dst CLONE ctn_ds.ctn_cols_src
+    sql: |-
+      SELECT column_name
+      FROM ctn_ds.INFORMATION_SCHEMA.COLUMNS
+      WHERE table_name = 'ctn_cols_dst'
+      ORDER BY column_name
+    expected:
+      rows:
+        - ['a']
+        - ['b']
+        - ['c']
+
+  - desc: CLONE inherits NOT NULL from the source column
+    setup:
+      - CREATE TABLE ctn_nn_src (a INT64 NOT NULL, b STRING)
+      - INSERT INTO ctn_nn_src (a, b) VALUES (1, 'x')
+      - CREATE TABLE ctn_nn_dst CLONE ctn_nn_src
+    sql: INSERT INTO ctn_nn_dst (a, b) VALUES (NULL, 'q')
+    expected:
+      error:
+        contains: NOT NULL
+
+  - desc: CLONE inherits the source column's DEFAULT
+    setup:
+      - CREATE TABLE ctn_def_src (a INT64, b STRING DEFAULT 'z')
+      - CREATE TABLE ctn_def_dst CLONE ctn_def_src
+      - INSERT INTO ctn_def_dst (a) VALUES (1)
+    sql: SELECT b FROM ctn_def_dst WHERE a = 1
+    expected:
+      rows:
+        - ['z']
+
+  - desc: FOR SYSTEM_TIME AS OF is rejected
+    setup:
+      - CREATE TABLE ctn_st_src (a INT64)
+    sql: CREATE TABLE ctn_st_dst CLONE ctn_st_src FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP()
+    expected:
+      error:
+        contains: FOR SYSTEM_TIME AS OF is not supported
+
+  - desc: CLONE against an unknown source table is an analysis error
+    sql: CREATE TABLE ctn_missing_dst CLONE ctn_no_such_table
+    expected:
+      error:
+        contains: 'Table not found'
+        phase: analysis
+
+  - desc: cloning a table into itself is rejected
+    setup:
+      - CREATE TABLE ctn_self (a INT64)
+      - INSERT INTO ctn_self (a) VALUES (1)
+    sql: CREATE OR REPLACE TABLE ctn_self CLONE ctn_self
+    expected:
+      error:
+        contains: into itself
+
+  - desc: CLONE from a view materialises the view's rows
+    setup:
+      - CREATE TABLE ctn_v_src (a INT64, b STRING)
+      - INSERT INTO ctn_v_src (a, b) VALUES (1, 'x')
+      - INSERT INTO ctn_v_src (a, b) VALUES (2, 'y')
+      - CREATE VIEW ctn_v AS SELECT a, b FROM ctn_v_src WHERE a = 1
+      - CREATE TABLE ctn_v_dst CLONE ctn_v
+    sql: SELECT a, b FROM ctn_v_dst ORDER BY a
+    expected:
+      rows:
+        - [1, 'x']
+
+  - desc: a copy that fails at evaluation time does not claim the table name
+    setup:
+      - CREATE TABLE ctn_fail_src (a INT64)
+      - INSERT INTO ctn_fail_src (a) VALUES (1)
+    sql: CREATE TABLE ctn_fail_dst CLONE ctn_fail_src WHERE 1 / 0 > 0
+    expected:
+      error:
+        contains: zero divided
+
+  - desc: the table name is reusable after a failed copy
+    setup:
+      - CREATE TABLE ctn_reuse_src (a INT64)
+      - INSERT INTO ctn_reuse_src (a) VALUES (1)
+      - CREATE TABLE ctn_reuse_dst (z INT64)
+      - INSERT INTO ctn_reuse_dst (z) VALUES (9)
+    sql: SELECT z FROM ctn_reuse_dst
+    expected:
+      rows:
+        - [9]
