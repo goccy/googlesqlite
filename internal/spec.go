@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	googlesql "github.com/goccy/go-googlesql"
@@ -272,6 +273,20 @@ type Type struct {
 	SignatureKind googlesql.SignatureArgumentKind `json:"signatureKind"`
 	ElementType   *Type                           `json:"elementType"`
 	FieldTypes    []*NameWithType                 `json:"fieldTypes"`
+
+	// node memoizes ToGoogleSQLType. The global TypeFactory interns
+	// every type it makes, so rebuilding the handle is a pure wasm
+	// round trip; the row scanner casts every column of every row
+	// against its type, which made that round trip a per-row cost.
+	nodeOnce sync.Once
+	node     googlesql.Googlesql_TypeNode
+	nodeErr  error
+
+	// structFields memoizes the []*googlesql.StructField view of
+	// FieldTypes that CastValue reshapes struct values against, so the
+	// row scanner never has to ask the wasm StructType for its fields.
+	structFieldsOnce sync.Once
+	structFields     []*googlesql.StructField
 }
 
 func (t *Type) FunctionArgumentType() (*googlesql.FunctionArgumentType, error) {
@@ -338,6 +353,42 @@ func (t *Type) ToGoogleSQLType() (googlesql.Googlesql_TypeNode, error) {
 	if t == nil {
 		return nil, fmt.Errorf("nil Type cannot be converted to googlesql type")
 	}
+	switch t.kindAs() {
+	case googlesql.TypeKindTypeProto, googlesql.TypeKindTypeEnum:
+		// Proto / Enum handles come from a registry the consumer fills
+		// at runtime (Conn.RegisterProto); a lookup that missed once may
+		// succeed later, so these are deliberately not memoized.
+		return t.buildGoogleSQLType()
+	}
+	t.nodeOnce.Do(func() {
+		t.node, t.nodeErr = t.buildGoogleSQLType()
+	})
+	return t.node, t.nodeErr
+}
+
+// googleSQLStructFields returns the declared fields of a STRUCT Type in
+// the form CastValue consumes, built once from FieldTypes. It returns
+// nil for non-struct types and for a struct whose field types cannot be
+// resolved, in which case the caller falls back to the wasm StructType.
+func (t *Type) googleSQLStructFields() []*googlesql.StructField {
+	if t == nil || t.kindAs() != googlesql.TypeKindTypeStruct {
+		return nil
+	}
+	t.structFieldsOnce.Do(func() {
+		fields := make([]*googlesql.StructField, 0, len(t.FieldTypes))
+		for _, field := range t.FieldTypes {
+			typ, err := field.Type.ToGoogleSQLType()
+			if err != nil {
+				return
+			}
+			fields = append(fields, &googlesql.StructField{Name: field.Name, Type_: typ})
+		}
+		t.structFields = fields
+	})
+	return t.structFields
+}
+
+func (t *Type) buildGoogleSQLType() (googlesql.Googlesql_TypeNode, error) {
 	switch t.kindAs() {
 	case googlesql.TypeKindTypeProto:
 		// Proto / Enum types cannot be rebuilt via MakeSimpleType.

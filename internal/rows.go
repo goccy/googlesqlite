@@ -142,7 +142,7 @@ func (r *Rows) assignValue(src any, dst reflect.Value, typ *Type) error {
 	if err != nil {
 		return err
 	}
-	value, err := CastValue(t, decodedValue)
+	value, err := castValueWithSpec(t, typ, decodedValue)
 	if err != nil {
 		return err
 	}

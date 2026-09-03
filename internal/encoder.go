@@ -409,6 +409,52 @@ func structValueFromLiteral(v googlesql.Value) (*value.StructValue, error) {
 	return ret, nil
 }
 
+// arrayElementType returns the declared element type of an ARRAY type,
+// or nil when t is not an ArrayType handle or the element type cannot
+// be resolved.
+func arrayElementType(t googlesql.Googlesql_TypeNode) googlesql.Googlesql_TypeNode {
+	at, ok := t.(*googlesql.ArrayType)
+	if !ok || at == nil {
+		return nil
+	}
+	elem, err := at.ElementType()
+	if err != nil || elem == nil {
+		return nil
+	}
+	return elem
+}
+
+// structValueForCast produces the StructValue that CastValue reshapes
+// against a declared STRUCT type. A Go-side struct arrives in one of two
+// shapes: a StructValue (from map[string]any or a Go struct), or an
+// ArrayValue of single-key StructValues — the driver's own scan form for
+// STRUCT columns ([]map[string]any, one entry per field in declaration
+// order), which callers such as bigquery-emulator feed back in unchanged.
+// The latter is merged into one StructValue so both shapes take the same
+// field-by-field cast below.
+func structValueForCast(v value.Value) (*value.StructValue, error) {
+	array, ok := v.(*value.ArrayValue)
+	if !ok {
+		return v.ToStruct()
+	}
+	ret := &value.StructValue{M: map[string]value.Value{}}
+	for _, elem := range array.Values {
+		if elem == nil {
+			return nil, fmt.Errorf("failed to convert struct from array %v: NULL element", array)
+		}
+		st, err := elem.ToStruct()
+		if err != nil {
+			return nil, err
+		}
+		ret.Keys = append(ret.Keys, st.Keys...)
+		ret.Values = append(ret.Values, st.Values...)
+		for i, k := range st.Keys {
+			ret.M[k] = st.Values[i]
+		}
+	}
+	return ret, nil
+}
+
 // hasDuplicateFieldNames reports whether two or more declared
 // target-struct fields share the same non-empty name.
 func hasDuplicateFieldNames(fields []*googlesql.StructField) bool {
@@ -458,7 +504,22 @@ func structHasMatchingNames(s *value.StructValue, fields []*googlesql.StructFiel
 	return false
 }
 
+// CastValue coerces v to the googlesql type t, reshaping composite
+// values (ARRAY elements, STRUCT fields) recursively against the
+// declared type. Every kind/element/field lookup on t is a wasm round
+// trip; callers that hold the driver-side *Type description of t should
+// use castValueWithSpec so those lookups are answered from Go memory.
 func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, error) {
+	return castValueWithSpec(t, nil, v)
+}
+
+// castValueWithSpec is CastValue with an optional driver-side spec that
+// mirrors t (spec.ToGoogleSQLType() == t). When spec is non-nil the
+// type kind, ARRAY element type and STRUCT fields come from spec and its
+// memoized handles instead of from wasm calls on t. The row scanner
+// passes the column's *Type here: it casts every column of every row,
+// so the wasm round trips would otherwise be paid per row.
+func castValueWithSpec(t googlesql.Googlesql_TypeNode, spec *Type, v value.Value) (value.Value, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -469,33 +530,57 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 	if t == nil {
 		return v, nil
 	}
-	// Googlesql_TypeNode carries Kind directly, no upcast needed.
-	switch m1(t.Kind()) {
+	var kind googlesql.TypeKind
+	if spec != nil {
+		kind = spec.kindAs()
+	} else {
+		// Googlesql_TypeNode carries Kind directly, no upcast needed.
+		kind = m1(t.Kind())
+	}
+	// A value that already has the canonical representation for its
+	// kind is returned as-is: re-boxing it into a fresh interface
+	// value is an allocation per scalar, per row.
+	switch kind {
 	case googlesql.TypeKindTypeInt32, googlesql.TypeKindTypeInt64, googlesql.TypeKindTypeUint32, googlesql.TypeKindTypeUint64:
+		if _, ok := v.(value.IntValue); ok {
+			return v, nil
+		}
 		i64, err := v.ToInt64()
 		if err != nil {
 			return nil, err
 		}
 		return value.IntValue(i64), nil
 	case googlesql.TypeKindTypeBool:
+		if _, ok := v.(value.BoolValue); ok {
+			return v, nil
+		}
 		b, err := v.ToBool()
 		if err != nil {
 			return nil, err
 		}
 		return value.BoolValue(b), nil
 	case googlesql.TypeKindTypeFloat, googlesql.TypeKindTypeDouble:
+		if _, ok := v.(value.FloatValue); ok {
+			return v, nil
+		}
 		f64, err := v.ToFloat64()
 		if err != nil {
 			return nil, err
 		}
 		return value.FloatValue(f64), nil
 	case googlesql.TypeKindTypeString, googlesql.TypeKindTypeEnum:
+		if _, ok := v.(value.StringValue); ok {
+			return v, nil
+		}
 		s, err := v.ToString()
 		if err != nil {
 			return nil, err
 		}
 		return value.StringValue(s), nil
 	case googlesql.TypeKindTypeBytes:
+		if _, ok := v.(value.BytesValue); ok {
+			return v, nil
+		}
 		b, err := v.ToBytes()
 		if err != nil {
 			return nil, err
@@ -536,30 +621,39 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 		if err != nil {
 			return nil, err
 		}
-		// ArrayType.ElementType() isn't exposed on the wasm bridge
-		// yet; fall back to leaving the inner element untyped, which
-		// preserves the value shape for the simple cast-through cases
-		// tests exercise today.
-		ret := &value.ArrayValue{}
-		ret.Values = append(ret.Values, array.Values...)
+		// Cast every element against the declared element type so a
+		// nested composite (an ARRAY<STRUCT<..., inner STRUCT<...>>>
+		// bound from Go maps/slices) is reshaped all the way down.
+		// Without this the elements keep whatever shape the Go value
+		// had, and a later `elem.inner.field` access fails at runtime
+		// because the stored inner value is not a struct.
+		var (
+			elemType googlesql.Googlesql_TypeNode
+			elemSpec *Type
+		)
+		if spec != nil && spec.ElementType != nil {
+			if et, err := spec.ElementType.ToGoogleSQLType(); err == nil && et != nil {
+				elemType, elemSpec = et, spec.ElementType
+			}
+		}
+		if elemType == nil {
+			elemType = arrayElementType(t)
+		}
+		ret := &value.ArrayValue{Values: make([]value.Value, 0, len(array.Values))}
+		for _, elem := range array.Values {
+			if elem == nil || elemType == nil {
+				ret.Values = append(ret.Values, elem)
+				continue
+			}
+			casted, err := castValueWithSpec(elemType, elemSpec, elem)
+			if err != nil {
+				return nil, err
+			}
+			ret.Values = append(ret.Values, casted)
+		}
 		return ret, nil
 	case googlesql.TypeKindTypeStruct:
-		if array, ok := v.(*value.ArrayValue); ok {
-			ret := &value.StructValue{M: map[string]value.Value{}}
-			for _, value := range array.Values {
-				st, err := value.ToStruct()
-				if err != nil {
-					return nil, err
-				}
-				ret.Keys = append(ret.Keys, st.Keys...)
-				ret.Values = append(ret.Values, st.Values...)
-				for i, k := range st.Keys {
-					ret.M[k] = st.Values[i]
-				}
-			}
-			return ret, nil
-		}
-		s, err := v.ToStruct()
+		s, err := structValueForCast(v)
 		if err != nil {
 			return nil, err
 		}
@@ -578,63 +672,74 @@ func CastValue(t googlesql.Googlesql_TypeNode, v value.Value) (value.Value, erro
 		// — looking the target's named fields up in the source's
 		// auto-generated map would miss every one (root cause of
 		// anonymous-struct-field bug, runtime side).
-		if st, ok := t.(*googlesql.StructType); ok && st != nil {
-			fields, err := st.Fields()
-			if err == nil && len(fields) > 0 {
-				// Three reasons to zip positionally:
-				//   - source has no field-name overlap with target (the
-				//     usePositional path that already lived here);
-				//   - the target type declares duplicate field names —
-				//     looking up by name through the source's deduped
-				//     `M` map collapses every duplicate-named field to
-				//     the same value;
-				//   - the source itself has duplicate keys for the same
-				//     reason.
-				dupTargetNames := hasDuplicateFieldNames(fields)
-				dupSourceKeys := hasDuplicateKeys(s.Keys)
-				usePositional := !structHasMatchingNames(s, fields) || dupTargetNames || dupSourceKeys
-				reshaped := &value.StructValue{M: map[string]value.Value{}}
-				for i, f := range fields {
-					key := f.Name
-					var existing value.Value
-					switch {
-					case usePositional:
-						if i < len(s.Values) {
-							existing = s.Values[i]
-						}
-					case key == "":
-						// Mixed name + anonymous targets (e.g. result of
-						// REGEXP_EXTRACT_GROUPS with `(?<key>...):(...)`):
-						// the declared struct keeps anonymous fields as
-						// empty strings, but the source struct names them
-						// positionally (`$col2`, ...). Fall back to the
-						// positional value for unnamed targets.
-						if i < len(s.Values) {
-							existing = s.Values[i]
-						}
-					default:
-						if v, found := s.M[key]; found {
-							existing = v
-						}
-					}
-					var fieldValue value.Value
-					if existing != nil {
-						if f.Type_ != nil {
-							casted, err := CastValue(f.Type_, existing)
-							if err != nil {
-								return nil, err
-							}
-							fieldValue = casted
-						} else {
-							fieldValue = existing
-						}
-					}
-					reshaped.Keys = append(reshaped.Keys, key)
-					reshaped.Values = append(reshaped.Values, fieldValue)
-					reshaped.M[key] = fieldValue
+		// The declared fields come from the driver-side spec when the
+		// caller has one (no wasm call); otherwise ask the StructType.
+		fields := spec.googleSQLStructFields()
+		if fields == nil {
+			if st, ok := t.(*googlesql.StructType); ok && st != nil {
+				if declared, err := st.Fields(); err == nil {
+					fields = declared
 				}
-				return reshaped, nil
 			}
+		}
+		if len(fields) > 0 {
+			// Three reasons to zip positionally:
+			//   - source has no field-name overlap with target (the
+			//     usePositional path that already lived here);
+			//   - the target type declares duplicate field names —
+			//     looking up by name through the source's deduped
+			//     `M` map collapses every duplicate-named field to
+			//     the same value;
+			//   - the source itself has duplicate keys for the same
+			//     reason.
+			dupTargetNames := hasDuplicateFieldNames(fields)
+			dupSourceKeys := hasDuplicateKeys(s.Keys)
+			usePositional := !structHasMatchingNames(s, fields) || dupTargetNames || dupSourceKeys
+			reshaped := &value.StructValue{M: map[string]value.Value{}}
+			for i, f := range fields {
+				key := f.Name
+				var existing value.Value
+				switch {
+				case usePositional:
+					if i < len(s.Values) {
+						existing = s.Values[i]
+					}
+				case key == "":
+					// Mixed name + anonymous targets (e.g. result of
+					// REGEXP_EXTRACT_GROUPS with `(?<key>...):(...)`):
+					// the declared struct keeps anonymous fields as
+					// empty strings, but the source struct names them
+					// positionally (`$col2`, ...). Fall back to the
+					// positional value for unnamed targets.
+					if i < len(s.Values) {
+						existing = s.Values[i]
+					}
+				default:
+					if v, found := s.M[key]; found {
+						existing = v
+					}
+				}
+				var fieldValue value.Value
+				if existing != nil {
+					if f.Type_ != nil {
+						var fieldSpec *Type
+						if spec != nil && i < len(spec.FieldTypes) {
+							fieldSpec = spec.FieldTypes[i].Type
+						}
+						casted, err := castValueWithSpec(f.Type_, fieldSpec, existing)
+						if err != nil {
+							return nil, err
+						}
+						fieldValue = casted
+					} else {
+						fieldValue = existing
+					}
+				}
+				reshaped.Keys = append(reshaped.Keys, key)
+				reshaped.Values = append(reshaped.Values, fieldValue)
+				reshaped.M[key] = fieldValue
+			}
+			return reshaped, nil
 		}
 		return s, nil
 	case googlesql.TypeKindTypeNumeric:

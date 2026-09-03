@@ -1029,6 +1029,123 @@ CREATE TABLE table (
 	}
 }
 
+// TestArrayOfNestedStructParameterFieldAccess binds an
+// ARRAY<STRUCT<key, value STRUCT<...>>> column from Go values and reads
+// the nested struct's fields back through UNNEST. Regression for
+// goccy/bigquery-emulator#308: the emulator binds STRUCT values in the
+// driver's own scan shape ([]map[string]any, one single-key map per
+// field), and the nested `value` struct used to stay stored as an array,
+// so `elem.value.string_value` failed with "failed to convert struct
+// from array". Both the scan shape and the plain map[string]any shape
+// must be cast against the declared element type all the way down.
+func TestArrayOfNestedStructParameterFieldAccess(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name  string
+		param any
+	}{
+		{
+			name: "scan shape",
+			param: []any{
+				[]map[string]any{
+					{"key": "param1"},
+					{"value": []map[string]any{
+						{"string_value": "value1"},
+						{"int_value": nil},
+						{"float_value": nil},
+					}},
+				},
+				[]map[string]any{
+					{"key": "param2"},
+					{"value": []map[string]any{
+						{"string_value": nil},
+						{"int_value": float64(123)},
+						{"float_value": nil},
+					}},
+				},
+			},
+		},
+		{
+			name: "map shape",
+			param: []any{
+				map[string]any{
+					"key":   "param1",
+					"value": map[string]any{"string_value": "value1"},
+				},
+				map[string]any{
+					"key":   "param2",
+					"value": map[string]any{"int_value": int64(123)},
+				},
+			},
+		},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			db, err := sql.Open("googlesqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if _, err := db.ExecContext(ctx, `
+CREATE TABLE events (
+  event_params ARRAY<STRUCT<key STRING, value STRUCT<string_value STRING, int_value INT64, float_value FLOAT64>>>
+)`); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.ExecContext(ctx,
+				"INSERT INTO events (event_params) VALUES (?)", tc.param); err != nil {
+				t.Fatalf("INSERT: %v", err)
+			}
+			rows, err := db.QueryContext(ctx, `
+SELECT
+  event_param.key AS param_key,
+  event_param.value.string_value AS param_value_string,
+  event_param.value.int_value AS param_value_int
+FROM events, UNNEST(event_params) AS event_param
+ORDER BY param_key`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer rows.Close()
+			type row struct {
+				key sql.NullString
+				str sql.NullString
+				num sql.NullInt64
+			}
+			var got []row
+			for rows.Next() {
+				var r row
+				if err := rows.Scan(&r.key, &r.str, &r.num); err != nil {
+					t.Fatalf("Scan: %v", err)
+				}
+				got = append(got, r)
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatalf("rows.Err: %v", err)
+			}
+			want := []row{
+				{key: sql.NullString{String: "param1", Valid: true}, str: sql.NullString{String: "value1", Valid: true}},
+				{key: sql.NullString{String: "param2", Valid: true}, num: sql.NullInt64{Int64: 123, Valid: true}},
+			}
+			if len(got) != len(want) {
+				t.Fatalf("got %d rows; want %d: %+v", len(got), len(want), got)
+			}
+			for i := range want {
+				if got[i] != want[i] {
+					t.Errorf("row %d = %+v; want %+v", i, got[i], want[i])
+				}
+			}
+			// The whole column must also scan back without error.
+			var whole any
+			if err := db.QueryRowContext(ctx, "SELECT event_params FROM events").Scan(&whole); err != nil {
+				t.Fatalf("scan whole column: %v", err)
+			}
+		})
+	}
+}
+
 func TestCreateTempTableParity(t *testing.T) {
 	t.Parallel()
 	now := time.Now()
