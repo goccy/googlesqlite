@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - ['["a","b"]']
+  - desc: a JSON null element becomes a NULL element
+    sql: SELECT ARRAY_TO_STRING(JSON_EXTRACT_STRING_ARRAY('["x", null]', '$'), '|', 'NULL')
+    expected:
+      rows:
+        - ["x|NULL"]

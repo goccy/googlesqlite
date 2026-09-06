@@ -19,3 +19,8 @@ cases:
     expected:
       rows:
         - ["number"]
+  - desc: NULL JSON returns NULL
+    sql: SELECT JSON_TYPE(CAST(NULL AS JSON)), JSON_TYPE(JSON_QUERY(JSON '{}', '$.missing'))
+    expected:
+      rows:
+        - [null, null]

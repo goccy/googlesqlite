@@ -14,6 +14,9 @@ func BindJsonType(args ...value.Value) (value.Value, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("JSON_TYPE: invalid number of arguments: got %d, want 1", len(args))
 	}
+	if args[0] == nil {
+		return nil, nil
+	}
 	value, ok := args[0].(value.JsonValue)
 	if !ok {
 		return nil, fmt.Errorf("JSON_TYPE: failed to convert %T to JSON value", args[0])
