@@ -95,6 +95,72 @@ func TestBindParseJson(t *testing.T) {
 	}
 }
 
+func TestBindParseJsonCanonicalForm(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ in, mode, want string }{
+		{`{"b": 1,  "a":[1, 2, {"y":true, "x":null}]}`, "exact", `{"a":[1,2,{"x":null,"y":true}],"b":1}`},
+		{` "str" `, "exact", `"str"`},
+		{`{"u":"\u00e9 \ud83d\ude00 \u001f \/ <&>"}`, "exact", "{\"u\":\"\u00e9 \U0001f600 \\u001f / <&>\"}"},
+		{`-0`, "exact", `0`},
+		{`-0.0`, "exact", `-0.0`},
+		{`1.50`, "exact", `1.5`},
+		{`0.1000`, "exact", `0.1`},
+		{`1e3`, "exact", `1000.0`},
+		{`2.5e2`, "exact", `250.0`},
+		{`123456.789e3`, "exact", `123456789.0`},
+		{`1E-7`, "exact", `1e-07`},
+		{`0.000001`, "exact", `1e-06`},
+		{`1e14`, "exact", `100000000000000.0`},
+		{`1e15`, "exact", `1e+15`},
+		{`1.5e15`, "exact", `1.5e+15`},
+		{`1e-4`, "exact", `0.0001`},
+		{`1e-5`, "exact", `1e-05`},
+		{`123456789012345.0`, "exact", `123456789012345.0`},
+		{`1234567890123456.0`, "exact", `1.234567890123456e+15`},
+		{`1e20`, "exact", `1e+20`},
+		{`1e21`, "exact", `1e+21`},
+		{`0.1`, "exact", `0.1`},
+		{`2.675`, "exact", `2.675`},
+		{`1e300`, "exact", `1e+300`},
+		{`1.5e-10`, "exact", `1.5e-10`},
+		{`9007199254740993`, "exact", `9007199254740993`},
+		{`9223372036854775807`, "exact", `9223372036854775807`},
+		{`-9223372036854775808`, "exact", `-9223372036854775808`},
+		{`18446744073709551615`, "exact", `18446744073709551615`},
+		{`3.14159265358979323846`, "round", `3.141592653589793`},
+		{`18446744073709551616`, "round", `1.8446744073709552e+19`},
+		{`{"a":[3.14159265358979323846]}`, "round", `{"a":[3.141592653589793]}`},
+		{`0.1000000000000000000001`, "round", `0.1`},
+	} {
+		got, err := BindParseJson(value.StringValue(c.in), value.StringValue(c.mode))
+		if err != nil {
+			t.Errorf("PARSE_JSON(%s, %s): %v", c.in, c.mode, err)
+			continue
+		}
+		if s := mustString(t, got); s != c.want {
+			t.Errorf("PARSE_JSON(%s, %s) = %s; want %s", c.in, c.mode, s, c.want)
+		}
+	}
+	for _, c := range []struct{ in, mode string }{
+		{`3.14159265358979323846`, "exact"},
+		{`18446744073709551616`, "exact"},
+		{`99999999999999990000.0`, "exact"},
+		{`12345678901234567.0`, "exact"},
+		{`{"a":[18446744073709551616]}`, "exact"},
+		{`1e400`, "exact"},
+		{`1e400`, "round"},
+		{`{"a":1} x`, "exact"},
+	} {
+		if _, err := BindParseJson(value.StringValue(c.in), value.StringValue(c.mode)); err == nil {
+			t.Errorf("PARSE_JSON(%s, %s): expected error", c.in, c.mode)
+		}
+	}
+	if _, err := BindParseJson(value.StringValue(`1`), value.StringValue("loose")); err == nil {
+		t.Error("expected wide_number_mode error")
+	}
+}
+
 // TestBindJsonExtractFailingToString drives the args[i].ToString
 // error branch by passing an ARRAY value, which ToString errors on.
 func TestBindJsonExtractFailingToString(t *testing.T) {

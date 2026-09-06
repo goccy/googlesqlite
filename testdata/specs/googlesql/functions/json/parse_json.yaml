@@ -6,3 +6,30 @@ cases:
     expected:
       rows:
         - ['object']
+  - desc: the parsed value is stored in canonical form
+    sql: |-
+      SELECT TO_JSON_STRING(PARSE_JSON('{"prompt_source": "typed",  "n":1, "a":[1, 2.50, "<&>", {"y":true, "x":null}]}'))
+    expected:
+      rows:
+        - ['{"a":[1,2.5,"<&>",{"x":null,"y":true}],"n":1,"prompt_source":"typed"}']
+  - desc: numbers are stored as INT64 or as the shortest FLOAT64 text
+    sql: SELECT TO_JSON_STRING(PARSE_JSON(x)) FROM UNNEST(['-0', '1.50', '1e3', '1E-7', '1e21', '9007199254740993', '18446744073709551615']) AS x
+    expected:
+      rows:
+        - ['0']
+        - ['1.5']
+        - ['1000.0']
+        - ['1e-07']
+        - ['1e+21']
+        - ['9007199254740993']
+        - ['18446744073709551615']
+  - desc: exact mode rejects a number that does not round-trip
+    sql: SELECT PARSE_JSON('3.14159265358979323846')
+    expected:
+      error:
+        contains: "cannot round-trip"
+  - desc: round mode stores the nearest FLOAT64
+    sql: SELECT TO_JSON_STRING(PARSE_JSON('{"a":3.14159265358979323846}', wide_number_mode=>'round'))
+    expected:
+      rows:
+        - ['{"a":3.141592653589793}']
