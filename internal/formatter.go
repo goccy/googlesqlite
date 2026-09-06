@@ -2130,11 +2130,15 @@ func (n *SetOperationScanNode) FormatSQL(ctx context.Context) (string, error) {
 	default:
 		opType = "UNKNOWN"
 	}
+	var resultColumns []string
+	for _, col := range m1(n.node.ColumnList()) {
+		resultColumns = append(resultColumns, fmt.Sprintf("`%s`", uniqueColumnName(ctx, col)))
+	}
 	var queries []string
 	for _, item := range m1(n.node.InputItemList()) {
 		var outputColumns []string
-		for _, outputColumn := range m1(item.OutputColumnList()) {
-			outputColumns = append(outputColumns, fmt.Sprintf("`%s`", uniqueColumnName(ctx, outputColumn)))
+		for idx, outputColumn := range m1(item.OutputColumnList()) {
+			outputColumns = append(outputColumns, fmt.Sprintf("`%s` AS %s", uniqueColumnName(ctx, outputColumn), resultColumns[idx]))
 		}
 		query, err := newNode(item).FormatSQL(ctx)
 		if err != nil {
@@ -2154,22 +2158,9 @@ func (n *SetOperationScanNode) FormatSQL(ctx context.Context) (string, error) {
 			),
 		)
 	}
-	columnMaps := []string{}
-	if inputItems := m1(n.node.InputItemList()); len(inputItems) != 0 {
-		for idx, col := range m1(inputItems[0].OutputColumnList()) {
-			columnMaps = append(
-				columnMaps,
-				fmt.Sprintf(
-					"`%s` AS `%s`",
-					uniqueColumnName(ctx, col),
-					uniqueColumnName(ctx, m1(n.node.ColumnList())[idx]),
-				),
-			)
-		}
-	}
 	return fmt.Sprintf(
 		"SELECT %s FROM (%s)",
-		strings.Join(columnMaps, ","),
+		strings.Join(resultColumns, ","),
 		strings.Join(queries, fmt.Sprintf(" %s ", opType)),
 	), nil
 }

@@ -16,3 +16,13 @@ cases:
         - [1]
         - [2]
         - [3]
+  - desc: a branch that projects one column twice does not capture later branches' columns
+    sql: |-
+      SELECT x, x AS y FROM (SELECT 's1' AS x)
+      UNION ALL SELECT p AS x, q AS y FROM (SELECT 'r' AS p, 'k' AS q)
+      UNION ALL SELECT 'u', 'v'
+    expected:
+      rows:
+        - ['s1', 's1']
+        - ['r', 'k']
+        - ['u', 'v']
