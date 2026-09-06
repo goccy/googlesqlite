@@ -1674,8 +1674,8 @@ func (c *Catalog) getOrCreateSubCatalog(parent *googlesql.SimpleCatalog, name st
 	if existing, ok := subs[name]; ok {
 		return existing
 	}
-	sub := newSimpleCatalog(name)
-	if sub == nil {
+	sub, err := googlesql.NewSimpleCatalog(name, tf())
+	if err != nil || sub == nil {
 		return nil
 	}
 	_ = parent.AddCatalog(sub)
