@@ -12,3 +12,14 @@ cases:
         - [1, 1]
         - [2, 3]
         - [3, 6]
+  - desc: RANGE offset frame with PARTITION BY
+    sql: |-
+      SELECT k, x, COUNT(*) OVER (PARTITION BY k ORDER BY x RANGE BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS n
+      FROM UNNEST([STRUCT('a' AS k, 1 AS x), ('a', 2), ('a', 4), ('b', 1)])
+      ORDER BY k, x
+    expected:
+      rows:
+        - ['a', 1, 2]
+        - ['a', 2, 2]
+        - ['a', 4, 1]
+        - ['b', 1, 1]

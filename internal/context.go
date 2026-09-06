@@ -170,6 +170,7 @@ type analyticOrderBy struct {
 	column    string
 	isAsc     bool
 	nullOrder nullOrderMode
+	partition bool
 }
 
 type analyticOrderColumnNames struct {

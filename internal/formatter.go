@@ -1007,21 +1007,24 @@ func (n *AnalyticFunctionCallNode) formatNative(ctx context.Context, sqliteName 
 	if cols := analyticPartitionColumnNamesFromContext(ctx); len(cols) > 0 {
 		clauses = append(clauses, "PARTITION BY "+strings.Join(cols, ","))
 	}
-	if len(orderColumns) > 0 {
-		var ob []string
-		for _, col := range orderColumns {
-			switch col.nullOrder {
-			case nullOrderFirst:
-				ob = append(ob, fmt.Sprintf("(%s IS NOT NULL)", col.column))
-			case nullOrderLast:
-				ob = append(ob, fmt.Sprintf("(%s IS NULL)", col.column))
-			}
-			suffix := " COLLATE googlesqlite_collate"
-			if !col.isAsc {
-				suffix += " DESC"
-			}
-			ob = append(ob, col.column+suffix)
+	var ob []string
+	for _, col := range orderColumns {
+		if col.partition {
+			continue
 		}
+		switch col.nullOrder {
+		case nullOrderFirst:
+			ob = append(ob, fmt.Sprintf("(%s IS NOT NULL)", col.column))
+		case nullOrderLast:
+			ob = append(ob, fmt.Sprintf("(%s IS NULL)", col.column))
+		}
+		suffix := " COLLATE googlesqlite_collate"
+		if !col.isAsc {
+			suffix += " DESC"
+		}
+		ob = append(ob, col.column+suffix)
+	}
+	if len(ob) > 0 {
 		clauses = append(clauses, "ORDER BY "+strings.Join(ob, ","))
 	}
 	if frameSQL, err := n.formatNativeFrame(ctx); err != nil {
@@ -2332,8 +2335,9 @@ func (n *AnalyticScanNode) FormatSQL(ctx context.Context) (string, error) {
 					colName,
 				)
 				order := &analyticOrderBy{
-					column: colName,
-					isAsc:  true,
+					column:    colName,
+					isAsc:     true,
+					partition: true,
 				}
 				orderColumnNames.values = append(orderColumnNames.values, order)
 				scanOrderBy = append(scanOrderBy, order)
