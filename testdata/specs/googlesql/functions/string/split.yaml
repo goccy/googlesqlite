@@ -11,3 +11,13 @@ cases:
     expected:
       rows:
         - [["hello", "world", "foo"]]
+  - desc: NULL value or delimiter returns a NULL array
+    sql: SELECT SPLIT(CAST(NULL AS STRING), ".") IS NULL, SPLIT("a.b", CAST(NULL AS STRING)) IS NULL, SPLIT(CAST(NULL AS BYTES), b".") IS NULL
+    expected:
+      rows:
+        - [true, true, true]
+  - desc: subscript on the NULL array of a NULL value returns NULL
+    sql: SELECT SPLIT(CAST(NULL AS STRING), ".")[OFFSET(0)], SPLIT(CAST(NULL AS STRING), ".")[SAFE_OFFSET(1)]
+    expected:
+      rows:
+        - [null, null]

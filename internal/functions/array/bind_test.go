@@ -95,6 +95,9 @@ func TestArrayConcat(t *testing.T) {
 			t.Errorf("cell %d = %d; want %d", i, v, w)
 		}
 	}
+	if got, err := arrayfn.BindArrayConcat(arr(value.IntValue(1)), nil); err != nil || got != nil {
+		t.Errorf("ARRAY_CONCAT([1], NULL) = %v, %v; want NULL", got, err)
+	}
 }
 
 // ------------------------------------------------------------------
@@ -294,6 +297,9 @@ func TestArrayReverse(t *testing.T) {
 			t.Errorf("cell %d = %d; want %d", i, v, w)
 		}
 	}
+	if got, err := arrayfn.BindArrayReverse(nil); err != nil || got != nil {
+		t.Errorf("ARRAY_REVERSE(NULL) = %v, %v; want NULL", got, err)
+	}
 }
 
 // ------------------------------------------------------------------
@@ -327,6 +333,16 @@ func TestArrayToString(t *testing.T) {
 	}
 	if got != value.StringValue("a--N--c") {
 		t.Errorf("got %v; want a--N--c", got)
+	}
+	for _, args := range [][]value.Value{
+		{nil, value.StringValue("--")},
+		{a, nil},
+		{an, value.StringValue("--"), nil},
+	} {
+		got, err = arrayfn.BindArrayToString(args...)
+		if err != nil || got != nil {
+			t.Errorf("BindArrayToString(%v) = %v, %v; want NULL", args, got, err)
+		}
 	}
 }
 

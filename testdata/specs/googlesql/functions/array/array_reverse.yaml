@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [[3, 2, 1]]
+  - desc: NULL array returns NULL
+    sql: SELECT ARRAY_REVERSE(CAST(NULL AS ARRAY<INT64>)) IS NULL, ARRAY_REVERSE(JSON_QUERY_ARRAY(JSON '{}', '$.missing')) IS NULL
+    expected:
+      rows:
+        - [true, true]

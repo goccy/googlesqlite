@@ -78,10 +78,8 @@ func TestBind_Arity(t *testing.T) {
 }
 
 // nullCases checks that every binder follows the standard NULL-in =>
-// NULL-out contract for at least one position. Note that SPLIT
-// returns the empty array on NULL input (matching BQ semantics), and
-// COALESCE-shaped helpers don't live in this package, so we handle
-// those separately below.
+// NULL-out contract for at least one position. COALESCE-shaped helpers
+// don't live in this package, so we handle those separately below.
 func TestBind_NullPropagation(t *testing.T) {
 	t.Parallel()
 
@@ -1217,11 +1215,11 @@ func TestSplit(t *testing.T) {
 	if len(arr.Values) != 3 {
 		t.Errorf("SPLIT explicit delim len: got %d", len(arr.Values))
 	}
-	// SPLIT NULL -> empty array, per the BQ NULL contract for SPLIT.
-	got, _ = strfn.BindSplit(nil)
-	arr, _ = got.ToArray()
-	if len(arr.Values) != 0 {
-		t.Errorf("SPLIT NULL -> empty array")
+	if got, err := strfn.BindSplit(nil, value.StringValue(",")); err != nil || got != nil {
+		t.Errorf("SPLIT(NULL, ',') = %v, %v; want NULL", got, err)
+	}
+	if got, err := strfn.BindSplit(value.StringValue("a,b"), nil); err != nil || got != nil {
+		t.Errorf("SPLIT('a,b', NULL) = %v, %v; want NULL", got, err)
 	}
 	// SPLIT BYTES requires explicit delim.
 	got, _ = strfn.BindSplit(value.BytesValue("a|b"), value.BytesValue("|"))

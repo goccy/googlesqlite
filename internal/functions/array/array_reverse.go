@@ -19,6 +19,9 @@ func BindArrayReverse(args ...value.Value) (value.Value, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("ARRAY_REVERSE: invalid number of arguments: got %d, want 1", len(args))
 	}
+	if args[0] == nil {
+		return nil, nil
+	}
 	arr, err := args[0].ToArray()
 	if err != nil {
 		return nil, err

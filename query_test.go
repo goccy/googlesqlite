@@ -6317,12 +6317,12 @@ WITH letters AS (
 				{[]any{""}},
 				{[]any{"a"}},
 				{[]any{"b", "c", "d"}},
-				{[]any{}},
+				{nil},
 			},
 		}, {
 			name:         "split null delimiter",
 			query:        `SELECT SPLIT('abc', NULL), SPLIT(b'\xab\xcd\xef\xaa\xbb', NULL)`,
-			expectedRows: [][]any{{[]any{}, []any{}}},
+			expectedRows: [][]any{{nil, nil}},
 		},
 		{
 			name:         "starts_with",
