@@ -2,21 +2,32 @@ package math
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
 func DIV(x, y value.Value) (value.Value, error) {
-	xv, err := x.ToInt64()
+	if xi, ok := x.(value.IntValue); ok {
+		if yi, ok := y.(value.IntValue); ok {
+			if yi == 0 {
+				return nil, fmt.Errorf("DIV: division by zero")
+			}
+			return value.IntValue(int64(xi) / int64(yi)), nil
+		}
+	}
+	xr, err := x.ToRat()
 	if err != nil {
 		return nil, err
 	}
-	yv, err := y.ToInt64()
+	yr, err := y.ToRat()
 	if err != nil {
 		return nil, err
 	}
-	if yv == 0 {
-		return nil, fmt.Errorf("DIV: zero divided")
+	if yr.Sign() == 0 {
+		return nil, fmt.Errorf("DIV: division by zero")
 	}
-	return value.IntValue(xv / yv), nil
+	q := new(big.Rat).Quo(xr, yr)
+	n := new(big.Int).Quo(q.Num(), q.Denom())
+	return &value.NumericValue{Rat: new(big.Rat).SetInt(n), IsBigNumeric: isBigNumeric(x) || isBigNumeric(y)}, nil
 }

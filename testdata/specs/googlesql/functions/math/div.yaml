@@ -6,3 +6,18 @@ cases:
     expected:
       rows:
         - [3]
+  - desc: truncates toward zero
+    sql: SELECT DIV(-7, 2), DIV(7, -2), DIV(NUMERIC '-7.9', NUMERIC '2')
+    expected:
+      rows:
+        - [-3, -3, "-3"]
+  - desc: NUMERIC and BIGNUMERIC operands are divided exactly
+    sql: SELECT DIV(NUMERIC '9223372036854775808', NUMERIC '2'), DIV(BIGNUMERIC '79228162514264337593543950336', BIGNUMERIC '58')
+    expected:
+      rows:
+        - ["4611686018427387904", "1366002801970074786095585350"]
+  - desc: zero divisor is an error
+    sql: SELECT DIV(n, 0) FROM (SELECT 25 AS n)
+    expected:
+      error:
+        contains: "division by zero"

@@ -2,6 +2,7 @@ package math
 
 import (
 	gomath "math"
+	"math/big"
 	"testing"
 
 	"github.com/goccy/googlesqlite/internal/value"
@@ -167,25 +168,69 @@ func TestBinaryMath(t *testing.T) {
 		t.Fatalf("POW(2,8) = %v, want 256", mustFloat(t, got))
 	}
 
-	got, _ = MOD(value.FloatValue(10), value.FloatValue(3))
-	if gomath.Abs(mustFloat(t, got)-1) > 1e-9 {
-		t.Fatalf("MOD(10,3) = %v, want 1", mustFloat(t, got))
+	if got, _ = MOD(value.IntValue(10), value.IntValue(3)); got != value.Value(value.IntValue(1)) {
+		t.Fatalf("MOD(10,3) = %#v, want IntValue(1)", got)
 	}
-	if _, err := MOD(value.FloatValue(1), value.FloatValue(0)); err == nil {
+	if got, _ = MOD(value.IntValue(9007199254740993), value.IntValue(10)); got != value.Value(value.IntValue(3)) {
+		t.Fatalf("MOD(9007199254740993,10) = %#v, want IntValue(3)", got)
+	}
+	if _, err := MOD(value.IntValue(1), value.IntValue(0)); err == nil {
 		t.Fatalf("MOD division by zero should error")
 	}
 }
 
-// --- DIV (INT64 integer division) ---
-
 func TestDiv(t *testing.T) {
-	got, _ := DIV(value.IntValue(7), value.IntValue(2))
-	if mustInt(t, got) != 3 {
-		t.Fatalf("DIV(7,2) = %d, want 3", mustInt(t, got))
+	t.Parallel()
+	if got, _ := DIV(value.IntValue(-7), value.IntValue(2)); got != value.Value(value.IntValue(-3)) {
+		t.Errorf("DIV(-7, 2) = %#v, want IntValue(-3)", got)
+	}
+	for _, c := range []struct{ x, y, want string }{
+		{"9223372036854775808", "2", "4611686018427387904"},
+		{"79228162514264337593543950336", "58", "1366002801970074786095585350"},
+		{"-7.9", "2", "-3"},
+		{"7", "-2", "-3"},
+		{"1", "3", "0"},
+	} {
+		x := &value.NumericValue{Rat: ratOf(c.x), IsBigNumeric: true}
+		y := &value.NumericValue{Rat: ratOf(c.y), IsBigNumeric: true}
+		got, err := DIV(x, y)
+		if err != nil {
+			t.Fatalf("DIV(%s, %s): %v", c.x, c.y, err)
+		}
+		nv, ok := got.(*value.NumericValue)
+		if !ok || !nv.IsBigNumeric || nv.RatString() != c.want {
+			t.Errorf("DIV(%s, %s) = %#v, want BIGNUMERIC %s", c.x, c.y, got, c.want)
+		}
 	}
 	if _, err := DIV(value.IntValue(1), value.IntValue(0)); err == nil {
-		t.Fatalf("DIV zero divisor should error")
+		t.Error("DIV division by zero should error")
 	}
+}
+
+func TestSafeDivideNumeric(t *testing.T) {
+	t.Parallel()
+	x := &value.NumericValue{Rat: ratOf("79228162514264337593543950336"), IsBigNumeric: true}
+	y := &value.NumericValue{Rat: ratOf("58"), IsBigNumeric: true}
+	got, err := SAFE_DIVIDE(x, y)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nv, ok := got.(*value.NumericValue)
+	want := ratOf("79228162514264337593543950336/58")
+	if !ok || !nv.IsBigNumeric || nv.Cmp(want) != 0 {
+		t.Errorf("SAFE_DIVIDE(BIGNUMERIC) = %#v, want exact %s", got, want.RatString())
+	}
+	if got, err := SAFE_DIVIDE(&value.NumericValue{Rat: ratOf("1")}, &value.NumericValue{Rat: ratOf("0")}); err != nil || got != nil {
+		t.Errorf("SAFE_DIVIDE(NUMERIC 1, NUMERIC 0) = %v, %v; want NULL", got, err)
+	}
+	if got, _ := SAFE_DIVIDE(value.IntValue(1), value.IntValue(3)); got != value.Value(value.FloatValue(1.0/3.0)) {
+		t.Errorf("SAFE_DIVIDE(1, 3) = %#v, want FLOAT64", got)
+	}
+}
+
+func ratOf(s string) *big.Rat {
+	r, _ := new(big.Rat).SetString(s)
+	return r
 }
 
 // --- IS_INF / IS_NAN / SIGN ---

@@ -11,3 +11,13 @@ cases:
     expected:
       rows:
         - [null]
+  - desc: NUMERIC and BIGNUMERIC operands are divided exactly
+    sql: SELECT SAFE_DIVIDE(NUMERIC '1', NUMERIC '3'), SAFE_DIVIDE(BIGNUMERIC '79228162514264337593543950336', BIGNUMERIC '58')
+    expected:
+      rows:
+        - ["0.333333333", "1366002801970074786095585350.62068965517241379310344827586206896552"]
+  - desc: NUMERIC zero divisor returns NULL
+    sql: SELECT SAFE_DIVIDE(NUMERIC '1', NUMERIC '0')
+    expected:
+      rows:
+        - [null]
