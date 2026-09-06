@@ -563,14 +563,14 @@ func TestRoundErrorPath(t *testing.T) {
 
 // TestBindGreatestErrorPath drives a value type that errors on GT.
 func TestBindGreatestErrorPath(t *testing.T) {
-	if _, err := BindGreatest(value.BoolValue(true), value.BoolValue(false)); err == nil {
-		t.Errorf("BindGreatest: GT error not propagated for BOOL")
+	if _, err := BindGreatest(newBad(), value.IntValue(1)); err == nil {
+		t.Errorf("BindGreatest: GT error not propagated")
 	}
 }
 
 func TestBindLeastErrorPath(t *testing.T) {
-	if _, err := BindLeast(value.BoolValue(true), value.BoolValue(false)); err == nil {
-		t.Errorf("BindLeast: LT error not propagated for BOOL")
+	if _, err := BindLeast(newBad(), value.IntValue(1)); err == nil {
+		t.Errorf("BindLeast: LT error not propagated")
 	}
 }
 

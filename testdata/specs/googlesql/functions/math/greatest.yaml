@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [5]
+  - desc: BOOL arguments order FALSE before TRUE
+    sql: SELECT GREATEST(FALSE, TRUE), LEAST(TRUE, FALSE), FALSE < TRUE
+    expected:
+      rows:
+        - [true, false, true]

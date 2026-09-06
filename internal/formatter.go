@@ -137,6 +137,34 @@ func formatInput(input string) (string, error) {
 	return "", fmt.Errorf("unexpected input pattern: %s", input)
 }
 
+// SQLite stores a BOOL as 0 or 1, which a function would read as an INT64.
+func typeBoolArguments(node *ResolvedBaseFunctionCallNode, args []string) []string {
+	for i, a := range m1(node.ArgumentList()) {
+		if i < len(args) && isBoolExpr(a) {
+			args[i] = typedBoolSQL(args[i])
+		}
+	}
+	return args
+}
+
+func isBoolExpr(expr interface {
+	Type() (googlesql.Googlesql_TypeNode, error)
+}) bool {
+	t, _ := expr.Type()
+	if t == nil {
+		return false
+	}
+	k, err := t.Kind()
+	return err == nil && k == googlesql.TypeKindTypeBool
+}
+
+func typedBoolSQL(arg string) string {
+	return fmt.Sprintf(
+		"CASE (%s) WHEN 0 THEN %q WHEN 1 THEN %q END",
+		arg, value.EncodedBoolLayout(false), value.EncodedBoolLayout(true),
+	)
+}
+
 func getFuncNameAndArgs(ctx context.Context, node *ResolvedBaseFunctionCallNode, isWindowFunc bool) (string, []string, error) {
 	args := []string{}
 	for _, a := range m1(node.ArgumentList()) {
@@ -387,6 +415,9 @@ func (n *FunctionCallNode) FormatSQL(ctx context.Context) (string, error) {
 	funcMap := funcMapFromContext(ctx)
 	if spec, exists := funcMap[funcName]; exists {
 		return spec.CallSQL(ctx, n.node.ResolvedFunctionCallBase, args)
+	}
+	if strings.HasPrefix(funcName, "googlesqlite_") {
+		args = typeBoolArguments(n.node.ResolvedFunctionCallBase, args)
 	}
 	return fmt.Sprintf(
 		"%s(%s)",
@@ -723,6 +754,9 @@ func (n *AggregateFunctionCallNode) FormatSQL(ctx context.Context) (string, erro
 	case googlesql.ResolvedNonScalarFunctionCallBaseEnums_NullHandlingModifierIgnoreNulls:
 		opts = append(opts, "googlesqlite_ignore_nulls()")
 	case googlesql.ResolvedNonScalarFunctionCallBaseEnums_NullHandlingModifierRespectNulls:
+	}
+	if strings.HasPrefix(funcName, "googlesqlite_") {
+		args = typeBoolArguments(n.node.ResolvedFunctionCallBase, args)
 	}
 	args = append(args, opts...)
 	return fmt.Sprintf(
@@ -1166,6 +1200,9 @@ func (n *MakeStructNode) FormatSQL(ctx context.Context) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if isBoolExpr(fields[i]) {
+			field = typedBoolSQL(field)
+		}
 		args = append(args, field)
 	}
 	return fmt.Sprintf("googlesqlite_make_struct(%s)", strings.Join(args, ",")), nil
@@ -1527,8 +1564,11 @@ func (n *SubqueryExprNode) FormatSQL(ctx context.Context) (string, error) {
 		if len(subCols) == 0 {
 			return "", fmt.Errorf("failed to find computed column names for array subquery")
 		}
-		colName := uniqueColumnName(ctx, subCols[0])
-		return fmt.Sprintf("(SELECT googlesqlite_array(`%s`) FROM (%s))", colName, sql), nil
+		elem := fmt.Sprintf("`%s`", uniqueColumnName(ctx, subCols[0]))
+		if isBoolExpr(subCols[0]) {
+			elem = typedBoolSQL(elem)
+		}
+		return fmt.Sprintf("(SELECT googlesqlite_array(%s) FROM (%s))", elem, sql), nil
 	case googlesql.ResolvedSubqueryExprEnums_SubqueryTypeExists:
 		return fmt.Sprintf("EXISTS (%s)", sql), nil
 	case googlesql.ResolvedSubqueryExprEnums_SubqueryTypeIn:

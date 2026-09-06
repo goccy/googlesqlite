@@ -80,6 +80,12 @@ func DecodeValue(v any) (Value, error) {
 	if !ok {
 		return nil, fmt.Errorf("unexpected value type: %T", v)
 	}
+	switch s {
+	case encodedBoolLayouts[0]:
+		return BoolValue(false), nil
+	case encodedBoolLayouts[1]:
+		return BoolValue(true), nil
+	}
 	// Try the canonical base64-of-JSON envelope first. If either step
 	// fails the input is most likely a raw SQL string literal (e.g.
 	// `'int32'`, `'date'`, `'bytes'`) that the formatter inlined
@@ -101,6 +107,12 @@ func DecodeValue(v any) (Value, error) {
 
 func decodeFromValueLayout(layout *ValueLayout) (Value, error) {
 	switch layout.Header {
+	case BoolValueType:
+		b, err := strconv.ParseBool(layout.Body)
+		if err != nil {
+			return nil, err
+		}
+		return BoolValue(b), nil
 	case StringValueType:
 		return StringValue(layout.Body), nil
 	case BytesValueType:

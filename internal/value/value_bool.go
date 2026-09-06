@@ -33,19 +33,35 @@ func (bv BoolValue) EQ(v Value) (bool, error) {
 }
 
 func (bv BoolValue) GT(v Value) (bool, error) {
-	return false, fmt.Errorf("gt operation is unsupported for bool %v", bv)
+	v2, err := v.ToBool()
+	if err != nil {
+		return false, fmt.Errorf("failed to convert %v to bool", v)
+	}
+	return bool(bv) && !v2, nil
 }
 
 func (bv BoolValue) GTE(v Value) (bool, error) {
-	return false, fmt.Errorf("gte operation is unsupported for bool %v", bv)
+	v2, err := v.ToBool()
+	if err != nil {
+		return false, fmt.Errorf("failed to convert %v to bool", v)
+	}
+	return bool(bv) || !v2, nil
 }
 
 func (bv BoolValue) LT(v Value) (bool, error) {
-	return false, fmt.Errorf("lt operation is unsupported for bool %v", bv)
+	v2, err := v.ToBool()
+	if err != nil {
+		return false, fmt.Errorf("failed to convert %v to bool", v)
+	}
+	return !bool(bv) && v2, nil
 }
 
 func (bv BoolValue) LTE(v Value) (bool, error) {
-	return false, fmt.Errorf("lte operation is unsupported for bool %v", bv)
+	v2, err := v.ToBool()
+	if err != nil {
+		return false, fmt.Errorf("failed to convert %v to bool", v)
+	}
+	return !bool(bv) || v2, nil
 }
 
 func (bv BoolValue) ToInt64() (int64, error) {

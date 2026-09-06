@@ -45,19 +45,28 @@ func TestBoolValue(t *testing.T) {
 		}
 	})
 
-	t.Run("GT/GTE/LT/LTE unsupported", func(t *testing.T) {
-		bv := value.BoolValue(true)
-		if _, err := bv.GT(bv); err == nil {
-			t.Fatal("GT should be unsupported")
+	t.Run("FALSE orders before TRUE", func(t *testing.T) {
+		f, tr := value.BoolValue(false), value.BoolValue(true)
+		for _, c := range []struct {
+			name string
+			op   func(value.Value) (bool, error)
+			rhs  value.Value
+			want bool
+		}{
+			{"false < true", f.LT, tr, true},
+			{"true < false", tr.LT, f, false},
+			{"true <= true", tr.LTE, tr, true},
+			{"true > false", tr.GT, f, true},
+			{"false > false", f.GT, f, false},
+			{"false >= true", f.GTE, tr, false},
+		} {
+			got, err := c.op(c.rhs)
+			if err != nil || got != c.want {
+				t.Errorf("%s = %v, %v; want %v", c.name, got, err, c.want)
+			}
 		}
-		if _, err := bv.GTE(bv); err == nil {
-			t.Fatal("GTE should be unsupported")
-		}
-		if _, err := bv.LT(bv); err == nil {
-			t.Fatal("LT should be unsupported")
-		}
-		if _, err := bv.LTE(bv); err == nil {
-			t.Fatal("LTE should be unsupported")
+		if _, err := tr.GT(&value.ArrayValue{}); err == nil {
+			t.Error("GT with a non-bool operand should fail")
 		}
 	})
 

@@ -44,3 +44,16 @@ cases:
     expected:
       rows:
         - ['[]']
+  - desc: BOOL from a column or an expression keeps its type
+    sql: |-
+      WITH t AS (SELECT FALSE AS b)
+      SELECT TO_JSON_STRING(b), TO_JSON_STRING(STRUCT(b, FALSE AS lit)), TO_JSON_STRING([b, 1 > 0]), TO_JSON_STRING(CAST(NULL AS BOOL))
+      FROM t
+    expected:
+      rows:
+        - ['false', '{"b":false,"lit":false}', '[false,true]', 'null']
+  - desc: ARRAY_AGG of BOOL keeps its type with and without ORDER BY
+    sql: SELECT TO_JSON_STRING(ARRAY_AGG(x)), TO_JSON_STRING(ARRAY_AGG(x ORDER BY x)) FROM UNNEST([TRUE, FALSE]) AS x
+    expected:
+      rows:
+        - ['[true,false]', '[false,true]']
