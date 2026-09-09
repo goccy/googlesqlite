@@ -67,6 +67,10 @@ var (
 // internal.RegisterFunctions on each new connection.
 const internalDriverName = "googlesqlite_sqlite3"
 
+// A statement is prepared inside one connection's wasm memory, which the
+// Go runtime's own limits do not see; ncruces caps it at 256 MB by default.
+const sqliteConnectionMemoryLimit = 1 << 30
+
 func init() {
 	sql.Register("googlesqlite", &Driver{})
 	sql.Register(internalDriverName, &internalSQLiteDriver{})
@@ -78,7 +82,11 @@ type internalSQLiteDriver struct{}
 
 func (internalSQLiteDriver) Open(name string) (driver.Conn, error) {
 	path, _ := dsnParts(name)
-	conn, err := (&sqlitedriver.SQLite{}).Open(path)
+	connector, err := (&sqlitedriver.SQLite{}).OpenConnector(path)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := connector.Connect(sqlite3.WithMaxMemory(context.Background(), sqliteConnectionMemoryLimit))
 	if err != nil {
 		return nil, err
 	}
