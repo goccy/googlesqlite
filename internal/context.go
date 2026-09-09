@@ -16,7 +16,6 @@ type (
 	tvfMapKey                       struct{}
 	systemVarsKey                   struct{}
 	connKey                         struct{}
-	cteRefCountsKey                 struct{}
 	analyticOrderColumnNamesKey     struct{}
 	analyticPartitionColumnNamesKey struct{}
 	analyticInputScanKey            struct{}
@@ -135,23 +134,6 @@ func connFromContext(ctx context.Context) *Conn {
 		return nil
 	}
 	return value.(*Conn)
-}
-
-// withCteRefCounts carries a CTE-name → reference-count map through
-// the formatter, populated by WithScanNode just before it formats
-// the WITH entries. WithEntryNode reads it to decide whether to
-// emit the SQLite `MATERIALIZED` hint for entries that are
-// referenced more than once.
-func withCteRefCounts(ctx context.Context, m map[string]int) context.Context {
-	return context.WithValue(ctx, cteRefCountsKey{}, m)
-}
-
-func cteRefCounts(ctx context.Context) map[string]int {
-	value := ctx.Value(cteRefCountsKey{})
-	if value == nil {
-		return nil
-	}
-	return value.(map[string]int)
 }
 
 // nullOrderMode represents the OVER (ORDER BY ... NULLS FIRST/LAST)

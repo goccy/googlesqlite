@@ -121,9 +121,8 @@ func (c *Conn) ScriptVariable(name string) (string, bool) {
 	return v, ok
 }
 
-// MaterializeCTE reports the materialize-multi-ref-CTE flag for this
-// connection. The formatter consults this through context to decide
-// whether to emit the SQLite `MATERIALIZED` hint.
+// MaterializeCTE reports whether the formatter emits the SQLite
+// `MATERIALIZED` hint on CTEs.
 func (c *Conn) MaterializeCTE() bool {
 	return c.materializeCTE
 }

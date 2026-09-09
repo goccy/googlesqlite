@@ -2719,34 +2719,15 @@ func (n *WithScanNode) FormatSQL(ctx context.Context) (string, error) {
 			break
 		}
 	}
-	// Count CTE references in the WITH body and across WithEntry
-	// subqueries (a later CTE may reference an earlier one). Pass
-	// the counts down so WithEntryNode.FormatSQL can decide whether
-	// to emit `MATERIALIZED`.
-	refCounts := map[string]int{}
-	if conn := connFromContext(ctx); conn == nil || conn.MaterializeCTE() {
-		query, _ := n.node.Query()
-		if query != nil {
-			collectCteRefCounts(query, refCounts)
-		}
-		for _, entry := range m1(n.node.WithEntryList()) {
-			sub, _ := entry.WithSubquery()
-			if sub == nil {
-				continue
-			}
-			collectCteRefCounts(sub, refCounts)
-		}
-	}
-	subCtx := withCteRefCounts(ctx, refCounts)
 	queries := []string{}
 	for _, entry := range m1(n.node.WithEntryList()) {
-		sql, err := newNode(entry).FormatSQL(subCtx)
+		sql, err := newNode(entry).FormatSQL(ctx)
 		if err != nil {
 			return "", err
 		}
 		queries = append(queries, sql)
 	}
-	query, err := newNode(m1(n.node.Query())).FormatSQL(subCtx)
+	query, err := newNode(m1(n.node.Query())).FormatSQL(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -2756,26 +2737,6 @@ func (n *WithScanNode) FormatSQL(ctx context.Context) (string, error) {
 		strings.Join(queries, ", "),
 		query,
 	), nil
-}
-
-// collectCteRefCounts walks a resolved-scan subtree and increments
-// counts[name] for every ResolvedWithRefScan it encounters. Used by
-// WithScanNode to decide whether each CTE body should be emitted as
-// `MATERIALIZED`.
-func collectCteRefCounts(node googlesql.ResolvedNode, counts map[string]int) {
-	if node == nil {
-		return
-	}
-	if kind, _ := node.NodeKind(); kind == googlesql.ResolvedNodeKindResolvedWithRefScan {
-		if ref, ok := node.(*googlesql.ResolvedWithRefScan); ok {
-			name, _ := ref.WithQueryName()
-			counts[name]++
-		}
-	}
-	children, _ := node.GetChildNodes()
-	for _, c := range children {
-		collectCteRefCounts(c, counts)
-	}
 }
 
 func (n *WithEntryNode) FormatSQL(ctx context.Context) (string, error) {
@@ -2797,7 +2758,7 @@ func (n *WithEntryNode) FormatSQL(ctx context.Context) (string, error) {
 	}
 	tableToColumnList := tableNameToColumnListMap(ctx)
 	tableToColumnList[queryName] = m1(sub.MutableColumnList())
-	hint := cteMaterializeHint(ctx, queryName, subKind)
+	hint := cteMaterializeHint(ctx, subKind)
 	if subKind == googlesql.ResolvedNodeKindResolvedRecursiveScan {
 		// SQLite needs an explicit column list on the recursive CTE
 		// so both UNION branches map their projected columns by
@@ -2815,21 +2776,17 @@ func (n *WithEntryNode) FormatSQL(ctx context.Context) (string, error) {
 	return fmt.Sprintf("`%s` AS%s ( %s )", queryName, hint, subquery), nil
 }
 
-// cteMaterializeHint returns either " MATERIALIZED" (with a leading
-// space) or "" depending on whether SQLite should be told to push
-// this CTE into a transient temp table instead of inlining its body
-// once per reference. Recursive CTEs are skipped — SQLite always
-// materialises the recursion accumulator anyway, and the hint
-// interacts oddly with the `WITH RECURSIVE` keyword.
-func cteMaterializeHint(ctx context.Context, queryName string, subKind googlesql.ResolvedNodeKind) string {
+// SQLite inlines a CTE referenced once into its consumer; for a large
+// compound body that copies the consumer once per arm, and preparing the
+// statement can exhaust the connection's memory.
+func cteMaterializeHint(ctx context.Context, subKind googlesql.ResolvedNodeKind) string {
 	if subKind == googlesql.ResolvedNodeKindResolvedRecursiveScan {
 		return ""
 	}
-	counts := cteRefCounts(ctx)
-	if counts[queryName] >= 2 {
-		return " MATERIALIZED"
+	if conn := connFromContext(ctx); conn != nil && !conn.MaterializeCTE() {
+		return ""
 	}
-	return ""
+	return " MATERIALIZED"
 }
 
 func (n *AnalyticFunctionGroupNode) FormatSQL(ctx context.Context) (string, error) {

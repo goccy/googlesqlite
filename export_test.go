@@ -49,8 +49,8 @@ func ChangedCatalogFromResult(result sql.Result) (*ChangedCatalog, error) {
 	return googlesqliteResult.ChangedCatalog(), nil
 }
 
-// SetMaterializeCTE controls whether CTEs referenced more than once
-// are emitted with the SQLite MATERIALIZED hint.
+// SetMaterializeCTE controls whether CTEs are emitted with the SQLite
+// MATERIALIZED hint.
 func (c *Conn) SetMaterializeCTE(enabled bool) { c.materializeCTE = enabled }
 
 // MaterializeCTE reports the current materialize-multi-ref-CTE flag.
