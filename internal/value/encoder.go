@@ -41,6 +41,12 @@ func EncodeValue(v Value) (any, error) {
 
 // ValueFromGoValue converts a plain Go value (the kind a SQL driver
 // hands us across the FFI boundary) into a googlesqlite Value.
+//
+// A caller that already holds a typed Value (constructed through one
+// of the type-hinted wrappers the top-level package re-exports, e.g.
+// googlesqlite.Date / googlesqlite.Numeric) gets it back unchanged —
+// see valueFromGoReflectValue for why that check has to live there,
+// not here.
 func ValueFromGoValue(v any) (Value, error) {
 	if isNullValue(v) {
 		return nil, nil
@@ -49,6 +55,31 @@ func ValueFromGoValue(v any) (Value, error) {
 }
 
 func valueFromGoReflectValue(v reflect.Value) (Value, error) {
+	// A caller-constructed Value (googlesqlite.Date / googlesqlite.Numeric,
+	// aliases for DateValue / *NumericValue) must be recognised and
+	// returned as-is *before* the generic reflection below ever sees it —
+	// and not only when it is the top-level parameter. This same function
+	// recurses for ARRAY elements (the reflect.Slice case) and STRUCT
+	// fields (the reflect.Struct case), so an ARRAY<DATE> parameter's
+	// elements reach this exact function, each wrapped as a
+	// reflect.Interface Value first (see the Interface case below)
+	// unwrapping to a DateValue struct.
+	//
+	// Without this check, that struct falls into the generic
+	// reflect.Struct case: DateValue's underlying type is time.Time, but
+	// DateValue itself fails the `v.Interface().(time.Time)` assertion
+	// there (it is a distinct named type), so the code falls through to
+	// iterating time.Time's *unexported* fields — one of which (loc
+	// *Location) is nil for any UTC-based time.Time. Recursing into that
+	// nil pointer field hits the reflect.Pointer case's v.Elem(), which
+	// returns the zero reflect.Value, and the v.Type().Kind() call at the
+	// top of the very next call panics: "reflect: call of
+	// reflect.Value.Type on zero Value".
+	if v.IsValid() && v.CanInterface() {
+		if val, ok := v.Interface().(Value); ok {
+			return val, nil
+		}
+	}
 	kind := v.Type().Kind()
 	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:

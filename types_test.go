@@ -462,6 +462,124 @@ func TestDateParamRoundTrip(t *testing.T) {
 	}
 }
 
+// TestDateGoValueParameter binds a Go value as a DATE query parameter
+// via googlesqlite.Date. Unlike TestDateParamRoundTrip above (which
+// only exercises a DATE literal), this drives the actual parameter
+// path: ValueFromGoValue's Value pass-through, EncodeValue's DATE
+// layout, and googleSQLTypeForEncodedString's DateValue branch feeding
+// the analyzer a real DATE type for the parameter — not the TIMESTAMP
+// every other time.Time bind gets.
+//
+// Reference: docs/third_party/googlesql-docs/data-types.md "DATE".
+func TestDateGoValueParameter(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=date_go_value_param")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	if _, err := db.ExecContext(ctx, "CREATE TABLE dgv (d DATE)"); err != nil {
+		t.Fatalf("CREATE: %v", err)
+	}
+	bound := googlesqlite.Date(time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC))
+	if _, err := db.ExecContext(ctx,
+		"INSERT INTO dgv (d) VALUES (@v)", sql.Named("v", bound)); err != nil {
+		t.Fatalf("INSERT: %v", err)
+	}
+	var got string
+	if err := db.QueryRowContext(ctx,
+		"SELECT FORMAT_DATE('%F', d) FROM dgv").Scan(&got); err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if got != "2024-01-15" {
+		t.Errorf("got = %q; want 2024-01-15", got)
+	}
+
+	// The parameter must be analysed as DATE, not TIMESTAMP: a DATE
+	// column comparison against a TIMESTAMP-typed parameter is a
+	// GoogleSQL type error, so this query only succeeds if the
+	// analyzer saw @v as DATE.
+	var n int64
+	if err := db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM dgv WHERE d = @v", sql.Named("v", bound)).Scan(&n); err != nil {
+		t.Fatalf("DATE = DATE comparison: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("got = %d; want 1", n)
+	}
+}
+
+// TestNumericGoValueParameter binds a Go value as a NUMERIC (and
+// BIGNUMERIC) query parameter via googlesqlite.NewNumeric /
+// NewBigNumeric. Without the typed wrapper, ValueFromGoValue's
+// reflection fallback has no way to tell a decimal string apart from
+// a plain STRING, and googleSQLTypeForEncodedString had no branch for
+// *value.NumericValue at all.
+//
+// Reference: docs/third_party/googlesql-docs/data-types.md "NUMERIC type",
+// "BIGNUMERIC type".
+func TestNumericGoValueParameter(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=numeric_go_value_param")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	t.Run("numeric", func(t *testing.T) {
+		n, err := googlesqlite.NewNumeric("123.456")
+		if err != nil {
+			t.Fatalf("NewNumeric: %v", err)
+		}
+		if _, err := db.ExecContext(ctx, "CREATE TABLE pn (v NUMERIC)"); err != nil {
+			t.Fatalf("CREATE: %v", err)
+		}
+		if _, err := db.ExecContext(ctx,
+			"INSERT INTO pn (v) VALUES (@v)", sql.Named("v", n)); err != nil {
+			t.Fatalf("INSERT: %v", err)
+		}
+		var got string
+		if err := db.QueryRowContext(ctx,
+			"SELECT CAST(v AS STRING) FROM pn").Scan(&got); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		if got != "123.456" {
+			t.Errorf("got = %q; want 123.456", got)
+		}
+	})
+
+	t.Run("bignumeric", func(t *testing.T) {
+		n, err := googlesqlite.NewBigNumeric("123456789012345678901234567890.123456789")
+		if err != nil {
+			t.Fatalf("NewBigNumeric: %v", err)
+		}
+		if _, err := db.ExecContext(ctx, "CREATE TABLE pbn (v BIGNUMERIC)"); err != nil {
+			t.Fatalf("CREATE: %v", err)
+		}
+		if _, err := db.ExecContext(ctx,
+			"INSERT INTO pbn (v) VALUES (@v)", sql.Named("v", n)); err != nil {
+			t.Fatalf("INSERT: %v", err)
+		}
+		var got string
+		if err := db.QueryRowContext(ctx,
+			"SELECT CAST(v AS STRING) FROM pbn").Scan(&got); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		if got != "123456789012345678901234567890.123456789" {
+			t.Errorf("got = %q; want 123456789012345678901234567890.123456789", got)
+		}
+	})
+
+	t.Run("invalid decimal string", func(t *testing.T) {
+		if _, err := googlesqlite.NewNumeric("not-a-number"); err == nil {
+			t.Error("expected an error for an invalid decimal string")
+		}
+	})
+}
+
 // TestExecWithMultiplePositionalParams drives the positional-parameter
 // path through ParameterNode.FormatSQL when paramCollectorFromContext
 // is active.
