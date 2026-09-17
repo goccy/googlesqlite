@@ -1706,6 +1706,11 @@ func googleSQLTypeForEncodedString(factory *googlesql.TypeFactory, s string) (go
 		return makeSimpleType(factory, googlesql.TypeKindTypeTimestamp)
 	case value.DatetimeValue:
 		return makeSimpleType(factory, googlesql.TypeKindTypeDatetime)
+	case *value.NumericValue:
+		if dv.IsBigNumeric {
+			return makeSimpleType(factory, googlesql.TypeKindTypeBignumeric)
+		}
+		return makeSimpleType(factory, googlesql.TypeKindTypeNumeric)
 	case *value.ArrayValue:
 		// element type from the first non-nil element
 		var elemKind googlesql.TypeKind = googlesql.TypeKindTypeString
