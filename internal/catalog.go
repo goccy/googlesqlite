@@ -63,6 +63,12 @@ type Catalog struct {
 	functions    []*FunctionSpec
 	tvfs         []*TVFSpec
 	catalog      *googlesql.SimpleCatalog
+	// tvfOwners holds the Go wrappers that own the native TVF objects
+	// registered on catalog. SimpleCatalog only keeps the embedded
+	// *TableValuedFunction alive, which has no finalizer; the owning
+	// wrapper does, so it must stay reachable for as long as catalog
+	// can resolve the TVF, or GC frees the TVF under the catalog.
+	tvfOwners []any
 	// descriptorPool is the protobuf DescriptorPool attached to the
 	// SimpleCatalog at construction time. Consumers register FileDescriptorProto
 	// payloads through Catalog.RegisterProto (Conn.RegisterProto on the
@@ -2101,6 +2107,7 @@ func (c *Catalog) resetCatalog(tables []*TableSpec, functions []*FunctionSpec, t
 	c.tables = []*TableSpec{}
 	c.functions = []*FunctionSpec{}
 	c.tvfs = []*TVFSpec{}
+	c.tvfOwners = nil
 	c.tableMap = map[string]*TableSpec{}
 	c.funcMap = map[string]*FunctionSpec{}
 	c.tvfMap = map[string]*TVFSpec{}
@@ -2648,6 +2655,7 @@ func (c *Catalog) tvfHandleForSpec(spec *TVFSpec) (*googlesql.TableValuedFunctio
 	if err != nil {
 		return nil, fmt.Errorf("failed to build TVF handle: %w", err)
 	}
+	c.tvfOwners = append(c.tvfOwners, tvf)
 	return tvf.TableValuedFunction, nil
 }
 
