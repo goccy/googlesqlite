@@ -1686,6 +1686,10 @@ func (n *ArrayScanNode) FormatSQL(ctx context.Context) (string, error) {
 				array,
 				arrayJoinExpr,
 			)
+		} else if m1(n.node.IsOuter()) {
+			// A correlated LEFT JOIN UNNEST has no join expression but
+			// must still keep an outer row whose array is empty or NULL.
+			arrayJoinExpr = fmt.Sprintf("LEFT OUTER JOIN %s ON TRUE", array)
 		} else {
 			// If there is no join expression, use a CROSS JOIN
 			arrayJoinExpr = fmt.Sprintf(", %s", array)

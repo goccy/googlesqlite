@@ -71,3 +71,82 @@ cases:
         - [1, 'a', 0]
         - [2, 'b', 1]
         - [3, 'c', 2]
+  # Correlated LEFT JOIN with no ON clause. From the "correlated LEFT
+  # JOIN" Example in docs/third_party/googlesql-docs/query-syntax.md:
+  # a row whose array is empty or NULL is kept, NULL-extended.
+  - desc: correlated LEFT JOIN on an array path keeps the empty-array row
+    sql: |-
+      SELECT A.name, item, ARRAY_LENGTH(A.items) item_count_for_name
+      FROM
+        UNNEST(
+          [
+            STRUCT(
+              'first' AS name,
+              [1, 2, 3, 4] AS items),
+            STRUCT(
+              'second' AS name,
+              [] AS items)]) AS A
+      LEFT JOIN
+        A.items AS item
+    expected:
+      unordered: true
+      rows:
+        - ['first', 1, 4]
+        - ['first', 2, 4]
+        - ['first', 3, 4]
+        - ['first', 4, 4]
+        - ['second', null, 0]
+  - desc: correlated INNER JOIN on an array path drops the empty-array row
+    sql: |-
+      SELECT A.name, item
+      FROM
+        UNNEST(
+          [
+            STRUCT(
+              'first' AS name,
+              [1, 2, 3, 4] AS items),
+            STRUCT(
+              'second' AS name,
+              [] AS items)]) AS A
+      INNER JOIN
+        A.items AS item
+    expected:
+      unordered: true
+      rows:
+        - ['first', 1]
+        - ['first', 2]
+        - ['first', 3]
+        - ['first', 4]
+  # Same rule through the explicit UNNEST(...) spelling, for an empty
+  # array, a NULL array, and WITH OFFSET (the offset is NULL-extended
+  # with the element).
+  - desc: correlated LEFT JOIN UNNEST keeps the empty-array row
+    sql: |-
+      WITH s AS (SELECT 'a' AS id, CAST([] AS ARRAY<STRING>) AS arr
+                 UNION ALL SELECT 'b', ['p1'])
+      SELECT s.id, p FROM s LEFT JOIN UNNEST(s.arr) AS p ORDER BY 1
+    expected:
+      rows:
+        - ['a', null]
+        - ['b', 'p1']
+  - desc: correlated LEFT JOIN UNNEST keeps the NULL-array row
+    sql: |-
+      WITH s AS (SELECT 'a' AS id, CAST(NULL AS ARRAY<STRING>) AS arr
+                 UNION ALL SELECT 'b', ['p1'])
+      SELECT s.id, p FROM s LEFT JOIN UNNEST(s.arr) AS p ORDER BY 1
+    expected:
+      rows:
+        - ['a', null]
+        - ['b', 'p1']
+  - desc: correlated LEFT JOIN UNNEST WITH OFFSET keeps the empty-array row
+    sql: |-
+      WITH s AS (SELECT 'a' AS id, CAST([] AS ARRAY<STRING>) AS arr
+                 UNION ALL SELECT 'b', ['p1', 'p2'])
+      SELECT s.id, p, o
+      FROM s LEFT JOIN UNNEST(s.arr) AS p WITH OFFSET AS o
+      ORDER BY 1, 3
+    expected:
+      rows:
+        - ['a', null, null]
+        - ['b', 'p1', 0]
+        - ['b', 'p2', 1]
