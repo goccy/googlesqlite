@@ -51,8 +51,10 @@ func SPLIT(val, delimValue value.Value) (value.Value, error) {
 }
 
 func BindSplit(args ...value.Value) (value.Value, error) {
+	// A NULL value or delimiter yields a NULL array, matching
+	// googlesql/compliance/testdata/strings.test.
 	if helper.ExistsNull(args) {
-		return &value.ArrayValue{}, nil
+		return nil, nil
 	}
 	var delim value.Value
 	if len(args) > 1 {

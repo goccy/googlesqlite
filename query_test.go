@@ -6317,12 +6317,15 @@ WITH letters AS (
 				{[]any{""}},
 				{[]any{"a"}},
 				{[]any{"b", "c", "d"}},
-				{[]any{}},
+				// SPLIT(NULL) is a NULL array per
+				// googlesql/compliance/testdata/strings.test. BigQuery
+				// shows it as [] only when serializing the result.
+				{nil},
 			},
 		}, {
 			name:         "split null delimiter",
 			query:        `SELECT SPLIT('abc', NULL), SPLIT(b'\xab\xcd\xef\xaa\xbb', NULL)`,
-			expectedRows: [][]any{{[]any{}, []any{}}},
+			expectedRows: [][]any{{nil, nil}},
 		},
 		{
 			name:         "starts_with",

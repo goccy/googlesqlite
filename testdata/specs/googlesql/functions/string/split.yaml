@@ -11,3 +11,15 @@ cases:
     expected:
       rows:
         - [["hello", "world", "foo"]]
+  # From googlesql/compliance/testdata/strings.test: a NULL value or
+  # delimiter yields a NULL array, not an empty one.
+  - desc: NULL value or delimiter returns a NULL array
+    sql: SELECT SPLIT(NULL), SPLIT(NULL, ","), SPLIT("x", NULL), SPLIT(NULL, NULL)
+    expected:
+      rows:
+        - [null, null, null, null]
+  - desc: OFFSET into the NULL array from SPLIT(NULL) is NULL, not an error
+    sql: SELECT SPLIT(CAST(NULL AS STRING), "_")[OFFSET(0)]
+    expected:
+      rows:
+        - [null]

@@ -1217,11 +1217,9 @@ func TestSplit(t *testing.T) {
 	if len(arr.Values) != 3 {
 		t.Errorf("SPLIT explicit delim len: got %d", len(arr.Values))
 	}
-	// SPLIT NULL -> empty array, per the BQ NULL contract for SPLIT.
-	got, _ = strfn.BindSplit(nil)
-	arr, _ = got.ToArray()
-	if len(arr.Values) != 0 {
-		t.Errorf("SPLIT NULL -> empty array")
+	// SPLIT NULL -> NULL array, per googlesql/compliance/testdata/strings.test.
+	if got, _ = strfn.BindSplit(nil); got != nil {
+		t.Errorf("SPLIT NULL: got %v, want NULL", got)
 	}
 	// SPLIT BYTES requires explicit delim.
 	got, _ = strfn.BindSplit(value.BytesValue("a|b"), value.BytesValue("|"))
