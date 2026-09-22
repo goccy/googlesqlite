@@ -309,6 +309,7 @@ type DropStmtAction struct {
 	objectType     string
 	ifExists       bool
 	funcMap        map[string]*FunctionSpec
+	tvfMap         map[string]*TVFSpec
 	catalog        *Catalog
 	query          string
 	formattedQuery string
@@ -351,6 +352,17 @@ func (a *DropStmtAction) exec(ctx context.Context, conn *Conn) error {
 		}
 		conn.deleteFunction(spec)
 		delete(a.funcMap, spec.FuncName())
+	case "TABLE FUNCTION":
+		spec, exists := a.catalog.tvfMap[a.name]
+		if !exists && a.ifExists {
+			return nil
+		}
+		if err := a.catalog.DeleteTVFSpec(ctx, conn, a.name); err != nil {
+			return fmt.Errorf("failed to delete TVF spec: %w", err)
+		}
+		if a.tvfMap != nil {
+			delete(a.tvfMap, spec.TVFName())
+		}
 	default:
 		return fmt.Errorf("currently unsupported DROP %s statement", a.objectType)
 	}

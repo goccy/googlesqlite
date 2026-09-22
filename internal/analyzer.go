@@ -288,6 +288,7 @@ var supportedStatementKinds = []googlesql.ResolvedNodeKind{
 	googlesql.ResolvedNodeKindResolvedCreateTableFunctionStmt,
 	googlesql.ResolvedNodeKindResolvedCreateViewStmt,
 	googlesql.ResolvedNodeKindResolvedDropFunctionStmt,
+	googlesql.ResolvedNodeKindResolvedDropTableFunctionStmt,
 	googlesql.ResolvedNodeKindResolvedAssignmentStmt,
 	googlesql.ResolvedNodeKindResolvedExportDataStmt,
 	// PropertyGraph DDL.
@@ -1794,6 +1795,8 @@ func (a *Analyzer) newStmtAction(ctx context.Context, query string, args []drive
 		return a.newDropStmtAction(ctx, query, args, node.(*googlesql.ResolvedDropStmt))
 	case googlesql.ResolvedNodeKindResolvedDropFunctionStmt:
 		return a.newDropFunctionStmtAction(ctx, query, args, node.(*googlesql.ResolvedDropFunctionStmt))
+	case googlesql.ResolvedNodeKindResolvedDropTableFunctionStmt:
+		return a.newDropTableFunctionStmtAction(ctx, node.(*googlesql.ResolvedDropTableFunctionStmt))
 	case googlesql.ResolvedNodeKindResolvedInsertStmt, googlesql.ResolvedNodeKindResolvedUpdateStmt, googlesql.ResolvedNodeKindResolvedDeleteStmt:
 		return a.newDMLStmtAction(ctx, query, args, node)
 	case googlesql.ResolvedNodeKindResolvedTruncateStmt:
@@ -2085,6 +2088,16 @@ func (a *Analyzer) newDropFunctionStmtAction(ctx context.Context, query string, 
 		catalog:    a.catalog,
 		query:      query,
 		args:       queryArgs,
+	}, nil
+}
+
+func (a *Analyzer) newDropTableFunctionStmtAction(ctx context.Context, node *googlesql.ResolvedDropTableFunctionStmt) (*DropStmtAction, error) {
+	return &DropStmtAction{
+		name:       a.namePath.format2(node.NamePath()),
+		objectType: "TABLE FUNCTION",
+		ifExists:   m1(node.IsIfExists()),
+		tvfMap:     tvfMapFromContext(ctx),
+		catalog:    a.catalog,
 	}, nil
 }
 
