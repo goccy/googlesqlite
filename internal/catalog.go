@@ -63,6 +63,12 @@ type Catalog struct {
 	functions    []*FunctionSpec
 	tvfs         []*TVFSpec
 	catalog      *googlesql.SimpleCatalog
+	// tvfOwners holds the Go wrappers that own the native TVF objects
+	// registered on catalog. SimpleCatalog only keeps the embedded
+	// *TableValuedFunction alive, which has no finalizer; the owning
+	// wrapper does, so it must stay reachable for as long as catalog
+	// can resolve the TVF, or GC frees the TVF under the catalog.
+	tvfOwners []any
 	// descriptorPool is the protobuf DescriptorPool attached to the
 	// SimpleCatalog at construction time. Consumers register FileDescriptorProto
 	// payloads through Catalog.RegisterProto (Conn.RegisterProto on the
@@ -2101,6 +2107,7 @@ func (c *Catalog) resetCatalog(tables []*TableSpec, functions []*FunctionSpec, t
 	c.tables = []*TableSpec{}
 	c.functions = []*FunctionSpec{}
 	c.tvfs = []*TVFSpec{}
+	c.tvfOwners = nil
 	c.tableMap = map[string]*TableSpec{}
 	c.funcMap = map[string]*FunctionSpec{}
 	c.tvfMap = map[string]*TVFSpec{}
@@ -2322,7 +2329,22 @@ func (c *Catalog) addTableSpecRecursive(cat *googlesql.SimpleCatalog, spec *Tabl
 	if table == nil {
 		return fmt.Errorf("failed to build table %q", spec.TableName())
 	}
-	return c.addTableSpecRecursiveImpl(cat, spec, table)
+	if err := c.addTableSpecRecursiveImpl(cat, spec, table); err != nil {
+		return err
+	}
+	// `project.dataset`.table: a quoted identifier holding a dotted
+	// prefix is one path component, so also register the object under
+	// a sub-catalog named by each dotted prefix of its path.
+	for i := 2; i < len(spec.NamePath); i++ {
+		sub := c.getOrCreateSubCatalog(cat, strings.Join(spec.NamePath[:i], "."))
+		if sub == nil {
+			return fmt.Errorf("failed to register sub-catalog %q", strings.Join(spec.NamePath[:i], "."))
+		}
+		if err := c.addTableSpecRecursiveImpl(sub, c.copyTableSpec(spec, spec.NamePath[i:]), table); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // addTableSpecRecursiveImpl aliases the same SimpleTable handle into
@@ -2584,7 +2606,26 @@ func (c *Catalog) addTVFSpecRecursive(cat *googlesql.SimpleCatalog, spec *TVFSpe
 	if tvf == nil {
 		return fmt.Errorf("failed to build TVF %q", spec.TVFName())
 	}
-	return c.addTVFSpecRecursiveImpl(cat, spec, tvf)
+	if err := c.addTVFSpecRecursiveImpl(cat, spec, tvf); err != nil {
+		return err
+	}
+	// Same lookup names as tables: the whole dotted path as one quoted
+	// identifier, and each dotted prefix as a sub-catalog.
+	if len(spec.NamePath) > 1 {
+		if fullName := strings.Join(spec.NamePath, "."); !c.existsTVF(cat, fullName) {
+			_ = cat.AddTableValuedFunction2(fullName, tvf)
+		}
+	}
+	for i := 2; i < len(spec.NamePath); i++ {
+		sub := c.getOrCreateSubCatalog(cat, strings.Join(spec.NamePath[:i], "."))
+		if sub == nil {
+			return fmt.Errorf("failed to register sub-catalog %q", strings.Join(spec.NamePath[:i], "."))
+		}
+		if err := c.addTVFSpecRecursiveImpl(sub, c.copyTVFSpec(spec, spec.NamePath[i:]), tvf); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Catalog) addTVFSpecRecursiveImpl(cat *googlesql.SimpleCatalog, spec *TVFSpec, tvf *googlesql.TableValuedFunction) error {
@@ -2648,6 +2689,7 @@ func (c *Catalog) tvfHandleForSpec(spec *TVFSpec) (*googlesql.TableValuedFunctio
 	if err != nil {
 		return nil, fmt.Errorf("failed to build TVF handle: %w", err)
 	}
+	c.tvfOwners = append(c.tvfOwners, tvf)
 	return tvf.TableValuedFunction, nil
 }
 
