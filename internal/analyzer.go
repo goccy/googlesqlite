@@ -1777,6 +1777,81 @@ func (a *Analyzer) analyzeTemplatedFunctionWithRuntimeArgument(ctx context.Conte
 	return spec, nil
 }
 
+// analyzeTemplatedTVFWithRuntimeArguments resolves the body of a
+// templated TVF (one with an ANY TABLE or ANY TYPE parameter) for one
+// call site. It re-analyzes the body as a TEMP TABLE FUNCTION whose
+// parameters carry the call's concrete types, TABLE<...> for table
+// arguments, and returns the resulting non-templated spec.
+func (a *Analyzer) analyzeTemplatedTVFWithRuntimeArguments(ctx context.Context, spec *TVFSpec, argNodes []*googlesql.ResolvedFunctionArgument) (*TVFSpec, error) {
+	if len(argNodes) != len(spec.Args) {
+		return nil, fmt.Errorf("call has %d arguments, function declares %d", len(argNodes), len(spec.Args))
+	}
+	params := make([]string, 0, len(spec.Args))
+	for i, arg := range spec.Args {
+		typ, err := tvfRuntimeArgumentTypeSQL(argNodes[i])
+		if err != nil {
+			return nil, fmt.Errorf("argument %s: %w", arg.Name, err)
+		}
+		params = append(params, fmt.Sprintf("`%s` %s", arg.Name, typ))
+	}
+	query := fmt.Sprintf(
+		"CREATE TEMP TABLE FUNCTION `googlesqlite_templated_tvf`(%s) AS (%s)",
+		strings.Join(params, ", "),
+		spec.Code,
+	)
+	out, err := googlesql.AnalyzeStatement(query, a.opt, a.catalog.catalog, tf())
+	if err != nil {
+		return nil, fmt.Errorf("failed to analyze templated TVF body: %w", err)
+	}
+	node, _ := out.ResolvedStatement()
+	stmt, ok := node.(*googlesql.ResolvedCreateTableFunctionStmt)
+	if !ok {
+		return nil, fmt.Errorf("unexpected templated TVF statement %s", query)
+	}
+	concrete, err := newTVFSpec(ctx, a.namePath, stmt)
+	if err != nil {
+		return nil, err
+	}
+	concrete.NamePath = spec.NamePath
+	return concrete, nil
+}
+
+// tvfRuntimeArgumentTypeSQL returns the SQL type of one TVF call
+// argument: TABLE<name type, ...> for a table argument, the scalar type
+// otherwise.
+func tvfRuntimeArgumentTypeSQL(arg *googlesql.ResolvedFunctionArgument) (string, error) {
+	if scan, _ := arg.Scan(); scan != nil {
+		columns := m1(arg.ArgumentColumnList())
+		if len(columns) == 0 {
+			columns = scanColumnList(scan)
+		}
+		fields := make([]string, 0, len(columns))
+		for _, col := range columns {
+			typ, err := sqlTypeName(m1(col.Type()))
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("`%s` %s", m1(col.Name()), typ))
+		}
+		return fmt.Sprintf("TABLE<%s>", strings.Join(fields, ", ")), nil
+	}
+	expr, _ := arg.Expr()
+	if expr == nil {
+		return "", fmt.Errorf("unsupported TVF argument")
+	}
+	return sqlTypeName(m1(expr.Type()))
+}
+
+func sqlTypeName(t googlesql.Googlesql_TypeNode) (string, error) {
+	named, ok := t.(interface {
+		TypeName(googlesql.ProductMode) (string, error)
+	})
+	if !ok {
+		return "", fmt.Errorf("cannot name type %T", t)
+	}
+	return named.TypeName(googlesql.ProductModeProductExternal)
+}
+
 func (a *Analyzer) newStmtAction(ctx context.Context, query string, args []driver.NamedValue, node googlesql.ResolvedStatementNode) (StmtAction, error) {
 	kind, _ := node.NodeKind()
 	switch kind {
