@@ -42,7 +42,7 @@ func (nv *NumericValue) Mul(v Value) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	nv.Rat = z.Mul(x, y)
+	nv.Rat = roundToScale(z.Mul(x, y), nv.scale())
 	return nv, nil
 }
 
@@ -62,8 +62,25 @@ func (nv *NumericValue) Div(v Value) (ret Value, e error) {
 		return nil, err
 	}
 	zy := new(big.Rat)
-	nv.Rat = z.Mul(x, zy.Inv(y))
+	nv.Rat = roundToScale(z.Mul(x, zy.Inv(y)), nv.scale())
 	return nv, nil
+}
+
+// scale is the number of decimal places the type keeps: 9 for NUMERIC,
+// 38 for BIGNUMERIC.
+func (nv *NumericValue) scale() int {
+	if nv.IsBigNumeric {
+		return 38
+	}
+	return 9
+}
+
+// roundToScale rounds r to scale decimal places, halves away from zero,
+// as BigQuery does for a NUMERIC or BIGNUMERIC product or quotient.
+func roundToScale(r *big.Rat, scale int) *big.Rat {
+	// FloatString rounds the last digit to nearest, halves away from zero.
+	rounded, _ := new(big.Rat).SetString(r.FloatString(scale))
+	return rounded
 }
 
 func (nv *NumericValue) EQ(v Value) (bool, error) {
