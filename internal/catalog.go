@@ -2500,6 +2500,23 @@ func (c *Catalog) addFunctionSpecRecursive(cat *googlesql.SimpleCatalog, spec *F
 	if err := c.addFunctionSpecRecursiveImpl(cat, spec, fn); err != nil {
 		return err
 	}
+	// Same lookup names as tables and TVFs: the whole dotted path as one
+	// quoted identifier (`p.ds.f`), and each dotted prefix as a
+	// sub-catalog (`p.ds`.f).
+	if len(spec.NamePath) > 1 {
+		if fullName := strings.Join(spec.NamePath, "."); !c.existsFunction(cat, fullName) {
+			_ = cat.AddFunction2(fullName, fn)
+		}
+	}
+	for i := 2; i < len(spec.NamePath); i++ {
+		sub := c.getOrCreateSubCatalog(cat, strings.Join(spec.NamePath[:i], "."))
+		if sub == nil {
+			return fmt.Errorf("failed to register sub-catalog %q", strings.Join(spec.NamePath[:i], "."))
+		}
+		if err := c.addFunctionSpecRecursiveImpl(sub, c.copyFunctionSpec(spec, spec.NamePath[i:]), fn); err != nil {
+			return err
+		}
+	}
 	// Alias the same Function handle under the `bqutil.fn.<name>`
 	// namepath so the BigQuery community-UDF dataset prefix resolves
 	// even when callers register the bare function (bqe#318). Apply
