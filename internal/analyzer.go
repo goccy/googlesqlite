@@ -303,9 +303,8 @@ var supportedStatementKinds = []googlesql.ResolvedNodeKind{
 	googlesql.ResolvedNodeKindResolvedGrantStmt,
 	googlesql.ResolvedNodeKindResolvedRevokeStmt,
 	// Procedural / scripting: ASSERT (runs the predicate and
-	// fails if false) and EXECUTE IMMEDIATE (re-analyzes its
-	// string argument). Both are no-op for the moment;
-	// future-work will hook them up.
+	// fails unless it is TRUE) and EXECUTE IMMEDIATE (re-analyzes
+	// its string argument; a no-op for the moment).
 	googlesql.ResolvedNodeKindResolvedAssertStmt,
 	googlesql.ResolvedNodeKindResolvedExecuteImmediateStmt,
 	// LOAD DATA: surface the resolved AST so external tools can
@@ -1821,6 +1820,9 @@ func (a *Analyzer) newStmtAction(ctx context.Context, query string, args []drive
 		return a.newCommitStmtAction(ctx, query, args, node)
 	case googlesql.ResolvedNodeKindResolvedAssignmentStmt:
 		return a.newAssignmentStmtAction(ctx, query, args, node.(*googlesql.ResolvedAssignmentStmt))
+	case googlesql.ResolvedNodeKindResolvedAssertStmt:
+		ctx = withUseColumnID(ctx)
+		return a.newAssertStmtAction(ctx, node.(*googlesql.ResolvedAssertStmt))
 	case googlesql.ResolvedNodeKindResolvedCreatePropertyGraphStmt:
 		return a.newCreatePropertyGraphStmtAction(ctx, node.(*googlesql.ResolvedCreatePropertyGraphStmt))
 	case
@@ -1828,7 +1830,6 @@ func (a *Analyzer) newStmtAction(ctx context.Context, query string, args []drive
 		googlesql.ResolvedNodeKindResolvedCreateSchemaStmt,
 		googlesql.ResolvedNodeKindResolvedGrantStmt,
 		googlesql.ResolvedNodeKindResolvedRevokeStmt,
-		googlesql.ResolvedNodeKindResolvedAssertStmt,
 		googlesql.ResolvedNodeKindResolvedExecuteImmediateStmt,
 		googlesql.ResolvedNodeKindResolvedAuxLoadDataStmt,
 		googlesql.ResolvedNodeKindResolvedCreateProcedureStmt:
@@ -2609,6 +2610,16 @@ func (a *Analyzer) newAssignmentStmtAction(ctx context.Context, _ string, _ []dr
 		name:    strings.Join(pathParts, "."),
 		exprSQL: exprSQL,
 	}, nil
+}
+
+func (a *Analyzer) newAssertStmtAction(ctx context.Context, node *googlesql.ResolvedAssertStmt) (*AssertStmtAction, error) {
+	expr, _ := node.Expression()
+	exprSQL, err := newNode(expr).FormatSQL(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to format ASSERT expression: %w", err)
+	}
+	description, _ := node.Description()
+	return &AssertStmtAction{exprSQL: exprSQL, description: description}, nil
 }
 
 //nolint:unparam

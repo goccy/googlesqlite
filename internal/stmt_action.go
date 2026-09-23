@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -815,6 +816,70 @@ func (a *AssignmentStmtAction) Args() []any {
 }
 
 func (a *AssignmentStmtAction) Cleanup(ctx context.Context, conn *Conn) error {
+	return nil
+}
+
+// assertionFailed leads the error of a failed ASSERT.
+const assertionFailed = "Assertion failed"
+
+// AssertStmtAction implements `ASSERT expression [AS description]`.
+// Per the BigQuery reference, the statement succeeds only when the
+// expression is TRUE; FALSE and NULL both raise an error that carries
+// the description. The expression is evaluated through the underlying
+// connection, like AssignmentStmtAction, so subqueries over tables,
+// temp tables and TVFs resolve as they would in a SELECT.
+type AssertStmtAction struct {
+	exprSQL     string
+	description string
+}
+
+func (a *AssertStmtAction) Prepare(ctx context.Context, conn *Conn) (driver.Stmt, error) {
+	return nil, nil
+}
+
+func (a *AssertStmtAction) exec(ctx context.Context, conn *Conn) error {
+	var raw any
+	if err := conn.QueryRowContext(ctx, fmt.Sprintf("SELECT %s", a.exprSQL)).Scan(&raw); err != nil {
+		return fmt.Errorf("failed to evaluate ASSERT expression: %w", err)
+	}
+	val, err := DecodeValue(raw)
+	if err != nil {
+		return fmt.Errorf("failed to decode ASSERT result: %w", err)
+	}
+	ok := false
+	if val != nil {
+		if ok, err = val.ToBool(); err != nil {
+			return fmt.Errorf("ASSERT expression is not a BOOL: %w", err)
+		}
+	}
+	if ok {
+		return nil
+	}
+	if a.description != "" {
+		return fmt.Errorf("%s: %s", assertionFailed, a.description)
+	}
+	return errors.New(assertionFailed)
+}
+
+func (a *AssertStmtAction) ExecContext(ctx context.Context, conn *Conn) (driver.Result, error) {
+	if err := a.exec(ctx, conn); err != nil {
+		return nil, err
+	}
+	return &Result{conn: conn}, nil
+}
+
+func (a *AssertStmtAction) QueryContext(ctx context.Context, conn *Conn) (*Rows, error) {
+	if err := a.exec(ctx, conn); err != nil {
+		return nil, err
+	}
+	return &Rows{conn: conn}, nil
+}
+
+func (a *AssertStmtAction) Args() []any {
+	return nil
+}
+
+func (a *AssertStmtAction) Cleanup(ctx context.Context, conn *Conn) error {
 	return nil
 }
 
