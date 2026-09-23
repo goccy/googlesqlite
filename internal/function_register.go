@@ -176,6 +176,12 @@ func RegisterFunctions(conn *sqlite3.Conn) error {
 		if decoded == nil {
 			return nil, nil
 		}
+		switch decoded.(type) {
+		case *value.StructValue, *value.ArrayValue:
+			// SQLite cannot hold a composite value, so group on its
+			// encoding: equal values encode identically.
+			return v, nil
+		}
 		return decoded.Interface(), nil
 	}, deterministic); err != nil {
 		return fmt.Errorf("failed to register group_by function: %w", err)

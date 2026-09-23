@@ -185,6 +185,7 @@ var enabledLanguageFeatures = []googlesql.LanguageFeature{
 	googlesql.LanguageFeatureFeatureSqlGraphReturnExtensions,
 	googlesql.LanguageFeatureFeatureGroupByGraphPath,
 	googlesql.LanguageFeatureFeatureGroupByStruct,
+	googlesql.LanguageFeatureFeatureGroupByArray,
 	// Features that the rewriters above transform into ordinary
 	// expressions. Each is gated upstream so enabling them is
 	// safe — they only fire when the corresponding construct
@@ -238,6 +239,7 @@ var enabledLanguageFeatures = []googlesql.LanguageFeature{
 	googlesql.LanguageFeatureFeatureArrayZip,
 	googlesql.LanguageFeatureFeatureUnnestAndFlattenArrays,
 	googlesql.LanguageFeatureFeatureGroupingSets,
+	googlesql.LanguageFeatureFeatureGroupByAll,
 	googlesql.LanguageFeatureFeatureGroupingBuiltin,
 	googlesql.LanguageFeatureFeatureV14UuidType,
 	// Pipe-syntax queries (`FROM t |> EXTEND ... |> SELECT ...`).
