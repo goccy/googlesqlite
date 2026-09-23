@@ -1786,6 +1786,9 @@ func (a *Analyzer) newStmtAction(ctx context.Context, query string, args []drive
 		ctx = withUseColumnID(ctx)
 		return a.newCreateTableAsSelectStmtAction(ctx, query, args, node.(*googlesql.ResolvedCreateTableAsSelectStmt))
 	case googlesql.ResolvedNodeKindResolvedCreateFunctionStmt:
+		// Subqueries in the body name their columns $col1, $col2, ... per
+		// scope, so key the column map by name#id or they collide.
+		ctx = withUseColumnID(ctx)
 		return a.newCreateFunctionStmtAction(ctx, query, args, node.(*googlesql.ResolvedCreateFunctionStmt))
 	case googlesql.ResolvedNodeKindResolvedCreateViewStmt:
 		ctx = withUseColumnID(ctx)
