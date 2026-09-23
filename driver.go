@@ -527,6 +527,20 @@ func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.Nam
 		rows    *internal.Rows
 	)
 	defer func() {
+		if e != nil {
+			// No Rows reach the caller, so nothing will run the cleanup
+			// on Close: run it here, or the TEMP objects created by the
+			// statements that succeeded outlive the failed script.
+			eg := new(internal.ErrorGroup)
+			eg.Add(e)
+			for _, action := range actions {
+				eg.Add(action.Cleanup(ctx, conn))
+			}
+			if eg.HasError() {
+				e = eg
+			}
+			return
+		}
 		if rows != nil {
 			// If we call cleanup action at the end of QueryContext function,
 			// there is a possibility that the deleted table will be referenced when scanning from Rows,
