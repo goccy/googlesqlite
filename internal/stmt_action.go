@@ -125,6 +125,13 @@ func (a *CreateTableStmtAction) Cleanup(ctx context.Context, conn *Conn) error {
 	); err != nil {
 		return fmt.Errorf("failed to cleanup table %s: %w", a.spec.TableName(), err)
 	}
+	// The script may already have dropped the table itself (DROP TABLE on
+	// a temp table), and a later statement may have re-created it under
+	// the same name and cleaned it up first. Either way there is no spec
+	// left to delete.
+	if !a.catalog.hasTableSpec(a.spec.TableName()) {
+		return nil
+	}
 	if err := a.catalog.DeleteTableSpec(ctx, conn, a.spec.TableName()); err != nil {
 		return fmt.Errorf("failed to delete table spec: %w", err)
 	}

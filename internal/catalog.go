@@ -1998,6 +1998,14 @@ func (c *Catalog) DeleteFunctionSpec(ctx context.Context, conn *Conn, name strin
 	return nil
 }
 
+func (c *Catalog) hasTableSpec(name string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	_, exists := c.tableMap[name]
+	return exists
+}
+
 func (c *Catalog) FunctionSpec(name string) (*FunctionSpec, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
