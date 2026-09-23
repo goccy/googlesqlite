@@ -723,6 +723,11 @@ func (n *AggregateFunctionCallNode) FormatSQL(ctx context.Context) (string, erro
 	case googlesql.ResolvedNonScalarFunctionCallBaseEnums_NullHandlingModifierIgnoreNulls:
 		opts = append(opts, "googlesqlite_ignore_nulls()")
 	case googlesql.ResolvedNonScalarFunctionCallBaseEnums_NullHandlingModifierRespectNulls:
+	default:
+		// APPROX_QUANTILES ignores NULLs unless RESPECT NULLS is given.
+		if m1(m1(n.node.Function()).FullName(false)) == "approx_quantiles" {
+			opts = append(opts, "googlesqlite_ignore_nulls()")
+		}
 	}
 	args = append(args, opts...)
 	return fmt.Sprintf(

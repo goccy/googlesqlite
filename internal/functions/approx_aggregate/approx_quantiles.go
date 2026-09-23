@@ -1,6 +1,7 @@
 package approx_aggregate
 
 import (
+	"sort"
 	"sync"
 
 	"github.com/goccy/googlesqlite/internal/functions/helper"
@@ -25,6 +26,16 @@ func (f *APPROX_QUANTILES) Done() (value.Value, error) {
 	if len(f.values) == 0 {
 		return nil, nil
 	}
+	// Quantiles are read off the sorted input, NULLs first (they only
+	// reach here under RESPECT NULLS).
+	sort.SliceStable(f.values, func(i, j int) bool {
+		a, b := f.values[i], f.values[j]
+		if a == nil || b == nil {
+			return a == nil && b != nil
+		}
+		lt, err := a.LT(b)
+		return err == nil && lt
+	})
 	if f.num == 0 {
 		return &value.ArrayValue{Values: []value.Value{f.values[0]}}, nil
 	}

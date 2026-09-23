@@ -32,14 +32,14 @@ func (a *Aggregator) Step(stepArgs ...any) error {
 	}
 	values, opt := ParseOptions(values...)
 	if opt.IgnoreNulls {
-		filtered := []value.Value{}
+		// Skip the whole row. Dropping only the NULL arguments would
+		// shift the rest, so APPROX_QUANTILES(x, 4 IGNORE NULLS) saw
+		// the 4 as its value and indexed past the end.
 		for _, v := range values {
 			if v == nil {
-				continue
+				return nil
 			}
-			filtered = append(filtered, v)
 		}
-		values = filtered
 		if len(values) == 0 {
 			return nil
 		}
