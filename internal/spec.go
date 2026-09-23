@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -223,8 +224,14 @@ type TVFSpec struct {
 	Args          []*NameWithType `json:"args"`
 	OutputColumns []*ColumnSpec   `json:"outputColumns"`
 	Body          string          `json:"body"`
-	UpdatedAt     time.Time       `json:"updatedAt"`
-	CreatedAt     time.Time       `json:"createdAt"`
+	// IsTemplated marks a TVF with an ANY TABLE or ANY TYPE parameter.
+	// Its body cannot be resolved until the argument types are known,
+	// so Code keeps the GoogleSQL body text and OutputColumns/Body stay
+	// empty; each call site re-analyzes Code with concrete types.
+	IsTemplated bool      `json:"isTemplated,omitempty"`
+	Code        string    `json:"code,omitempty"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 func (s *TVFSpec) TVFName() string {
@@ -238,25 +245,53 @@ func (s *TVFSpec) TVFName() string {
 // TVFScan output, in declaration order; we alias the body's output
 // columns onto them so the surrounding query can reference them.
 func (s *TVFSpec) CallSQL(argValues []string, callOutputColumns []string) (string, error) {
-	if len(callOutputColumns) != len(s.OutputColumns) {
-		return "", fmt.Errorf(
-			"TVF %s: call site has %d output columns, spec declares %d",
-			s.TVFName(), len(callOutputColumns), len(s.OutputColumns),
-		)
-	}
-	body := s.Body
-	for i, arg := range s.Args {
-		if i >= len(argValues) {
-			break
+	return s.CallSQLWithColumnIndexes(argValues, callOutputColumns, nil)
+}
+
+// CallSQLWithColumnIndexes is CallSQL for a call site whose output
+// columns are a subset of the TVF's result schema: columnIndexes[i] is
+// the result-schema position of callOutputColumns[i] (the TVFScan's
+// column_index_list). A nil columnIndexes means all columns, in order.
+func (s *TVFSpec) CallSQLWithColumnIndexes(argValues []string, callOutputColumns []string, columnIndexes []int) (string, error) {
+	if columnIndexes == nil {
+		if len(callOutputColumns) != len(s.OutputColumns) {
+			return "", fmt.Errorf(
+				"TVF %s: call site has %d output columns, spec declares %d",
+				s.TVFName(), len(callOutputColumns), len(s.OutputColumns),
+			)
 		}
-		argRef := fmt.Sprintf("@%s", arg.Name)
+		columnIndexes = make([]int, len(callOutputColumns))
+		for i := range columnIndexes {
+			columnIndexes[i] = i
+		}
+	}
+	if len(columnIndexes) != len(callOutputColumns) {
+		return "", fmt.Errorf("TVF %s: column index list does not match the call site columns", s.TVFName())
+	}
+	// Substitute the longest argument names first so that @a does not
+	// rewrite a prefix of @ab.
+	order := make([]int, 0, len(s.Args))
+	for i := range s.Args {
+		if i < len(argValues) {
+			order = append(order, i)
+		}
+	}
+	sort.SliceStable(order, func(a, b int) bool {
+		return len(s.Args[order[a]].Name) > len(s.Args[order[b]].Name)
+	})
+	body := s.Body
+	for _, i := range order {
+		argRef := fmt.Sprintf("@%s", s.Args[i].Name)
 		body = strings.Replace(body, argRef, argValues[i], -1)
 	}
-	projections := make([]string, 0, len(s.OutputColumns))
-	for i, col := range s.OutputColumns {
+	projections := make([]string, 0, len(callOutputColumns))
+	for i, idx := range columnIndexes {
+		if idx < 0 || idx >= len(s.OutputColumns) {
+			return "", fmt.Errorf("TVF %s: column index %d is out of range", s.TVFName(), idx)
+		}
 		projections = append(
 			projections,
-			fmt.Sprintf("`%s` AS `%s`", col.Name, callOutputColumns[i]),
+			fmt.Sprintf("`%s` AS `%s`", s.OutputColumns[idx].Name, callOutputColumns[i]),
 		)
 	}
 	return fmt.Sprintf(
@@ -275,6 +310,24 @@ type Type struct {
 }
 
 func (t *Type) FunctionArgumentType() (*googlesql.FunctionArgumentType, error) {
+	// A TABLE<...> parameter: a relation argument with a fixed schema.
+	// ANY TABLE is the same kind with no schema and takes the templated
+	// branch below.
+	if t.SignatureKind == googlesql.SignatureArgumentKindArgTypeRelation && len(t.FieldTypes) != 0 {
+		columns := make([]*googlesql.TVFSchemaColumn, 0, len(t.FieldTypes))
+		for _, field := range t.FieldTypes {
+			typ, err := field.Type.ToGoogleSQLType()
+			if err != nil {
+				return nil, err
+			}
+			columns = append(columns, &googlesql.TVFSchemaColumn{Name: field.Name, Type_: typ})
+		}
+		relation, err := googlesql.NewTVFRelation(columns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build relation argument schema: %w", err)
+		}
+		return googlesql.NewFunctionArgumentTypeRelationWithSchema(relation, false)
+	}
 	if t.SignatureKind != googlesql.SignatureArgumentKindArgTypeFixed {
 		return m1(googlesql.NewFunctionArgumentType5(
 			t.SignatureKind,
@@ -505,6 +558,20 @@ func (s *ColumnSpec) SQLiteSchema() string {
 }
 
 func newTypeFromFunctionArgumentType(t *googlesql.FunctionArgumentType) *Type {
+	if m1(t.IsRelation()) {
+		// TABLE<...> keeps its column list; ANY TABLE has none.
+		typ := &Type{SignatureKind: googlesql.SignatureArgumentKindArgTypeRelation}
+		opts, _ := t.Options()
+		if opts != nil && m1(opts.HasRelationInputSchema()) {
+			relation, _ := opts.RelationInputSchema()
+			if relation != nil {
+				for _, col := range m1(relation.Columns()) {
+					typ.FieldTypes = append(typ.FieldTypes, &NameWithType{Name: col.Name, Type: newType(col.Type_)})
+				}
+			}
+		}
+		return typ
+	}
 	if m1(t.IsTemplated()) {
 		return &Type{SignatureKind: m1(t.Kind())}
 	}
@@ -781,7 +848,22 @@ func newTVFSpec(ctx context.Context, namePath *NamePath, stmt *googlesql.Resolve
 		return nil, fmt.Errorf("failed to read TVF body: %w", err)
 	}
 	if innerScan == nil {
-		return nil, fmt.Errorf("TVF body is missing for %s", strings.Join(m1(stmt.NamePath()), "."))
+		// A TVF with an ANY TABLE or ANY TYPE parameter is templated:
+		// the analyzer leaves the body unresolved and keeps its text.
+		code, _ := stmt.Code()
+		if code == "" || !hasTemplatedArg(args) {
+			return nil, fmt.Errorf("TVF body is missing for %s", strings.Join(m1(stmt.NamePath()), "."))
+		}
+		now := time.Now()
+		return &TVFSpec{
+			IsTemp:      resolvedCreateScope(stmt) == googlesql.ResolvedCreateStatementEnums_CreateScopeCreateTemp,
+			NamePath:    namePath.mergePath(m1(stmt.NamePath())),
+			Args:        args,
+			IsTemplated: true,
+			Code:        code,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}, nil
 	}
 	innerBody, err := newNode(innerScan).FormatSQL(ctx)
 	if err != nil {
@@ -815,6 +897,22 @@ func newTVFSpec(ctx context.Context, namePath *NamePath, stmt *googlesql.Resolve
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}, nil
+}
+
+func hasTemplatedArg(args []*NameWithType) bool {
+	for _, arg := range args {
+		if arg.Type == nil {
+			continue
+		}
+		if arg.Type.SignatureKind == googlesql.SignatureArgumentKindArgTypeRelation && len(arg.Type.FieldTypes) == 0 {
+			return true
+		}
+		if arg.Type.SignatureKind != googlesql.SignatureArgumentKindArgTypeFixed &&
+			arg.Type.SignatureKind != googlesql.SignatureArgumentKindArgTypeRelation {
+			return true
+		}
+	}
+	return false
 }
 
 func newTableAsViewSpec(namePath *NamePath, query string, stmt *googlesql.ResolvedCreateViewStmt) *TableSpec {

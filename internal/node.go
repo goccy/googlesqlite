@@ -97,6 +97,8 @@ func newNode(node googlesql.ResolvedNode) Formatter {
 		return newProjectScanNode(node.(*googlesql.ResolvedProjectScan))
 	case googlesql.ResolvedNodeKindResolvedTvfscan:
 		return newTVFScanNode(node.(*googlesql.ResolvedTVFScan))
+	case googlesql.ResolvedNodeKindResolvedRelationArgumentScan:
+		return &RelationArgumentScanNode{node: node.(*googlesql.ResolvedRelationArgumentScan)}
 	case googlesql.ResolvedNodeKindResolvedQueryStmt:
 		return newQueryStmtNode(node.(*googlesql.ResolvedQueryStmt))
 	case googlesql.ResolvedNodeKindResolvedDropStmt:
@@ -303,6 +305,12 @@ type ProjectScanNode struct {
 
 type TVFScanNode struct {
 	node *googlesql.ResolvedTVFScan
+}
+
+// RelationArgumentScanNode is a reference to a TABLE-typed parameter
+// inside a TVF body.
+type RelationArgumentScanNode struct {
+	node *googlesql.ResolvedRelationArgumentScan
 }
 
 type QueryStmtNode struct {

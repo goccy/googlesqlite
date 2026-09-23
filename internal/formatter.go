@@ -2529,8 +2529,17 @@ func (n *TVFScanNode) FormatSQL(ctx context.Context) (string, error) {
 	if spec == nil {
 		return "", fmt.Errorf("TVF spec not found for %s", strings.Join(pathParts, "."))
 	}
+	argNodes := m1(n.node.ArgumentList())
 	argValues := make([]string, 0, len(spec.Args))
-	for _, argNode := range m1(n.node.ArgumentList()) {
+	for _, argNode := range argNodes {
+		if scan, _ := argNode.Scan(); scan != nil {
+			formatted, err := formatTVFRelationArgument(ctx, argNode, scan)
+			if err != nil {
+				return "", err
+			}
+			argValues = append(argValues, formatted)
+			continue
+		}
 		expr, _ := argNode.Expr()
 		if expr == nil {
 			argValues = append(argValues, "NULL")
@@ -2542,11 +2551,85 @@ func (n *TVFScanNode) FormatSQL(ctx context.Context) (string, error) {
 		}
 		argValues = append(argValues, formatted)
 	}
+	if spec.IsTemplated {
+		analyzer := analyzerFromContext(ctx)
+		if analyzer == nil {
+			return "", fmt.Errorf("TVF %s: templated TVF call needs an analyzer", spec.TVFName())
+		}
+		concrete, err := analyzer.analyzeTemplatedTVFWithRuntimeArguments(ctx, spec, argNodes)
+		if err != nil {
+			return "", fmt.Errorf("TVF %s: %w", spec.TVFName(), err)
+		}
+		spec = concrete
+	}
 	callOutputColumns := make([]string, 0, len(spec.OutputColumns))
 	for _, col := range m1(n.node.ColumnList()) {
 		callOutputColumns = append(callOutputColumns, uniqueColumnName(ctx, col))
 	}
-	return spec.CallSQL(argValues, callOutputColumns)
+	var columnIndexes []int
+	if indexes, _ := n.node.ColumnIndexList(); len(indexes) == len(callOutputColumns) {
+		columnIndexes = make([]int, len(indexes))
+		for i, idx := range indexes {
+			columnIndexes[i] = int(idx)
+		}
+	}
+	return spec.CallSQLWithColumnIndexes(argValues, callOutputColumns, columnIndexes)
+}
+
+// formatTVFRelationArgument formats a TABLE argument of a TVF call as a
+// subquery exposing the argument's columns under their plain names,
+// which is how RelationArgumentScanNode reads them inside the body.
+func formatTVFRelationArgument(ctx context.Context, arg *googlesql.ResolvedFunctionArgument, scan googlesql.ResolvedScanNode) (string, error) {
+	input, err := newNode(scan).FormatSQL(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to format TVF table argument: %w", err)
+	}
+	formattedInput, err := formatInput(input)
+	if err != nil {
+		return "", err
+	}
+	columns := m1(arg.ArgumentColumnList())
+	if len(columns) == 0 {
+		columns = scanColumnList(scan)
+	}
+	projections := make([]string, 0, len(columns))
+	for _, col := range columns {
+		projections = append(projections, fmt.Sprintf("`%s` AS `%s`", uniqueColumnName(ctx, col), m1(col.Name())))
+	}
+	if len(projections) == 0 {
+		projections = append(projections, "NULL")
+	}
+	return fmt.Sprintf("(SELECT %s %s)", strings.Join(projections, ","), formattedInput), nil
+}
+
+// scanColumnList returns the column_list of any resolved scan.
+func scanColumnList(scan googlesql.ResolvedScanNode) []*googlesql.ResolvedColumn {
+	if withColumns, ok := scan.(interface {
+		ColumnList() ([]*googlesql.ResolvedColumn, error)
+	}); ok {
+		columns, _ := withColumns.ColumnList()
+		return columns
+	}
+	return nil
+}
+
+// FormatSQL reads a TABLE parameter inside a TVF body. The parameter is
+// written as @name, which TVFSpec.CallSQL replaces with the formatted
+// argument at each call site.
+func (n *RelationArgumentScanNode) FormatSQL(ctx context.Context) (string, error) {
+	if n.node == nil {
+		return "", nil
+	}
+	name, _ := n.node.Name()
+	columns := m1(n.node.ColumnList())
+	projections := make([]string, 0, len(columns))
+	for _, col := range columns {
+		projections = append(projections, fmt.Sprintf("`%s` AS `%s`", m1(col.Name()), uniqueColumnName(ctx, col)))
+	}
+	if len(projections) == 0 {
+		projections = append(projections, "NULL")
+	}
+	return fmt.Sprintf("(SELECT %s FROM @%s)", strings.Join(projections, ","), name), nil
 }
 
 // FormatSQL Formats the outermost query statement that runs and produces rows of output, like a SELECT
