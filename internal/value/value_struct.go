@@ -217,6 +217,11 @@ func (sv *StructValue) Format(verb rune) string {
 		}
 		elems = append(elems, v.Format(verb))
 	}
+	// A %T literal needs the keyword where a bare parenthesis would not
+	// parse as a struct: STRUCT() and STRUCT(value).
+	if verb == 'T' && len(elems) < 2 {
+		return fmt.Sprintf("STRUCT(%s)", strings.Join(elems, ", "))
+	}
 	return fmt.Sprintf("(%s)", strings.Join(elems, ", "))
 }
 

@@ -148,9 +148,21 @@ func (sv StringValue) Format(verb rune) string {
 	case 't':
 		return string(sv)
 	case 'T':
-		return strconv.Quote(string(sv))
+		return quoteSQLStringLiteral(string(sv))
 	}
 	return string(sv)
+}
+
+// quoteSQLStringLiteral quotes s as a GoogleSQL string literal for %T:
+// single quotes when s contains a double quote and no single quote,
+// double quotes otherwise, escaping only the chosen quote character.
+func quoteSQLStringLiteral(s string) string {
+	quoted := strconv.Quote(s)
+	if !strings.Contains(s, `"`) || strings.Contains(s, "'") {
+		return quoted
+	}
+	body := strings.ReplaceAll(quoted[1:len(quoted)-1], `\"`, `"`)
+	return "'" + body + "'"
 }
 
 func (sv StringValue) Interface() any {

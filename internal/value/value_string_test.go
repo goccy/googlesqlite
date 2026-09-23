@@ -193,8 +193,8 @@ func TestStringValue(t *testing.T) {
 		if sv.Format('t') != `he\"y` {
 			t.Fatalf("Format t: %s", sv.Format('t'))
 		}
-		// 'T' quotes with strconv.Quote
-		if got := sv.Format('T'); got != `"he\\\"y"` {
+		// 'T' picks single quotes: the value has a double quote and no single quote
+		if got := sv.Format('T'); got != `'he\\"y'` {
 			t.Fatalf("Format T: %s", got)
 		}
 		// fallback verb returns raw string

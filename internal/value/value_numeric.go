@@ -172,6 +172,12 @@ func (nv *NumericValue) ToRat() (*big.Rat, error) {
 }
 
 func (nv *NumericValue) Format(verb rune) string {
+	if verb == 'T' {
+		if nv.IsBigNumeric {
+			return fmt.Sprintf(`BIGNUMERIC "%s"`, nv.toString())
+		}
+		return fmt.Sprintf(`NUMERIC "%s"`, nv.toString())
+	}
 	return nv.toString()
 }
 

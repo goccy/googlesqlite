@@ -95,6 +95,9 @@ func (jv JsonValue) ToRat() (*big.Rat, error) {
 }
 
 func (jv JsonValue) Format(verb rune) string {
+	if verb == 'T' {
+		return "JSON " + quoteSQLStringLiteral(string(jv))
+	}
 	return string(jv)
 }
 

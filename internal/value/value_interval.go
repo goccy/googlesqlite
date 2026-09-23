@@ -105,6 +105,9 @@ func (iv *IntervalValue) Format(verb rune) string {
 	if err != nil {
 		return ""
 	}
+	if verb == 'T' {
+		return fmt.Sprintf(`INTERVAL "%s" YEAR TO SECOND`, s)
+	}
 	return s
 }
 

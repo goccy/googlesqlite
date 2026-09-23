@@ -142,14 +142,15 @@ func (d DatetimeValue) ToRat() (*big.Rat, error) {
 }
 
 func (d DatetimeValue) Format(verb rune) string {
-	formatted := time.Time(d).Format(datetimeFormat)
+	// FORMAT separates date and time with a space, unlike datetimeFormat.
+	printable := time.Time(d).Format("2006-01-02 15:04:05.999999")
 	switch verb {
 	case 't':
-		return formatted
+		return printable
 	case 'T':
-		return fmt.Sprintf(`DATETIME %q`, formatted)
+		return fmt.Sprintf(`DATETIME %q`, printable)
 	}
-	return formatted
+	return time.Time(d).Format(datetimeFormat)
 }
 
 func (d DatetimeValue) Interface() any {
