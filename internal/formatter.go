@@ -1003,18 +1003,30 @@ func (n *AnalyticFunctionCallNode) formatNative(ctx context.Context, sqliteName 
 	}
 	call := fmt.Sprintf("%s(%s)", sqliteName, strings.Join(valueArgs, ","))
 
+	// SQLite accepts a single ORDER BY expression when the frame is
+	// RANGE with a numeric offset. The partition columns are constant
+	// inside a partition, and NULL ordering cannot change which rows
+	// such a frame selects, so both are left out in that case.
+	singleOrderTerm := n.hasRangeOffsetFrame()
+
 	var clauses []string
-	if cols := analyticPartitionColumnNamesFromContext(ctx); len(cols) > 0 {
-		clauses = append(clauses, "PARTITION BY "+strings.Join(cols, ","))
+	partitionColumns := analyticPartitionColumnNamesFromContext(ctx)
+	if len(partitionColumns) > 0 {
+		clauses = append(clauses, "PARTITION BY "+strings.Join(partitionColumns, ","))
+	}
+	if singleOrderTerm {
+		orderColumns = withoutPartitionColumns(orderColumns, partitionColumns)
 	}
 	if len(orderColumns) > 0 {
 		var ob []string
 		for _, col := range orderColumns {
-			switch col.nullOrder {
-			case nullOrderFirst:
-				ob = append(ob, fmt.Sprintf("(%s IS NOT NULL)", col.column))
-			case nullOrderLast:
-				ob = append(ob, fmt.Sprintf("(%s IS NULL)", col.column))
+			if !singleOrderTerm {
+				switch col.nullOrder {
+				case nullOrderFirst:
+					ob = append(ob, fmt.Sprintf("(%s IS NOT NULL)", col.column))
+				case nullOrderLast:
+					ob = append(ob, fmt.Sprintf("(%s IS NULL)", col.column))
+				}
 			}
 			suffix := " COLLATE googlesqlite_collate"
 			if !col.isAsc {
@@ -1034,6 +1046,49 @@ func (n *AnalyticFunctionCallNode) formatNative(ctx context.Context, sqliteName 
 		return call + " OVER ()", nil
 	}
 	return call + " OVER (" + strings.Join(clauses, " ") + ")", nil
+}
+
+// withoutPartitionColumns drops the columns already named in the
+// PARTITION BY clause from the ORDER BY list.
+func withoutPartitionColumns(orderColumns []*analyticOrderBy, partitionColumns []string) []*analyticOrderBy {
+	if len(partitionColumns) == 0 {
+		return orderColumns
+	}
+	inPartition := make(map[string]struct{}, len(partitionColumns))
+	for _, col := range partitionColumns {
+		inPartition[col] = struct{}{}
+	}
+	filtered := make([]*analyticOrderBy, 0, len(orderColumns))
+	for _, col := range orderColumns {
+		if _, ok := inPartition[col.column]; ok {
+			continue
+		}
+		filtered = append(filtered, col)
+	}
+	return filtered
+}
+
+// hasRangeOffsetFrame reports whether the window frame is RANGE with a
+// numeric offset boundary, as opposed to UNBOUNDED or CURRENT ROW.
+func (n *AnalyticFunctionCallNode) hasRangeOffsetFrame() bool {
+	windowFrame, _ := n.node.WindowFrame()
+	if windowFrame == nil {
+		return false
+	}
+	if m1(windowFrame.FrameUnit()) != googlesql.ResolvedWindowFrameEnums_FrameUnitRange {
+		return false
+	}
+	for _, expr := range []*googlesql.ResolvedWindowFrameExpr{
+		m1(windowFrame.StartExpr()),
+		m1(windowFrame.EndExpr()),
+	} {
+		switch m1(expr.BoundaryType()) {
+		case googlesql.ResolvedWindowFrameExprEnums_BoundaryTypeOffsetPreceding,
+			googlesql.ResolvedWindowFrameExprEnums_BoundaryTypeOffsetFollowing:
+			return true
+		}
+	}
+	return false
 }
 
 // formatNativeFrame turns the resolved-tree frame into a SQLite frame

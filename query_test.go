@@ -4326,6 +4326,61 @@ FROM Farm`,
 			},
 		},
 		{
+			// A RANGE frame with a numeric offset restricts SQLite to a
+			// single ORDER BY expression, so the PARTITION BY columns
+			// must not be repeated in the generated ORDER BY.
+			name: "window range with partition",
+			query: `
+WITH Farm AS
+ (SELECT 'cat' as animal, 23 as population, 'mammal' as category
+  UNION ALL SELECT 'duck', 3, 'bird'
+  UNION ALL SELECT 'dog', 2, 'mammal'
+  UNION ALL SELECT 'goose', 1, 'bird'
+  UNION ALL SELECT 'ox', 2, 'mammal'
+  UNION ALL SELECT 'goat', 2, 'mammal')
+SELECT animal, population, category, COUNT(*)
+  OVER (
+    PARTITION BY category
+    ORDER BY population
+    RANGE BETWEEN 1 PRECEDING AND 1 FOLLOWING
+  ) AS similar_population
+FROM Farm
+ORDER BY category, population, animal`,
+			expectedRows: [][]any{
+				{"goose", int64(1), "bird", int64(1)},
+				{"duck", int64(3), "bird", int64(1)},
+				{"dog", int64(2), "mammal", int64(3)},
+				{"goat", int64(2), "mammal", int64(3)},
+				{"ox", int64(2), "mammal", int64(3)},
+				{"cat", int64(23), "mammal", int64(1)},
+			},
+		},
+		{
+			// NULLS LAST adds a second ORDER BY term for the same
+			// reason. NULL rows are their own peer group, so dropping it
+			// cannot change which rows a RANGE offset frame selects.
+			name: "window range with nulls last",
+			query: `
+WITH Numbers AS
+ (SELECT CAST(NULL AS INT64) as x
+  UNION ALL SELECT 1
+  UNION ALL SELECT 2
+  UNION ALL SELECT 3)
+SELECT x, COUNT(*)
+  OVER (
+    ORDER BY x NULLS LAST
+    RANGE BETWEEN 1 PRECEDING AND 1 FOLLOWING
+  ) AS neighbors
+FROM Numbers
+ORDER BY x`,
+			expectedRows: [][]any{
+				{nil, int64(1)},
+				{int64(1), int64(2)},
+				{int64(2), int64(3)},
+				{int64(3), int64(2)},
+			},
+		},
+		{
 			name: "date type",
 			query: `
 WITH Employees AS
