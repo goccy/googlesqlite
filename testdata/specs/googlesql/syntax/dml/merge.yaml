@@ -323,3 +323,77 @@ cases:
       rows:
         - [1, 30]
         - [2, 60]
+
+  # The cases below are Examples 3, 6 and 8 of the BigQuery DML
+  # reference (https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax,
+  # "MERGE examples"), whose `source_name` is a subquery rather than a
+  # table name (data-manipulation-language.md line 1374: "A table name
+  # or subquery."). Setup rows are the documented "before" tables and
+  # expected rows the documented "after" tables.
+  #
+  # Example 3 also pins first-match-wins across WHEN clauses: the
+  # warehouse #1 row satisfies both WHEN MATCHED clauses, but only the
+  # first (UPDATE) applies, so it is not deleted.
+  - desc: MERGE USING subquery — first matching WHEN clause wins (BigQuery DML Example 3)
+    setup:
+      - CREATE TABLE merge_ds.NewArrivals (product STRING, quantity INT64, warehouse STRING)
+      - "INSERT INTO merge_ds.NewArrivals (product, quantity, warehouse) VALUES ('dryer', 20, 'warehouse #2'), ('oven', 30, 'warehouse #3'), ('refrigerator', 25, 'warehouse #2'), ('top load washer', 10, 'warehouse #1')"
+      - |
+        MERGE merge_ds.NewArrivals T
+        USING (SELECT * FROM merge_ds.NewArrivals WHERE warehouse <> 'warehouse #2') S
+        ON T.product = S.product
+        WHEN MATCHED AND T.warehouse = 'warehouse #1' THEN
+          UPDATE SET quantity = T.quantity + 20
+        WHEN MATCHED THEN
+          DELETE
+    sql: SELECT product, quantity, warehouse FROM merge_ds.NewArrivals ORDER BY product
+    expected:
+      rows:
+        - ['dryer', 20, 'warehouse #2']
+        - ['refrigerator', 25, 'warehouse #2']
+        - ['top load washer', 30, 'warehouse #1']
+
+  - desc: MERGE USING a JOIN subquery (BigQuery DML Example 6)
+    setup:
+      - CREATE TABLE merge_ds.Warehouse (warehouse STRING, state STRING)
+      - CREATE TABLE merge_ds.NewArrivals (product STRING, quantity INT64, warehouse STRING)
+      - CREATE TABLE merge_ds.Inventory (product STRING, quantity INT64)
+      - "INSERT INTO merge_ds.Warehouse (warehouse, state) VALUES ('warehouse #1', 'WA'), ('warehouse #2', 'CA'), ('warehouse #3', 'WA')"
+      - "INSERT INTO merge_ds.NewArrivals (product, quantity, warehouse) VALUES ('dryer', 20, 'warehouse #2'), ('refrigerator', 25, 'warehouse #2'), ('top load washer', 30, 'warehouse #1')"
+      - "INSERT INTO merge_ds.Inventory (product, quantity) VALUES ('dryer', 50), ('microwave', 20), ('oven', 35), ('refrigerator', 25), ('top load washer', 30)"
+      - |
+        MERGE merge_ds.Inventory T
+        USING (SELECT product, quantity, state FROM merge_ds.NewArrivals t1 JOIN merge_ds.Warehouse t2 ON t1.warehouse = t2.warehouse) S
+        ON T.product = S.product
+        WHEN MATCHED AND state = 'CA' THEN
+          UPDATE SET quantity = T.quantity + S.quantity
+        WHEN MATCHED THEN
+          DELETE
+    sql: SELECT product, quantity FROM merge_ds.Inventory ORDER BY product
+    expected:
+      rows:
+        - ['dryer', 70]
+        - ['microwave', 20]
+        - ['oven', 35]
+        - ['refrigerator', 50]
+
+  - desc: MERGE USING an UNNEST subquery with INSERT ROW (BigQuery DML Example 8)
+    setup:
+      - CREATE TABLE merge_ds.NewArrivals (product STRING, quantity INT64, warehouse STRING)
+      - "INSERT INTO merge_ds.NewArrivals (product, quantity, warehouse) VALUES ('dryer', 10, 'warehouse #2'), ('dryer', 20, 'warehouse #1'), ('refrigerator', 25, 'warehouse #2'), ('top load washer', 30, 'warehouse #1')"
+      - |
+        MERGE merge_ds.NewArrivals
+        USING (SELECT * FROM UNNEST([('microwave', 10, 'warehouse #1'),
+                                     ('dryer', 30, 'warehouse #1'),
+                                     ('oven', 20, 'warehouse #2')]))
+        ON FALSE
+        WHEN NOT MATCHED THEN
+          INSERT ROW
+        WHEN NOT MATCHED BY SOURCE THEN
+          DELETE
+    sql: SELECT product, quantity, warehouse FROM merge_ds.NewArrivals ORDER BY product
+    expected:
+      rows:
+        - ['dryer', 30, 'warehouse #1']
+        - ['microwave', 10, 'warehouse #1']
+        - ['oven', 20, 'warehouse #2']

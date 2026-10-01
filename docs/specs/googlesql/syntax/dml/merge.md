@@ -24,8 +24,8 @@ See the upstream reference linked at the bottom of this spec.
 
 ## Behavior
 
-See the upstream reference linked at the bottom of this spec. Two
-documented behaviours that the spec tests pin:
+See the upstream reference linked at the bottom of this spec.
+Documented behaviours that the spec tests pin:
 
 - The canonical `Inventory` + `NewArrivals` walkthrough (`ON T.product
   = S.product`) — the post-MERGE row set in the upstream "after" table
@@ -34,6 +34,9 @@ documented behaviours that the spec tests pin:
   paired with `WHEN NOT MATCHED BY SOURCE THEN DELETE` +
   `WHEN NOT MATCHED BY TARGET THEN INSERT` it implements REPLACE
   semantics (`DELETE` followed by `INSERT`).
+- BigQuery DML reference Examples 3, 6 and 8, whose source is a
+  subquery (a filter, a JOIN, and an `UNNEST` of a literal array).
+  Example 3 also pins first-match-wins across `WHEN` clauses.
 
 The implementation accepts any boolean expression as the
 `merge_condition`; the spec tests cover equality, multi-equality,
