@@ -17,6 +17,10 @@ type (
 	NameWithType    = internal.NameWithType
 	ColumnSpec      = internal.ColumnSpec
 	Type            = internal.Type
+	// TypedValue is a query argument carrying its declared GoogleSQL
+	// type, for values whose type a Go value cannot express (struct
+	// field order, NULL fields, empty arrays).
+	TypedValue = internal.TypedValue
 )
 
 // ChangedCatalogFromRows retrieve modified catalog information from sql.Rows.

@@ -3,10 +3,13 @@ package googlesqlite_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	googlesql "github.com/goccy/go-googlesql"
 
 	"github.com/goccy/googlesqlite"
 )
@@ -1252,5 +1255,166 @@ func TestTimestamp(t *testing.T) {
 				t.Fatalf("expected %s got %s", expected, ti)
 			}
 		})
+	}
+}
+
+// TestArrayOfStructParameterInference binds a Go slice of structs and
+// reads its fields back through UNNEST. The parameter must be declared
+// as ARRAY<STRUCT<ID INT64, Name STRING>>, inferred from the elements.
+func TestArrayOfStructParameterInference(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=array_of_struct_param")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	type row struct {
+		ID   int64
+		Name string
+	}
+	rows, err := db.QueryContext(context.Background(),
+		"SELECT r.ID, r.Name FROM UNNEST(@rows) AS r WHERE r.ID > 1 ORDER BY r.ID",
+		sql.Named("rows", []row{{ID: 1, Name: "a"}, {ID: 2, Name: "b"}, {ID: 3, Name: "c"}}))
+	if err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	defer rows.Close()
+	var got []string
+	for rows.Next() {
+		var (
+			id   int64
+			name string
+		)
+		if err := rows.Scan(&id, &name); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		got = append(got, fmt.Sprintf("%d=%s", id, name))
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+	if want := []string{"2=b", "3=c"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+}
+
+// TestTypedValueParameter binds parameters whose declared type cannot be
+// recovered from the Go value: struct fields given as an (unordered) Go
+// map, a NULL field, an empty array, an INT64 field supplied as a
+// decimal string, and a DATE supplied as a string.
+func TestTypedValueParameter(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=typed_value_param")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	kind := func(k googlesql.TypeKind) *googlesqlite.Type { return &googlesqlite.Type{Kind: int(k)} }
+	recordType := &googlesqlite.Type{Kind: int(googlesql.TypeKindTypeStruct), FieldTypes: []*googlesqlite.NameWithType{
+		{Name: "id", Type: kind(googlesql.TypeKindTypeInt64)},
+		{Name: "v", Type: kind(googlesql.TypeKindTypeString)},
+		{Name: "tags", Type: &googlesqlite.Type{Kind: int(googlesql.TypeKindTypeArray), ElementType: kind(googlesql.TypeKindTypeString)}},
+	}}
+	records := googlesqlite.TypedValue{
+		Type: &googlesqlite.Type{Kind: int(googlesql.TypeKindTypeArray), ElementType: recordType},
+		Value: []any{
+			map[string]any{"tags": []any{"x", "y"}, "v": "one", "id": "1"},
+			map[string]any{"v": nil, "id": "2", "tags": []any{}},
+		},
+	}
+
+	if _, err := db.ExecContext(ctx, "CREATE TABLE T (records ARRAY<STRUCT<id INT64, v STRING, tags ARRAY<STRING>>>)"); err != nil {
+		t.Fatalf("CREATE TABLE: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, "INSERT INTO T (records) VALUES (@records)", sql.Named("records", records)); err != nil {
+		t.Fatalf("INSERT: %v", err)
+	}
+	rows, err := db.QueryContext(ctx,
+		"SELECT r.id, r.v, ARRAY_LENGTH(r.tags) FROM T, UNNEST(T.records) AS r ORDER BY r.id")
+	if err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	defer rows.Close()
+	var got []string
+	for rows.Next() {
+		var (
+			id, n int64
+			v     sql.NullString
+		)
+		if err := rows.Scan(&id, &v, &n); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		got = append(got, fmt.Sprintf("%d,%v,%s,%d", id, v.Valid, v.String, n))
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+	if want := []string{"1,true,one,2", "2,false,,0"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+
+	var isDate bool
+	date := googlesqlite.TypedValue{Type: kind(googlesql.TypeKindTypeDate), Value: "2024-01-02"}
+	if err := db.QueryRowContext(ctx, "SELECT @d = DATE '2024-01-02'", sql.Named("d", date)).Scan(&isDate); err != nil {
+		t.Fatalf("DATE query: %v", err)
+	}
+	if !isDate {
+		t.Fatalf("@d = DATE '2024-01-02' got false; want true")
+	}
+}
+
+// TestTypedValueParameterErrors: a STRUCT value with a field the
+// declared type lacks, or a value that cannot be cast, is rejected.
+func TestTypedValueParameterErrors(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=typed_value_param_errors")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+
+	structType := &googlesqlite.Type{Kind: int(googlesql.TypeKindTypeStruct), FieldTypes: []*googlesqlite.NameWithType{
+		{Name: "id", Type: &googlesqlite.Type{Kind: int(googlesql.TypeKindTypeInt64)}},
+	}}
+	for name, v := range map[string]googlesqlite.TypedValue{
+		"undeclared field": {Type: structType, Value: map[string]any{"id": int64(1), "extra": "x"}},
+		"uncastable value": {Type: structType, Value: map[string]any{"id": "not a number"}},
+		"nil type":         {Value: int64(1)},
+	} {
+		var got any
+		err := db.QueryRowContext(context.Background(), "SELECT @p.id", sql.Named("p", v)).Scan(&got)
+		if err == nil {
+			t.Errorf("%s: got %v; want an error", name, got)
+		}
+	}
+}
+
+// TestTypedValuePreparedStatement binds a TypedValue to a prepared
+// statement, whose parameter types were fixed at prepare time: only the
+// value's encoding uses the declared type.
+func TestTypedValuePreparedStatement(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:?_test=typed_value_prepared")
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	stmt, err := db.PrepareContext(ctx, "SELECT ? + 1")
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	defer stmt.Close()
+	var got int64
+	v := googlesqlite.TypedValue{Type: &googlesqlite.Type{Kind: int(googlesql.TypeKindTypeInt64)}, Value: "41"}
+	if err := stmt.QueryRowContext(ctx, v).Scan(&got); err != nil {
+		t.Fatalf("QueryRow: %v", err)
+	}
+	if got != 42 {
+		t.Fatalf("got %d; want 42", got)
 	}
 }

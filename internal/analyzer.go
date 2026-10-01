@@ -1490,11 +1490,11 @@ func (a *Analyzer) sliceArgsPerStatement(parsed *parsedScript, args []driver.Nam
 // they do — wildcard-table pre-registration, StmtAction construction
 // — can itself re-enter Analyze; keeping that outside this critical
 // section is what prevents a self-deadlock.
-func (a *Analyzer) analyzeStatementLocked(stmt googlesql.ASTStatementNode, mode googlesql.ParameterMode, args []driver.NamedValue, query string) (googlesql.ResolvedStatementNode, error) {
+func (a *Analyzer) analyzeStatementLocked(stmt googlesql.ASTStatementNode, mode googlesql.ParameterMode, args []driver.NamedValue, declared map[string]*Type, query string) (googlesql.ResolvedStatementNode, error) {
 	wasmAnalyzeMu.Lock()
 	defer wasmAnalyzeMu.Unlock()
 	a.opt.SetParameterMode(mode)
-	if err := a.declareParameterTypes(mode, args); err != nil {
+	if err := a.declareParameterTypes(mode, args, declared); err != nil {
 		return nil, fmt.Errorf("failed to declare parameter types: %w", err)
 	}
 	out, err := googlesql.AnalyzeStatementFromParserAST(stmt, a.opt, query, a.catalog.catalog, tf())
@@ -1518,6 +1518,7 @@ func (a *Analyzer) Analyze(ctx context.Context, conn *Conn, query string, args [
 	// arg slice, applyScriptVariables needs ctx/conn) stay as explicit
 	// calls in their exact positions relative to the uniform pipeline
 	// steps.
+	args, declaredTypes := unwrapTypedArgs(args)
 	query, args = applyMixedParameterRewrite(query, args)
 	query = applySQLRewritePipeline(query, sqlRewritePipelinePreScriptVars)
 	query = applyScriptVariables(ctx, query, conn)
@@ -1565,7 +1566,7 @@ func (a *Analyzer) Analyze(ctx context.Context, conn *Conn, query string, args [
 				return nil, err
 			}
 			a.preRegisterWildcardTables(stmt)
-			stmtNode, err := a.analyzeStatementLocked(stmt, mode, stmtArgs, query)
+			stmtNode, err := a.analyzeStatementLocked(stmt, mode, stmtArgs, declaredTypes, query)
 			if err != nil {
 				return nil, err
 			}
@@ -1613,7 +1614,7 @@ func (a *Analyzer) context(
 //
 // Existing declared parameters are cleared each call so the same
 // options instance can be reused across queries.
-func (a *Analyzer) declareParameterTypes(mode googlesql.ParameterMode, args []driver.NamedValue) error {
+func (a *Analyzer) declareParameterTypes(mode googlesql.ParameterMode, args []driver.NamedValue, declared map[string]*Type) error {
 	if err := a.opt.ClearQueryParameters(); err != nil {
 		return err
 	}
@@ -1624,7 +1625,19 @@ func (a *Analyzer) declareParameterTypes(mode googlesql.ParameterMode, args []dr
 		if v.Name == "" {
 			continue
 		}
-		typ, ok := googleSQLTypeForValue(v.Value)
+		var (
+			typ googlesql.Googlesql_TypeNode
+			ok  bool
+		)
+		if dt, exists := declared[strings.ToLower(v.Name)]; exists {
+			t, err := dt.ToGoogleSQLType()
+			if err != nil {
+				return fmt.Errorf("parameter @%s: %w", v.Name, err)
+			}
+			typ, ok = t, true
+		} else {
+			typ, ok = googleSQLTypeForValue(v.Value)
+		}
 		if !ok {
 			continue
 		}
@@ -1659,8 +1672,17 @@ func googleSQLTypeForValue(v any) (googlesql.Googlesql_TypeNode, bool) {
 		// Try to decode as a googlesqlite layout first — Conn.CheckNamedValue
 		// has already encoded most non-primitive values into a base64
 		// string. If decoding succeeds, deduce the type from the layout.
-		if t, ok := googleSQLTypeForEncodedString(factory, x); ok {
-			return t, true
+		if decoded, err := DecodeValue(x); err == nil && decoded != nil {
+			if t, ok := googleSQLTypeForDecodedValue(factory, decoded); ok {
+				return t, true
+			}
+			switch decoded.(type) {
+			case *value.ArrayValue, *value.StructValue:
+				// A composite whose type cannot be derived (a NULL
+				// struct field) is left undeclared; STRING is never
+				// right for it.
+				return nil, false
+			}
 		}
 		return makeSimpleType(factory, googlesql.TypeKindTypeString)
 	case []byte:
@@ -1681,15 +1703,9 @@ func googleSQLTypeForValue(v any) (googlesql.Googlesql_TypeNode, bool) {
 	}
 }
 
-func googleSQLTypeForEncodedString(factory *googlesql.TypeFactory, s string) (googlesql.Googlesql_TypeNode, bool) {
-	if len(s) == 0 {
-		return nil, false
-	}
-	decoded, err := DecodeValue(s)
-	if err != nil || decoded == nil {
-		return nil, false
-	}
-	switch dv := decoded.(type) {
+// googleSQLTypeForScalarValue maps a decoded scalar to its type.
+func googleSQLTypeForScalarValue(factory *googlesql.TypeFactory, v value.Value) (googlesql.Googlesql_TypeNode, bool) {
+	switch v.(type) {
 	case value.IntValue:
 		return makeSimpleType(factory, googlesql.TypeKindTypeInt64)
 	case value.FloatValue:
@@ -1706,36 +1722,6 @@ func googleSQLTypeForEncodedString(factory *googlesql.TypeFactory, s string) (go
 		return makeSimpleType(factory, googlesql.TypeKindTypeTimestamp)
 	case value.DatetimeValue:
 		return makeSimpleType(factory, googlesql.TypeKindTypeDatetime)
-	case *value.ArrayValue:
-		// element type from the first non-nil element
-		var elemKind googlesql.TypeKind = googlesql.TypeKindTypeString
-		for _, elem := range dv.Values {
-			if elem == nil {
-				continue
-			}
-			switch elem.(type) {
-			case value.IntValue:
-				elemKind = googlesql.TypeKindTypeInt64
-			case value.FloatValue:
-				elemKind = googlesql.TypeKindTypeDouble
-			case value.BoolValue:
-				elemKind = googlesql.TypeKindTypeBool
-			case value.StringValue:
-				elemKind = googlesql.TypeKindTypeString
-			case value.BytesValue:
-				elemKind = googlesql.TypeKindTypeBytes
-			case value.DateValue:
-				elemKind = googlesql.TypeKindTypeDate
-			case value.TimestampValue:
-				elemKind = googlesql.TypeKindTypeTimestamp
-			case value.DatetimeValue:
-				elemKind = googlesql.TypeKindTypeDatetime
-			default:
-				return nil, false
-			}
-			break
-		}
-		return makeArrayType(factory, elemKind)
 	}
 	return nil, false
 }
