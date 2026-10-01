@@ -33,6 +33,12 @@ var (
 // driver.Value types. Numeric and bool primitives stay raw because
 // EncodeValue passes them through unchanged.
 func CheckNamedValue(value *driver.NamedValue) error {
+	switch tv := value.Value.(type) {
+	case TypedValue:
+		return checkTypedNamedValue(value, tv)
+	case *TypedValue:
+		return checkTypedNamedValue(value, *tv)
+	}
 	val, err := ValueFromGoValue(value.Value)
 	if err != nil {
 		return err
@@ -224,7 +230,7 @@ func newDMLStmt(stmt *sql.Stmt, args []*googlesql.ResolvedParameter, colTypes []
 }
 
 func (s *DMLStmt) CheckNamedValue(value *driver.NamedValue) error {
-	return CheckNamedValue(value)
+	return checkPreparedNamedValue(value)
 }
 
 func (s *DMLStmt) Close() error {
@@ -301,7 +307,7 @@ func newQueryStmt(stmt *sql.Stmt, args []*googlesql.ResolvedParameter, formatted
 }
 
 func (s *QueryStmt) CheckNamedValue(value *driver.NamedValue) error {
-	return CheckNamedValue(value)
+	return checkPreparedNamedValue(value)
 }
 
 func (s *QueryStmt) Close() error {
