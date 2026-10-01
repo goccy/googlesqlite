@@ -462,6 +462,160 @@ WHEN MATCHED THEN
 	}
 }
 
+// openMergeTestConn opens a fresh in-memory connection for one MERGE
+// test and returns it with an exec helper that fails the test on error.
+func openMergeTestConn(t *testing.T, name string) (*sql.Conn, func(q string, args ...any)) {
+	t.Helper()
+	db, err := sql.Open("googlesqlite", ":memory:?_test="+name)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+	conn, err := db.Conn(context.Background())
+	if err != nil {
+		t.Fatalf("Conn: %v", err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	return conn, func(q string, args ...any) {
+		t.Helper()
+		if _, err := conn.ExecContext(context.Background(), q, args...); err != nil {
+			t.Fatalf("exec %q: %v", q, err)
+		}
+	}
+}
+
+// queryMergeRows returns `SELECT id, v FROM T ORDER BY id` as "id=v"
+// strings, with NULL rendered as "NULL".
+func queryMergeRows(t *testing.T, conn *sql.Conn) []string {
+	t.Helper()
+	rows, err := conn.QueryContext(context.Background(), "SELECT id, v FROM T ORDER BY id")
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	defer rows.Close()
+	var got []string
+	for rows.Next() {
+		var id int64
+		var v sql.NullString
+		if err := rows.Scan(&id, &v); err != nil {
+			t.Fatalf("Scan: %v", err)
+		}
+		if !v.Valid {
+			v.String = "NULL"
+		}
+		got = append(got, fmt.Sprintf("%d=%s", id, v.String))
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("rows.Err: %v", err)
+	}
+	return got
+}
+
+// TestMergeNamedQueryParameters binds named query parameters in the ON
+// predicate, a WHEN ... AND condition, an UPDATE SET value and an
+// INSERT value. MERGE runs as several SQLite statements; each must
+// receive the parameters it references.
+func TestMergeNamedQueryParameters(t *testing.T) {
+	t.Parallel()
+	conn, exec := openMergeTestConn(t, "merge_named_params")
+	exec("CREATE TABLE T (id INT64, v STRING)")
+	exec("CREATE TABLE S (id INT64)")
+	exec("INSERT INTO T (id, v) VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+	exec("INSERT INTO S (id) VALUES (1), (2), (4), (5)")
+
+	exec(`MERGE T USING S
+ON T.id = S.id AND S.id <> @skip
+WHEN MATCHED AND T.v <> @keep THEN
+  UPDATE SET v = @updated
+WHEN NOT MATCHED BY TARGET THEN
+  INSERT (id, v) VALUES (S.id, CONCAT(@inserted, CAST(S.id AS STRING)))`,
+		sql.Named("skip", int64(5)),
+		sql.Named("keep", "b"),
+		sql.Named("updated", "u"),
+		sql.Named("inserted", "i"),
+	)
+
+	got := queryMergeRows(t, conn)
+	want := []string{"1=u", "2=b", "3=c", "4=i4", "5=i5"}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("rows after MERGE (-want +got):\n%s", diff)
+	}
+}
+
+// TestMergeSubquerySourceOverArrayParameter uses a subquery over
+// UNNEST(@ids) as the USING source, together with WHEN NOT MATCHED BY
+// SOURCE.
+func TestMergeSubquerySourceOverArrayParameter(t *testing.T) {
+	t.Parallel()
+	conn, exec := openMergeTestConn(t, "merge_unnest_param_source")
+	exec("CREATE TABLE T (id INT64, v STRING)")
+	exec("INSERT INTO T (id, v) VALUES (1, 'a'), (2, 'b')")
+
+	exec(`MERGE T USING (SELECT id, @label AS label FROM UNNEST(@ids) AS id) S
+ON T.id = S.id
+WHEN MATCHED THEN
+  UPDATE SET v = S.label
+WHEN NOT MATCHED BY TARGET THEN
+  INSERT (id, v) VALUES (S.id, S.label)
+WHEN NOT MATCHED BY SOURCE THEN
+  DELETE`,
+		sql.Named("ids", []int64{2, 3}),
+		sql.Named("label", "x"),
+	)
+
+	got := queryMergeRows(t, conn)
+	want := []string{"2=x", "3=x"}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("rows after MERGE (-want +got):\n%s", diff)
+	}
+}
+
+// TestMergeWhenConditionNullFallsThrough pins first-match-wins when an
+// earlier WHEN clause's condition evaluates to NULL: that clause does
+// not apply, so the row falls through to the next matching clause.
+func TestMergeWhenConditionNullFallsThrough(t *testing.T) {
+	t.Parallel()
+	conn, exec := openMergeTestConn(t, "merge_when_null_condition")
+	exec("CREATE TABLE T (id INT64, v STRING)")
+	exec("INSERT INTO T (id, v) VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+
+	exec(`MERGE T USING (
+  SELECT 1 AS id, TRUE AS keep UNION ALL
+  SELECT 2, CAST(NULL AS BOOL) UNION ALL
+  SELECT 3, FALSE
+) S
+ON T.id = S.id
+WHEN MATCHED AND S.keep THEN
+  UPDATE SET v = 'kept'
+WHEN MATCHED THEN
+  DELETE`)
+
+	got := queryMergeRows(t, conn)
+	want := []string{"1=kept"}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("rows after MERGE (-want +got):\n%s", diff)
+	}
+}
+
+// TestMergePositionalQueryParametersRejected: MERGE runs as several
+// SQLite statements, so one `?` sequence has no well-defined mapping
+// onto them. It must fail with a clear error rather than bind the
+// wrong values.
+func TestMergePositionalQueryParametersRejected(t *testing.T) {
+	t.Parallel()
+	conn, exec := openMergeTestConn(t, "merge_positional_params")
+	exec("CREATE TABLE T (id INT64, v STRING)")
+	exec("CREATE TABLE S (id INT64)")
+
+	_, err := conn.ExecContext(context.Background(), `MERGE T USING S
+ON T.id = S.id
+WHEN NOT MATCHED THEN
+  INSERT (id, v) VALUES (S.id, ?)`, "x")
+	if err == nil || !strings.Contains(err.Error(), "positional query parameters") {
+		t.Fatalf("MERGE with a positional parameter: err = %v; want a positional-parameter error", err)
+	}
+}
+
 // TestTruncateTable exercises the TruncateStmtAction surface (TRUNCATE
 // TABLE rewriting to DELETE FROM). Authoritative source:
 // docs/third_party/googlesql-docs/data-manipulation-language.md "TRUNCATE

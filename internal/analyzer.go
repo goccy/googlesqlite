@@ -2648,86 +2648,233 @@ func (a *Analyzer) newTruncateStmtAction(_ context.Context, _ string, _ []driver
 //
 // Per-WHEN AND conditions (when.MatchExpr) are honoured by attaching
 // the formatted expression as an extra WHERE conjunct on the staging
-// filter for that clause.
+// filter for that clause. Because the staging tables are snapshots
+// taken before any action runs, first-match-wins across WHEN clauses
+// of the same match type is enforced by also excluding the rows that
+// an earlier clause's condition selects.
 //
-// Known gaps (pre-existing): WHEN clauses are emitted independently,
-// so first-match-wins is not enforced across overlapping conditions;
-// and a matched (target, source) pair that has multiple source rows
-// for one target row is silently accepted (SQLite UPDATE FROM
-// behaves last-match-wins). Neither restriction is new in this
-// rewrite.
-func (a *Analyzer) newMergeStmtAction(ctx context.Context, _ string, _ []driver.NamedValue, node *googlesql.ResolvedMergeStmt) (*MergeStmtAction, error) {
+// A source that is not a bare table reference (a subquery, possibly
+// over UNNEST(@param)) is materialized once into a third staging
+// table, googlesqlite_merge_src_set, with a synthesized __s_rowid, so
+// it is evaluated exactly once even though both staging tables read
+// it.
+//
+// Each emitted statement binds exactly the named query parameters
+// that the fragments it is built from reference: every fragment is
+// formatted under its own paramCollector. Positional (`?`) parameters
+// are rejected, because the statements do not preserve the order in
+// which the parameters appear in the MERGE text.
+//
+// Known gap (pre-existing): a target row matched by multiple source
+// rows is silently accepted (SQLite UPDATE FROM behaves
+// last-match-wins) instead of raising BigQuery's "UPDATE/MERGE must
+// match at most one source row for each target row" error.
+func (a *Analyzer) newMergeStmtAction(ctx context.Context, _ string, args []driver.NamedValue, node *googlesql.ResolvedMergeStmt) (*MergeStmtAction, error) {
 	// node.TableScan() is typed *ResolvedTableScan already (the grammar
 	// guarantees the MERGE target is a base table reference), so no
 	// assertion is needed. node.FromScan() returns the interface
-	// ResolvedScanNode because USING-clause subqueries are legal in
-	// the spec; here we accept only the table-reference form so the
-	// per-WHEN UPDATE / DELETE can hand identity off to rowid.
+	// ResolvedScanNode because USING-clause subqueries are legal.
 	targetTableScan := m1(node.TableScan())
 	targetName, err := getTableName(ctx, targetTableScan)
 	if err != nil {
 		return nil, fmt.Errorf("MERGE: target table: %w", err)
 	}
-	sourceScan := m1(node.FromScan())
-	sourceTableScan, ok := sourceScan.(*googlesql.ResolvedTableScan)
-	if !ok {
-		return nil, fmt.Errorf("MERGE: source must be a single-table reference, got %T", sourceScan)
-	}
-	sourceName, err := getTableName(ctx, sourceTableScan)
-	if err != nil {
-		return nil, fmt.Errorf("MERGE: source table: %w", err)
-	}
-
-	targetCols := m1(targetTableScan.ColumnList())
-	sourceCols := m1(sourceTableScan.ColumnList())
-	targetSubquery := mergeProjectScan(ctx, targetCols, targetName, "__t_rowid")
-	sourceSubquery := mergeProjectScan(ctx, sourceCols, sourceName, "__s_rowid")
-
-	onExpr, err := newNode(m1(node.MergeExpr())).FormatSQL(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("MERGE: ON expression: %w", err)
-	}
 
 	const (
 		tSetName     = "googlesqlite_merge_t_set"
 		sOnlySetName = "googlesqlite_merge_s_only_set"
+		srcSetName   = "googlesqlite_merge_src_set"
 	)
+	cleanup := []mergeStmt{
+		{sql: fmt.Sprintf("DROP TABLE IF EXISTS %s", tSetName)},
+		{sql: fmt.Sprintf("DROP TABLE IF EXISTS %s", sOnlySetName)},
+		{sql: fmt.Sprintf("DROP TABLE IF EXISTS %s", srcSetName)},
+	}
 
-	var stmts []string
 	// Defensive cleanup: a previous MERGE in this connection may have
 	// errored mid-flight and left the staging tables behind.
-	stmts = append(stmts,
-		fmt.Sprintf("DROP TABLE IF EXISTS %s", tSetName),
-		fmt.Sprintf("DROP TABLE IF EXISTS %s", sOnlySetName),
-	)
-	stmts = append(stmts, fmt.Sprintf(
-		"CREATE TEMP TABLE %s AS SELECT __t.*, __s.*, (__s.__s_rowid IS NOT NULL) AS __s_present FROM %s AS __t LEFT JOIN %s AS __s ON %s",
-		tSetName, targetSubquery, sourceSubquery, onExpr,
-	))
-	stmts = append(stmts, fmt.Sprintf(
-		"CREATE TEMP TABLE %s AS SELECT __s.* FROM %s AS __s WHERE NOT EXISTS (SELECT 1 FROM %s AS __t WHERE %s)",
-		sOnlySetName, sourceSubquery, targetSubquery, onExpr,
-	))
+	stmts := append([]mergeStmt(nil), cleanup...)
 
-	for _, when := range m1(node.WhenClauseList()) {
-		matchCondSQL, err := formatMergeWhenMatchExpr(ctx, when)
+	targetSubquery := mergeProjectScan(ctx, m1(targetTableScan.ColumnList()), targetName, "__t_rowid")
+	var sourceSubquery string
+	sourceScan := m1(node.FromScan())
+	if sourceTableScan, ok := sourceScan.(*googlesql.ResolvedTableScan); ok {
+		sourceName, err := getTableName(ctx, sourceTableScan)
+		if err != nil {
+			return nil, fmt.Errorf("MERGE: source table: %w", err)
+		}
+		sourceSubquery = mergeProjectScan(ctx, m1(sourceTableScan.ColumnList()), sourceName, "__s_rowid")
+	} else {
+		materialize, err := mergeMaterializeSourceScan(ctx, sourceScan, srcSetName)
 		if err != nil {
 			return nil, err
 		}
-		stmt, err := mergeWhenStatement(ctx, when, targetName, tSetName, sOnlySetName, matchCondSQL)
+		stmts = append(stmts, materialize)
+		sourceSubquery = fmt.Sprintf("(SELECT * FROM %s)", srcSetName)
+	}
+
+	onExpr, onParams, err := formatMergeFragment(ctx, func(ctx context.Context) (string, error) {
+		return newNode(m1(node.MergeExpr())).FormatSQL(ctx)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("MERGE: ON expression: %w", err)
+	}
+	stmts = append(stmts,
+		mergeStmt{
+			sql: fmt.Sprintf(
+				"CREATE TEMP TABLE %s AS SELECT __t.*, __s.*, (__s.__s_rowid IS NOT NULL) AS __s_present FROM %s AS __t LEFT JOIN %s AS __s ON %s",
+				tSetName, targetSubquery, sourceSubquery, onExpr,
+			),
+			params: onParams,
+		},
+		mergeStmt{
+			sql: fmt.Sprintf(
+				"CREATE TEMP TABLE %s AS SELECT __s.* FROM %s AS __s WHERE NOT EXISTS (SELECT 1 FROM %s AS __t WHERE %s)",
+				sOnlySetName, sourceSubquery, targetSubquery, onExpr,
+			),
+			params: onParams,
+		},
+	)
+
+	// earlier[matchType] holds the conditions of the preceding WHEN
+	// clauses of that match type; unreachable[matchType] is set once
+	// one of them had no condition, so it takes every remaining row.
+	earlier := map[googlesql.ResolvedMergeWhenEnums_MatchType][]mergeStmt{}
+	unreachable := map[googlesql.ResolvedMergeWhenEnums_MatchType]bool{}
+	for _, when := range m1(node.WhenClauseList()) {
+		matchType := m1(when.MatchType())
+		if unreachable[matchType] {
+			continue
+		}
+		cond, condParams, err := formatMergeFragment(ctx, func(ctx context.Context) (string, error) {
+			return formatMergeWhenMatchExpr(ctx, when)
+		})
+		if err != nil {
+			return nil, err
+		}
+		filter := cond
+		params := condParams
+		for _, prev := range earlier[matchType] {
+			filter += fmt.Sprintf(" AND NOT COALESCE((%s), FALSE)", prev.sql)
+			params = append(params, prev.params...)
+		}
+		stmt, stmtParams, err := formatMergeFragment(ctx, func(ctx context.Context) (string, error) {
+			return mergeWhenStatement(ctx, when, targetName, tSetName, sOnlySetName, filter)
+		})
 		if err != nil {
 			return nil, err
 		}
 		if stmt != "" {
-			stmts = append(stmts, stmt)
+			stmts = append(stmts, mergeStmt{sql: stmt, params: append(params, stmtParams...)})
+		}
+		if cond == "" {
+			unreachable[matchType] = true
+		} else {
+			earlier[matchType] = append(earlier[matchType], mergeStmt{sql: strings.TrimPrefix(cond, " AND "), params: condParams})
 		}
 	}
+	stmts = append(stmts, cleanup...)
 
-	stmts = append(stmts,
-		fmt.Sprintf("DROP TABLE IF EXISTS %s", tSetName),
-		fmt.Sprintf("DROP TABLE IF EXISTS %s", sOnlySetName),
+	action := &MergeStmtAction{}
+	for _, stmt := range stmts {
+		stmtArgs, err := mergeBindArgs(args, stmt.params)
+		if err != nil {
+			return nil, err
+		}
+		action.stmts = append(action.stmts, stmt.sql)
+		action.args = append(action.args, stmtArgs)
+	}
+	return action, nil
+}
+
+// mergeStmt is one SQLite statement (or fragment) of a MERGE
+// expansion together with the query parameters its text references.
+type mergeStmt struct {
+	sql    string
+	params []*googlesql.ResolvedParameter
+}
+
+// formatMergeFragment runs format under a fresh paramCollector and
+// returns the formatted SQL with the query parameters it references.
+func formatMergeFragment(ctx context.Context, format func(context.Context) (string, error)) (string, []*googlesql.ResolvedParameter, error) {
+	c := &paramCollector{}
+	sql, err := format(withParamCollector(ctx, c))
+	if err != nil {
+		return "", nil, err
+	}
+	return sql, c.params, nil
+}
+
+// mergeMaterializeSourceScan renders a non-table MERGE source as a
+// CREATE TEMP TABLE statement. The formatted scan names each output
+// column by its analyzer-assigned unique id, which is what the ON /
+// WHEN / SET / INSERT fragments reference, so the projection re-selects
+// those names and appends the __s_rowid that the t_set LEFT JOIN uses
+// as its presence sentinel.
+func mergeMaterializeSourceScan(ctx context.Context, sourceScan googlesql.ResolvedScanNode, srcSetName string) (mergeStmt, error) {
+	formatted, params, err := formatMergeFragment(ctx, func(ctx context.Context) (string, error) {
+		return newNode(sourceScan).FormatSQL(ctx)
+	})
+	if err != nil {
+		return mergeStmt{}, fmt.Errorf("MERGE: source subquery: %w", err)
+	}
+	from, err := formatInput(formatted)
+	if err != nil {
+		return mergeStmt{}, fmt.Errorf("MERGE: source subquery: %w", err)
+	}
+	cols := m1(sourceScan.MutableColumnList())
+	projections := make([]string, 0, len(cols)+1)
+	for _, col := range cols {
+		projections = append(projections, fmt.Sprintf("`%s`", uniqueColumnName(ctx, col)))
+	}
+	projections = append(projections, "ROW_NUMBER() OVER () AS __s_rowid")
+	return mergeStmt{
+		sql:    fmt.Sprintf("CREATE TEMP TABLE %s AS SELECT %s %s", srcSetName, strings.Join(projections, ","), from),
+		params: params,
+	}, nil
+}
+
+// mergeBindArgs encodes the named query parameters one MERGE statement
+// references, looking each value up by name.
+func mergeBindArgs(values []driver.NamedValue, params []*googlesql.ResolvedParameter) ([]any, error) {
+	if len(params) == 0 {
+		return nil, nil
+	}
+	byName := make(map[string]driver.NamedValue, len(values))
+	for _, v := range values {
+		byName[strings.ToLower(v.Name)] = v
+	}
+	var (
+		named  []driver.NamedValue
+		unique []*googlesql.ResolvedParameter
+		seen   = map[string]struct{}{}
 	)
-	return &MergeStmtAction{stmts: stmts}, nil
+	for _, p := range params {
+		// Name() is always lower-case.
+		name, _ := p.Name()
+		if name == "" {
+			return nil, fmt.Errorf("MERGE: positional query parameters are not supported; use named parameters")
+		}
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
+		v, ok := byName[name]
+		if !ok {
+			return nil, fmt.Errorf("MERGE: no value for query parameter @%s", name)
+		}
+		named = append(named, v)
+		unique = append(unique, p)
+	}
+	encoded, err := encodeNamedValues(named, unique)
+	if err != nil {
+		return nil, fmt.Errorf("MERGE: query parameters: %w", err)
+	}
+	out := make([]any, 0, len(encoded))
+	for _, e := range encoded {
+		out = append(out, e)
+	}
+	return out, nil
 }
 
 // mergeProjectScan builds the per-side subquery used as one half of the

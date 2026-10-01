@@ -879,6 +879,8 @@ func (a *TruncateStmtAction) Cleanup(ctx context.Context, conn *Conn) error {
 
 type MergeStmtAction struct {
 	stmts []string
+	// args[i] holds the encoded query parameters stmts[i] references.
+	args [][]any
 }
 
 func (a *MergeStmtAction) Prepare(ctx context.Context, conn *Conn) (driver.Stmt, error) {
@@ -886,8 +888,8 @@ func (a *MergeStmtAction) Prepare(ctx context.Context, conn *Conn) (driver.Stmt,
 }
 
 func (a *MergeStmtAction) exec(ctx context.Context, conn *Conn) error {
-	for _, stmt := range a.stmts {
-		if _, err := conn.ExecContext(ctx, stmt); err != nil {
+	for i, stmt := range a.stmts {
+		if _, err := conn.ExecContext(ctx, stmt, a.args[i]...); err != nil {
 			return fmt.Errorf("failed to exec merge statement %s: %w", stmt, err)
 		}
 	}
