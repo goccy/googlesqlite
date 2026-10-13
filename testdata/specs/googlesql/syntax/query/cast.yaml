@@ -21,3 +21,17 @@ cases:
     expected:
       rows:
         - ['true']
+  # A string that is not a date literal is an error under CAST (the
+  # SAFE_CAST spec covers the NULL form). The subquery keeps the cast out
+  # of the analyzer's constant folder.
+  - desc: cast string to date rejects a timestamp-shaped string
+    sql: SELECT CAST(v AS DATE) AS r FROM (SELECT '2024-01-15T10:30:00.000Z' AS v)
+    expected:
+      error:
+        contains: "as a date literal"
+  # A timestamp source is truncated as documented, not rejected.
+  - desc: cast timestamp to date truncates
+    sql: SELECT CAST(v AS DATE) AS r FROM (SELECT TIMESTAMP '2024-01-15 10:30:00' AS v)
+    expected:
+      rows:
+        - ["2024-01-15"]

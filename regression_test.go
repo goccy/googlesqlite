@@ -2277,3 +2277,98 @@ func TestRegression_InUnnestArrayParam(t *testing.T) {
 		}
 	}
 }
+
+// TestRegression_StringToTemporalCastRequiresCanonicalLiteral asserts that a
+// STRING cast to DATE, DATETIME or TIME accepts exactly the canonical literal
+// of the target type.
+//
+// Regression: the runtime cast (a column value, i.e. everything the analyzer
+// does not constant-fold) routed every temporal target through one
+// shape-agnostic string parser. A timestamp-shaped string was therefore
+// truncated into a DATE instead of being rejected, while the canonical
+// one-digit forms the parser did not recognize were rejected instead of
+// accepted -- both directions disagreeing with the constant-folded path.
+func TestRegression_StringToTemporalCastRequiresCanonicalLiteral(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	null := sql.NullString{}
+	str := func(s string) sql.NullString { return sql.NullString{String: s, Valid: true} }
+
+	cases := []struct {
+		target string
+		input  string
+		want   sql.NullString
+	}{
+		// YYYY-[M]M-[D]D, and nothing else.
+		{"DATE", "2024-01-15", str("2024-01-15")},
+		{"DATE", "2024-1-5", str("2024-01-05")},
+		{"DATE", "2024-01-15T10:30:00.000Z", null},
+		{"DATE", "2024-01-15T00:00:00", null},
+		{"DATE", "2024-01-15 00:00:00", null},
+		{"DATE", "10:30:00", null},
+		{"DATE", "not-a-date", null},
+		// civil_date_part[{ |T|t}[H]H:[M]M:[S]S[.F]], no time zone.
+		{"DATETIME", "2024-01-15", str("2024-01-15T00:00:00")},
+		{"DATETIME", "2024-01-15 10:30:00", str("2024-01-15T10:30:00")},
+		{"DATETIME", "2024-01-15T10:30:00", str("2024-01-15T10:30:00")},
+		{"DATETIME", "2024-01-15t10:30:00", str("2024-01-15T10:30:00")},
+		{"DATETIME", "2024-01-15 10:30:00.123", str("2024-01-15T10:30:00.123")},
+		{"DATETIME", "2024-1-5 1:2:3", str("2024-01-05T01:02:03")},
+		{"DATETIME", "2024-01-15 10:30:00+00", null},
+		{"DATETIME", "2024-01-15T10:30:00.000Z", null},
+		// [H]H:[M]M:[S]S[.F], no date and no time zone.
+		{"TIME", "10:30:00", str("10:30:00")},
+		{"TIME", "1:2:3", str("01:02:03")},
+		{"TIME", "10:30:00.123456", str("10:30:00.123456")},
+		{"TIME", "10:30:00Z", null},
+		{"TIME", "2024-01-15", null},
+		{"TIME", "2024-01-15T10:30:00.000Z", null},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.target+"/"+tc.input, func(t *testing.T) {
+			// The column reference keeps the cast away from the analyzer's
+			// constant folder, so it runs through the driver's cast path.
+			q := fmt.Sprintf(
+				"SELECT CAST(SAFE_CAST(v AS %s) AS STRING) FROM (SELECT %q AS v)",
+				tc.target, tc.input)
+			var got sql.NullString
+			if err := db.QueryRowContext(ctx, q).Scan(&got); err != nil {
+				t.Fatalf("%s: %v", q, err)
+			}
+			if got != tc.want {
+				t.Errorf("%s\n got  %#v\n want %#v", q, got, tc.want)
+			}
+		})
+	}
+
+	// A string that does carry a time zone stays a valid TIMESTAMP.
+	t.Run("TIMESTAMP/zoned string still parses", func(t *testing.T) {
+		var got int64
+		q := `SELECT UNIX_SECONDS(SAFE_CAST(v AS TIMESTAMP)) FROM (SELECT '2024-01-15T10:30:00.000Z' AS v)`
+		if err := db.QueryRowContext(ctx, q).Scan(&got); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+		if want := int64(1705314600); got != want {
+			t.Errorf("got %d want %d", got, want)
+		}
+	})
+
+	// Non-string sources keep their documented truncating semantics.
+	t.Run("TIMESTAMP source still truncates to DATE", func(t *testing.T) {
+		var got string
+		q := `SELECT CAST(SAFE_CAST(v AS DATE) AS STRING) FROM (SELECT TIMESTAMP '2024-01-15 10:30:00' AS v)`
+		if err := db.QueryRowContext(ctx, q).Scan(&got); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+		if want := "2024-01-15"; got != want {
+			t.Errorf("got %q want %q", got, want)
+		}
+	})
+}

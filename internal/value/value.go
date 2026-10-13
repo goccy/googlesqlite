@@ -72,6 +72,47 @@ func parseTime(t string) (time.Time, error) {
 	return time.Parse("15:04:05.999999", t)
 }
 
+// Canonical DATE / DATETIME / TIME literal layouts. Every component
+// except the year may be written with one or two digits, and a datetime
+// separates its optional time part with a space, "T" or "t"
+// (data-types.md, "Canonical format").
+const (
+	dateLiteralLayout = "2006-1-2"
+	timeLiteralLayout = "15:4:5"
+)
+
+var datetimeLiteralLayouts = []string{
+	dateLiteralLayout + " " + timeLiteralLayout,
+	dateLiteralLayout + "T" + timeLiteralLayout,
+	dateLiteralLayout + "t" + timeLiteralLayout,
+	dateLiteralLayout,
+}
+
+func parseDateLiteral(s string) (time.Time, error) {
+	t, err := time.Parse(dateLiteralLayout, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse %q as a date literal", s)
+	}
+	return t, nil
+}
+
+func parseDatetimeLiteral(s string) (time.Time, error) {
+	for _, layout := range datetimeLiteralLayouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("failed to parse %q as a datetime literal", s)
+}
+
+func parseTimeLiteral(s string) (time.Time, error) {
+	t, err := time.Parse(timeLiteralLayout, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse %q as a time literal", s)
+	}
+	return t, nil
+}
+
 func parseTimestamp(timestamp string, loc *time.Location) (time.Time, error) {
 	if t, err := time.ParseInLocation("2006-01-02T15:04:05.999999999Z07:00", timestamp, loc); err == nil {
 		return t, nil

@@ -11,3 +11,57 @@ cases:
     expected:
       rows:
         - [null]
+  # Casting a STRING to a temporal type requires the canonical literal of
+  # the target type (conversion_functions.md: "the string must conform to
+  # the supported date literal format"), so a timestamp-shaped string is
+  # not a DATE and SAFE_CAST returns NULL instead of truncating it. The
+  # subquery keeps the cast out of the analyzer's constant folder.
+  - desc: string to date rejects a timestamp-shaped string
+    sql: SELECT SAFE_CAST(v AS DATE) FROM (SELECT "2024-01-15T10:30:00.000Z" AS v)
+    expected:
+      rows:
+        - [null]
+  - desc: string to date rejects a datetime-shaped string
+    sql: SELECT SAFE_CAST(v AS DATE) FROM (SELECT "2024-01-15 00:00:00" AS v)
+    expected:
+      rows:
+        - [null]
+  - desc: string to date rejects a time-shaped string
+    sql: SELECT SAFE_CAST(v AS DATE) FROM (SELECT "10:30:00" AS v)
+    expected:
+      rows:
+        - [null]
+  # YYYY-[M]M-[D]D: the month and day may be one or two digits.
+  - desc: string to date accepts the canonical date literal
+    sql: SELECT SAFE_CAST(v AS DATE) FROM (SELECT "2024-1-5" AS v)
+    expected:
+      rows:
+        - ["2024-01-05"]
+  # A datetime literal has no time zone, and its time part may be
+  # introduced by a space, "T" or "t".
+  - desc: string to datetime rejects a zoned string
+    sql: SELECT SAFE_CAST(v AS DATETIME) FROM (SELECT "2024-01-15T10:30:00.000Z" AS v)
+    expected:
+      rows:
+        - [null]
+  - desc: string to datetime accepts the lowercase t separator
+    sql: SELECT CAST(SAFE_CAST(v AS DATETIME) AS STRING) FROM (SELECT "2024-01-15t10:30:00" AS v)
+    expected:
+      rows:
+        - ["2024-01-15T10:30:00"]
+  - desc: string to time rejects a date-shaped string
+    sql: SELECT SAFE_CAST(v AS TIME) FROM (SELECT "2024-01-15" AS v)
+    expected:
+      rows:
+        - [null]
+  - desc: string to time accepts one-digit hour, minute and second
+    sql: SELECT CAST(SAFE_CAST(v AS TIME) AS STRING) FROM (SELECT "1:2:3" AS v)
+    expected:
+      rows:
+        - ["01:02:03"]
+  # A timestamp literal may carry a time zone, so this one still parses.
+  - desc: string to timestamp accepts a zoned string
+    sql: SELECT UNIX_SECONDS(SAFE_CAST(v AS TIMESTAMP)) FROM (SELECT "2024-01-15T10:30:00.000Z" AS v)
+    expected:
+      rows:
+        - [1705314600]

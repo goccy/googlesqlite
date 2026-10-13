@@ -5444,7 +5444,7 @@ SELECT item FROM Produce WHERE Produce.category = 'vegetable' QUALIFY RANK() OVE
 		{
 			name:        "cast integer to datetime",
 			query:       `WITH toks AS (SELECT "20100317" AS dt) SELECT CAST(dt AS DATETIME) FROM toks;`,
-			expectedErr: "failed to convert 20100317 to time.Time type",
+			expectedErr: `failed to parse "20100317" as a datetime literal`,
 		},
 		{
 			name:         "safe cast",
