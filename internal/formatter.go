@@ -2170,8 +2170,38 @@ func (n *SetOperationScanNode) FormatSQL(ctx context.Context) (string, error) {
 	return fmt.Sprintf(
 		"SELECT %s FROM (%s)",
 		strings.Join(columnMaps, ","),
-		strings.Join(queries, fmt.Sprintf(" %s ", opType)),
+		joinCompoundSelect(queries, opType),
 	), nil
+}
+
+// maxCompoundArms bounds how many SELECTs are chained into one SQLite
+// compound SELECT. SQLite plans a compound recursively, one stack frame
+// per arm, and the wasm build's stack overflows at about 200 arms
+// (a wasm trap that leaves the connection unusable). UNION ALL and
+// UNION are associative, so a longer chain is emitted as a tree of
+// compounds of at most this many arms each, which keeps the recursion
+// depth logarithmic in the number of arms.
+const maxCompoundArms = 64
+
+// joinCompoundSelect joins queries with op. For UNION ALL and UNION
+// chains longer than maxCompoundArms the arms are grouped into nested
+// `SELECT * FROM (...)` compounds. Each group is named after its own
+// first arm; that is harmless because a compound matches the columns of
+// its arms by position and the caller re-aliases the result.
+func joinCompoundSelect(queries []string, op string) string {
+	sep := " " + op + " "
+	if op != "UNION ALL" && op != "UNION" {
+		return strings.Join(queries, sep)
+	}
+	for len(queries) > maxCompoundArms {
+		var grouped []string
+		for i := 0; i < len(queries); i += maxCompoundArms {
+			end := min(i+maxCompoundArms, len(queries))
+			grouped = append(grouped, "SELECT * FROM ("+strings.Join(queries[i:end], sep)+")")
+		}
+		queries = grouped
+	}
+	return strings.Join(queries, sep)
 }
 
 func (n *OrderByScanNode) FormatSQL(ctx context.Context) (string, error) {
