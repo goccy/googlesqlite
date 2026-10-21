@@ -2659,29 +2659,20 @@ func (a *Analyzer) newTruncateStmtAction(_ context.Context, _ string, _ []driver
 func (a *Analyzer) newMergeStmtAction(ctx context.Context, _ string, _ []driver.NamedValue, node *googlesql.ResolvedMergeStmt) (*MergeStmtAction, error) {
 	// node.TableScan() is typed *ResolvedTableScan already (the grammar
 	// guarantees the MERGE target is a base table reference), so no
-	// assertion is needed. node.FromScan() returns the interface
-	// ResolvedScanNode because USING-clause subqueries are legal in
-	// the spec; here we accept only the table-reference form so the
-	// per-WHEN UPDATE / DELETE can hand identity off to rowid.
+	// assertion is needed. The source may be any scan (a table or a
+	// USING subquery); only the target's rowid carries identity to the
+	// per-WHEN UPDATE / DELETE.
 	targetTableScan := m1(node.TableScan())
 	targetName, err := getTableName(ctx, targetTableScan)
 	if err != nil {
 		return nil, fmt.Errorf("MERGE: target table: %w", err)
 	}
-	sourceScan := m1(node.FromScan())
-	sourceTableScan, ok := sourceScan.(*googlesql.ResolvedTableScan)
-	if !ok {
-		return nil, fmt.Errorf("MERGE: source must be a single-table reference, got %T", sourceScan)
-	}
-	sourceName, err := getTableName(ctx, sourceTableScan)
-	if err != nil {
-		return nil, fmt.Errorf("MERGE: source table: %w", err)
-	}
-
 	targetCols := m1(targetTableScan.ColumnList())
-	sourceCols := m1(sourceTableScan.ColumnList())
 	targetSubquery := mergeProjectScan(ctx, targetCols, targetName, "__t_rowid")
-	sourceSubquery := mergeProjectScan(ctx, sourceCols, sourceName, "__s_rowid")
+	sourceSubquery, err := mergeSourceSubquery(ctx, m1(node.FromScan()))
+	if err != nil {
+		return nil, err
+	}
 
 	onExpr, err := newNode(m1(node.MergeExpr())).FormatSQL(ctx)
 	if err != nil {
@@ -2741,6 +2732,27 @@ func mergeProjectScan(ctx context.Context, cols []*googlesql.ResolvedColumn, tab
 	}
 	projections = append(projections, fmt.Sprintf("rowid AS %s", rowidAlias))
 	return fmt.Sprintf("(SELECT %s FROM `%s`)", strings.Join(projections, ","), tableName)
+}
+
+// mergeSourceSubquery builds the source half of the MERGE staging tables.
+// A table reference is projected like the target. Any other USING query
+// (BigQuery accepts a subquery; dbt incrementals always emit one) is
+// rendered by the scan formatter, whose output already names each column
+// by its unique id. The source side needs no rowid: __s_rowid is only the
+// "a source row joined" sentinel, so a constant serves.
+func mergeSourceSubquery(ctx context.Context, scan googlesql.ResolvedScanNode) (string, error) {
+	if tableScan, ok := scan.(*googlesql.ResolvedTableScan); ok {
+		name, err := getTableName(ctx, tableScan)
+		if err != nil {
+			return "", fmt.Errorf("MERGE: source table: %w", err)
+		}
+		return mergeProjectScan(ctx, m1(tableScan.ColumnList()), name, "__s_rowid"), nil
+	}
+	query, err := newNode(scan).FormatSQL(ctx)
+	if err != nil {
+		return "", fmt.Errorf("MERGE: source query: %w", err)
+	}
+	return fmt.Sprintf("(SELECT *, 1 AS __s_rowid FROM (%s))", query), nil
 }
 
 // formatMergeWhenMatchExpr renders the optional `AND <expr>` that may
