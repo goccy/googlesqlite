@@ -2724,7 +2724,9 @@ func (n *WithScanNode) FormatSQL(ctx context.Context) (string, error) {
 	// the counts down so WithEntryNode.FormatSQL can decide whether
 	// to emit `MATERIALIZED`.
 	refCounts := map[string]int{}
+	var inlineCost *cteInlineCost
 	if conn := connFromContext(ctx); conn == nil || conn.MaterializeCTE() {
+		inlineCost = newCteInlineCost(n.node)
 		query, _ := n.node.Query()
 		if query != nil {
 			collectCteRefCounts(query, refCounts)
@@ -2737,7 +2739,7 @@ func (n *WithScanNode) FormatSQL(ctx context.Context) (string, error) {
 			collectCteRefCounts(sub, refCounts)
 		}
 	}
-	subCtx := withCteRefCounts(ctx, refCounts)
+	subCtx := withCteInlineCost(withCteRefCounts(ctx, refCounts), inlineCost)
 	queries := []string{}
 	for _, entry := range m1(n.node.WithEntryList()) {
 		sql, err := newNode(entry).FormatSQL(subCtx)
@@ -2798,6 +2800,12 @@ func (n *WithEntryNode) FormatSQL(ctx context.Context) (string, error) {
 	tableToColumnList := tableNameToColumnListMap(ctx)
 	tableToColumnList[queryName] = m1(sub.MutableColumnList())
 	hint := cteMaterializeHint(ctx, queryName, subKind)
+	if hint == "" && subKind != googlesql.ResolvedNodeKindResolvedRecursiveScan &&
+		cteInlineCostFrom(ctx).materialize(queryName, len(subquery)) {
+		// Inlining would make SQLite copy this body into every
+		// column reference of its consumer; see cteInlineBudget.
+		hint = " MATERIALIZED"
+	}
 	if subKind == googlesql.ResolvedNodeKindResolvedRecursiveScan {
 		// SQLite needs an explicit column list on the recursive CTE
 		// so both UNION branches map their projected columns by
