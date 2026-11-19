@@ -6,3 +6,13 @@ cases:
     expected:
       rows:
         - ["a,b,c"]
+  - desc: null array propagates
+    sql: SELECT ARRAY_TO_STRING(CAST(NULL AS ARRAY<STRING>), ",")
+    expected:
+      rows:
+        - [null]
+  - desc: null delimiter propagates
+    sql: SELECT ARRAY_TO_STRING(["a", "b"], CAST(NULL AS STRING))
+    expected:
+      rows:
+        - [null]

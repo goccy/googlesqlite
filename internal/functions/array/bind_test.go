@@ -497,3 +497,46 @@ func TestArrayConcatNumeric(t *testing.T) {
 		t.Errorf("cell 2 = %v; want %v", cells[2], three)
 	}
 }
+
+// ------------------------------------------------------------------
+// NULL arguments
+// ------------------------------------------------------------------
+
+// TestArrayBind_NullArgumentPropagates pins the GoogleSQL function call
+// rule (functions-reference.md, "Function call rules": "If an operand is
+// NULL, the function result is NULL"), which ARRAY_CONCAT also states
+// explicitly (array_functions.md: "The function returns NULL if any input
+// argument is NULL"). The bind layer receives SQL NULL as a nil
+// value.Value, so these binders must return (nil, nil) instead of
+// dereferencing it.
+func TestArrayBind_NullArgumentPropagates(t *testing.T) {
+	t.Parallel()
+
+	strs := arr(value.StringValue("a"), value.StringValue("b"))
+	ints := arr(value.IntValue(1), value.IntValue(2))
+	cases := []struct {
+		name string
+		bind func(...value.Value) (value.Value, error)
+		args []value.Value
+	}{
+		{"ARRAY_TO_STRING null array", arrayfn.BindArrayToString, []value.Value{nil, value.StringValue(",")}},
+		{"ARRAY_TO_STRING null array with null_text", arrayfn.BindArrayToString, []value.Value{nil, value.StringValue(","), value.StringValue("?")}},
+		{"ARRAY_TO_STRING null delimiter", arrayfn.BindArrayToString, []value.Value{strs, nil}},
+		{"ARRAY_TO_STRING null null_text", arrayfn.BindArrayToString, []value.Value{strs, value.StringValue(","), nil}},
+		{"ARRAY_REVERSE null array", arrayfn.BindArrayReverse, []value.Value{nil}},
+		{"ARRAY_CONCAT null first", arrayfn.BindArrayConcat, []value.Value{nil, ints}},
+		{"ARRAY_CONCAT null last", arrayfn.BindArrayConcat, []value.Value{ints, nil}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := c.bind(c.args...)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != nil {
+				t.Fatalf("got %v; want NULL", got)
+			}
+		})
+	}
+}
