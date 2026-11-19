@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/goccy/googlesqlite/internal/functions/helper"
 	"github.com/goccy/googlesqlite/internal/value"
 )
 
@@ -18,6 +19,9 @@ func ARRAY_REVERSE(v *value.ArrayValue) (value.Value, error) {
 func BindArrayReverse(args ...value.Value) (value.Value, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("ARRAY_REVERSE: invalid number of arguments: got %d, want 1", len(args))
+	}
+	if helper.ExistsNull(args) {
+		return nil, nil
 	}
 	arr, err := args[0].ToArray()
 	if err != nil {

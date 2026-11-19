@@ -6,3 +6,8 @@ cases:
     expected:
       rows:
         - [[1, 2, 3, 4]]
+  - desc: null argument propagates
+    sql: SELECT ARRAY_CONCAT(CAST(NULL AS ARRAY<INT64>), [1, 2])
+    expected:
+      rows:
+        - [null]
