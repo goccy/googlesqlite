@@ -77,6 +77,10 @@ type Catalog struct {
 	tableMap         map[string]*TableSpec
 	funcMap          map[string]*FunctionSpec
 	tvfMap           map[string]*TVFSpec
+	// tvfHandles keeps the FixedOutputSchemaTVF wrappers reachable. Their
+	// finalizer frees the native TVF, and the SimpleCatalog only holds the
+	// embedded TableValuedFunction.
+	tvfHandles []*googlesql.FixedOutputSchemaTVF
 	// infoSchemaRegistered tracks (project, dataset) pairs that have
 	// already had their INFORMATION_SCHEMA views auto-registered, so
 	// subsequent table additions in the same dataset don't re-add
@@ -2104,6 +2108,7 @@ func (c *Catalog) resetCatalog(tables []*TableSpec, functions []*FunctionSpec, t
 	c.tableMap = map[string]*TableSpec{}
 	c.funcMap = map[string]*FunctionSpec{}
 	c.tvfMap = map[string]*TVFSpec{}
+	c.tvfHandles = nil
 	c.infoSchemaRegistered = map[string]struct{}{}
 	c.infoSchemaTables = map[string]*infoSchemaTableMeta{}
 	// Clear the sub-catalog cache. Its keys are the parent
@@ -2648,6 +2653,7 @@ func (c *Catalog) tvfHandleForSpec(spec *TVFSpec) (*googlesql.TableValuedFunctio
 	if err != nil {
 		return nil, fmt.Errorf("failed to build TVF handle: %w", err)
 	}
+	c.tvfHandles = append(c.tvfHandles, tvf)
 	return tvf.TableValuedFunction, nil
 }
 
