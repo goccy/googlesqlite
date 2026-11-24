@@ -1662,6 +1662,21 @@ func (c *Catalog) StorageNameForTable(table googlesql.TableNode) string {
 // parent+name, creating and attaching it on first use. AddCatalog is
 // called exactly once per (parent, sub-name) so wasm-side
 // deduplication traps are impossible.
+//
+// A sub-catalog (a project, a dataset, a dataset's INFORMATION_SCHEMA)
+// is created empty: it holds only the tables and routines registered
+// under its path. Builtin functions live in the root catalog alone,
+// which is the catalog every analyzer call resolves against. Giving
+// each sub-catalog the full builtin set as well (newSimpleCatalog)
+// had two costs:
+//
+//   - addFunctionSpecRecursiveImpl skips a name the catalog already
+//     holds, so a dataset routine sharing a builtin's name (ds.upper)
+//     was never registered, and ds.upper(...) ran the builtin.
+//   - resetCatalog rebuilds every sub-catalog on each DROP, so each
+//     project and dataset cost one full builtin catalog per drop. The
+//     retired ones are freed only by finalizers, so sustained DDL grew
+//     the wasm heap past 2 GiB, where go-googlesql panics.
 func (c *Catalog) getOrCreateSubCatalog(parent *googlesql.SimpleCatalog, name string) *googlesql.SimpleCatalog {
 	if parent == nil {
 		return nil
@@ -1674,8 +1689,8 @@ func (c *Catalog) getOrCreateSubCatalog(parent *googlesql.SimpleCatalog, name st
 	if existing, ok := subs[name]; ok {
 		return existing
 	}
-	sub := newSimpleCatalog(name)
-	if sub == nil {
+	sub, err := googlesql.NewSimpleCatalog(name, tf())
+	if err != nil || sub == nil {
 		return nil
 	}
 	_ = parent.AddCatalog(sub)
