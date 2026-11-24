@@ -2277,3 +2277,40 @@ func TestRegression_InUnnestArrayParam(t *testing.T) {
 		}
 	}
 }
+
+// TestRegression_DatasetRoutineNamedLikeABuiltin asserts that a routine
+// created in a dataset under a builtin's name is what a dataset-qualified
+// call reaches, while an unqualified call still reaches the builtin.
+//
+// Origin: every sub-catalog (project, dataset) used to be built with the
+// full builtin function set. Registering ds.upper found the builtin
+// `upper` already present in the `ds` sub-catalog and skipped the
+// routine, so CREATE FUNCTION succeeded and ds.upper('a') still ran
+// UPPER, returning "A".
+func TestRegression_DatasetRoutineNamedLikeABuiltin(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("googlesqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	defer db.Close()
+	ctx := context.Background()
+
+	if _, err := db.ExecContext(ctx,
+		`CREATE FUNCTION ds.upper(x STRING) RETURNS STRING AS (CONCAT(x, '!'))`); err != nil {
+		t.Fatalf("CREATE FUNCTION: %v", err)
+	}
+	for _, tc := range []struct{ query, want string }{
+		{`SELECT ds.upper('a')`, "a!"},
+		{`SELECT UPPER('a')`, "A"},
+	} {
+		var got string
+		if err := db.QueryRowContext(ctx, tc.query).Scan(&got); err != nil {
+			t.Fatalf("%s: %v", tc.query, err)
+		}
+		if got != tc.want {
+			t.Errorf("%s got %q want %q", tc.query, got, tc.want)
+		}
+	}
+}
